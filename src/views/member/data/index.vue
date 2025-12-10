@@ -80,21 +80,36 @@ const columns = ref<TableColumnItem[]>([
   ...baseColumns,
   {
     title: '操作',
-    width: 160,
+    width: 240,
     dataIndex: 'ACTION',
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
     actions: ({ record }) => [
       {
-        label: '編輯',
+        label: '查看',
+        type: 'link',
         onClick: () => openFormModal(record),
       },
       {
-        label: '刪除',
-        popConfirm: {
-          title: '確定要刪除嗎?',
-          onConfirm: () => delRowConfirm(record),
+        label: '修改狀態',
+        type: 'link',
+        onClick: () => {
+          message.info('修改狀態功能開發中');
+        },
+      },
+      {
+        label: '修改餘額',
+        type: 'link',
+        onClick: () => {
+          message.info('修改餘額功能開發中');
+        },
+      },
+      {
+        label: '帳戶詳細',
+        type: 'link',
+        onClick: () => {
+          message.info('帳戶詳細功能開發中');
         },
       },
     ],
@@ -125,9 +140,10 @@ const delRowsConfirm = async (rowIds: string[]) => {
       :row-selection="rowSelection"
     >
       <template #toolbar>
-        <a-button type="primary" @click="openFormModal({})"> 新增會員 </a-button>
-        <a-button type="danger" :disabled="!isCheckRows" @click="delRowsConfirm(rowSelection.selectedRowKeys)">
-          批量刪除
+        <a-button type="primary" @click="openFormModal({})"> 新增帳號 </a-button>
+        <a-button type="default"> 批次修改 </a-button>
+        <a-button type="default" :disabled="!isCheckRows" @click="delRowsConfirm(rowSelection.selectedRowKeys)">
+          匯出
         </a-button>
       </template>
     </DynamicTable>

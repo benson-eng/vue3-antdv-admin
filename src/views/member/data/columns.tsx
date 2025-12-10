@@ -36,6 +36,13 @@ export const baseColumns: TableColumnItem[] = [
     title: '會員帳號',
     dataIndex: 'account',
     width: 120,
+    formItemProps: {
+      component: 'Input',
+      componentProps: {
+        placeholder: '輸入會員帳號',
+      },
+      colProps: { span: 6 },
+    },
   },
   {
     title: '狀態',
@@ -51,10 +58,16 @@ export const baseColumns: TableColumnItem[] = [
           { label: '停用', value: 0 },
         ],
       },
+      colProps: { span: 6 },
     },
     customRender: ({ record }) => {
       const enable = ~~record.status === 1;
-      return <Tag color={enable ? 'success' : 'error'}>{enable ? '啟用中' : '停用'}</Tag>;
+      return (
+        <div class="flex items-center gap-1">
+          <span class={`inline-block w-2 h-2 rounded-full ${enable ? 'bg-green-500' : 'bg-red-500'}`}></span>
+          <span>{enable ? '啟用中' : '停用'}</span>
+        </div>
+      );
     },
   },
   {
@@ -64,8 +77,9 @@ export const baseColumns: TableColumnItem[] = [
     formItemProps: {
       component: 'Input',
       componentProps: {
-        placeholder: '請輸入上級代理',
+        placeholder: '輸入代理帳號',
       },
+      colProps: { span: 6 },
     },
     customRender: ({ text }) => <a class="text-blue-500">{text}</a>,
   },
@@ -76,8 +90,9 @@ export const baseColumns: TableColumnItem[] = [
     formItemProps: {
       component: 'Input',
       componentProps: {
-        placeholder: '請輸入上級會員',
+        placeholder: '輸入會員帳號',
       },
+      colProps: { span: 6 },
     },
     customRender: ({ text }) => <a class="text-blue-500">{text}</a>,
   },
@@ -98,7 +113,39 @@ export const baseColumns: TableColumnItem[] = [
           { label: '疑似套利', value: '疑似套利' },
         ],
       },
+      colProps: { span: 6 },
     },
+  },
+  {
+    title: '會員等級',
+    dataIndex: 'vipLevel',
+    width: 120,
+    formItemProps: {
+      component: 'Select',
+      componentProps: {
+        placeholder: '請選擇',
+        options: [
+          { label: 'VIP2', value: 'VIP2' },
+          { label: 'VIP8', value: 'VIP8' },
+          { label: '一般會員', value: '一般會員' },
+        ],
+      },
+      colProps: { span: 6 },
+    },
+    hideInTable: true,
+  },
+  {
+    title: '會員層級',
+    dataIndex: 'memberLevel',
+    width: 120,
+    formItemProps: {
+      component: 'Input',
+      componentProps: {
+        placeholder: '請選擇',
+      },
+      colProps: { span: 6 },
+    },
+    hideInTable: true,
   },
   {
     title: '首存首出',
@@ -107,12 +154,13 @@ export const baseColumns: TableColumnItem[] = [
     formItemProps: {
       component: 'Select',
       componentProps: {
-        placeholder: '請選擇',
+        placeholder: '無首出',
         options: [
           { label: '無首出', value: 'no_withdraw' },
           { label: '無首存', value: 'no_deposit' },
         ],
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
@@ -123,8 +171,9 @@ export const baseColumns: TableColumnItem[] = [
     formItemProps: {
       component: 'Input',
       componentProps: {
-        placeholder: '請輸入IP',
+        placeholder: '請輸入Ip',
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
@@ -135,44 +184,22 @@ export const baseColumns: TableColumnItem[] = [
     formItemProps: {
       component: 'Input',
       componentProps: {
-        placeholder: '請輸入IP',
+        placeholder: '請輸入Ip',
       },
-    },
-    hideInTable: true,
-  },
-  {
-    title: '會員姓名',
-    dataIndex: 'realName',
-    width: 100,
-    formItemProps: {
-      component: 'Input',
-      componentProps: {
-        placeholder: '請輸入姓名',
-      },
-    },
-    hideInTable: true,
-  },
-  {
-    title: '手機號',
-    dataIndex: 'phone',
-    width: 120,
-    formItemProps: {
-      component: 'Input',
-      componentProps: {
-        placeholder: '請輸入手機號',
-      },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
   {
     title: '身份證號',
     dataIndex: 'idCard',
-    width: 150,
+    width: 120,
     formItemProps: {
       component: 'Input',
       componentProps: {
         placeholder: '請輸入身份證號',
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
@@ -189,19 +216,21 @@ export const baseColumns: TableColumnItem[] = [
           { label: 'Line 2', value: 'line2' },
         ],
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
   {
-    title: '駐冊時間',
+    title: '註冊時間',
     dataIndex: 'registerTime',
     width: 180,
     formItemProps: {
       component: 'RangePicker',
       componentProps: {
         placeholder: ['開始時間', '結束時間'],
-        showTime: true,
+        showTime: false,
       },
+      colProps: { span: 12 },
     },
     hideInTable: true,
   },
@@ -213,8 +242,9 @@ export const baseColumns: TableColumnItem[] = [
       component: 'RangePicker',
       componentProps: {
         placeholder: ['開始時間', '結束時間'],
-        showTime: true,
+        showTime: false,
       },
+      colProps: { span: 12 },
     },
     hideInTable: true,
   },
@@ -232,6 +262,7 @@ export const baseColumns: TableColumnItem[] = [
           { label: 'APP', value: 'app' },
         ],
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
@@ -240,11 +271,16 @@ export const baseColumns: TableColumnItem[] = [
     dataIndex: 'depositCount',
     width: 180,
     formItemProps: {
-      component: 'InputNumber',
+      component: 'Select',
       componentProps: {
-        placeholder: '請輸入次數',
-        min: 0,
+        placeholder: '>=',
+        options: [
+          { label: '>=', value: '>=' },
+          { label: '<=', value: '<=' },
+          { label: '=', value: '=' },
+        ],
       },
+      colProps: { span: 6 },
     },
     hideInTable: true,
   },
@@ -259,6 +295,20 @@ export const baseColumns: TableColumnItem[] = [
     dataIndex: 'vipLevel',
     width: 120,
     hideInSearch: true,
+    customRender: ({ record }) => {
+      // 根據等級顯示不同圖標
+      const isVip = record.vipLevel.includes('VIP');
+      return (
+        <div class="flex items-center gap-1">
+          {isVip ? (
+            <span class="text-yellow-500">👑</span>
+          ) : (
+            <span class="text-red-500">🔴</span>
+          )}
+          <span>{record.vipLevel}</span>
+        </div>
+      );
+    },
   },
   {
     title: '推廣代碼',
