@@ -1,10 +1,10 @@
-import { createI18n, type I18nOptions } from 'vue-i18n';
+import { createI18n } from 'vue-i18n';
 import { localeMap } from './config';
 import { setHtmlPageLang, setLoadLocalePool } from './helper';
 import type { App } from 'vue';
 import { useLocaleStoreWithOut } from '@/store/modules/locale';
 
-async function createI18nOptions(): Promise<I18nOptions> {
+async function createI18nOptions() {
   const localeStore = useLocaleStoreWithOut();
   const locale = localeStore.getLocale;
   const defaultLocal = await import(`./lang/${locale}.ts`);
@@ -17,7 +17,7 @@ async function createI18nOptions(): Promise<I18nOptions> {
 
   return {
     locale,
-    // legacy: false,
+    legacy: false, // 禁用舊版 API，使用 Composition API
     fallbackLocale: localeMap.zh_CN, // set fallback locale
     messages: {
       [locale]: message as { [key: string]: string },
@@ -28,10 +28,9 @@ async function createI18nOptions(): Promise<I18nOptions> {
     silentFallbackWarn: true,
   };
 }
-type Options = Awaited<ReturnType<typeof createI18nOptions>>;
 
-// ReturnType<typeof createI18n<false, Options>>
-export let i18n = createI18n({} as Options);
+// 動態建立 i18n 實例
+export let i18n: ReturnType<typeof createI18n>;
 
 // setup i18n instance with global
 export async function setupI18n(app: App) {

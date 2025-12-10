@@ -3,13 +3,15 @@ import type { DefaultBodyType, StrictRequest } from 'msw';
 import { ResultEnum } from '@/enums/httpEnum';
 import { uniqueSlash } from '@/utils/urlUtils';
 
-const baseApiUrl = new URL(import.meta.env.VITE_BASE_API_URL, location.origin).toString();
+// 當 VITE_BASE_API_URL 為空時，使用 '/api' 作為預設值
+const baseApiUrl = import.meta.env.VITE_BASE_API_URL || '/api';
 
 /**
  * msw 官方不支持配置 baseUrl, 需要自己手动处理
  * @see https://github.com/mswjs/msw/issues/397#issuecomment-751230924
  */
 export const serverApi = (path: string) => {
+  // 直接拼接而不經過 URL constructor，避免重複添加協議
   return uniqueSlash(baseApiUrl + path);
 };
 
