@@ -52,6 +52,19 @@ export const useUserStore = defineStore(
       perms.value = [];
       menus.value = [];
       userInfo.value = {};
+      // 清除新增的狀態欄位
+      name.value = '';
+      avatar.value = '';
+      roles.value = [];
+      email.value = '';
+      account.value = '';
+      introduction.value = '';
+      level.value = -1;
+      website.value = '';
+      masterAgent.value = '';
+      agent.value = '';
+      currencies.value = [];
+      shareholder.value = '';
       resetRouter();
       setTimeout(() => {
         localStorage.clear();
@@ -139,9 +152,22 @@ export const useUserStore = defineStore(
     };
     /** 登出 */
     const logout = async () => {
-      await Api.account.accountLogout();
+      // 使用新的 AdminSystem API 登出
+      try {
+        if (token.value) {
+          await logoutLocal({});
+        }
+      } catch (error) {
+        console.error('登出 API 調用失敗:', error);
+        // 即使 API 調用失敗，也繼續執行登出流程
+      }
+      
+      // 清除所有登入狀態
       sseStore.closeEventSource();
       clearLoginStatus();
+      
+      // 清除新增的狀態欄位
+      resetToken();
     };
     
     // ========== 從 Vue 2 專案整合的新方法 ==========
