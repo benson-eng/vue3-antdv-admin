@@ -43,11 +43,19 @@
         >
           <template #prefix> <Icon icon="ant-design:safety-outlined" /> </template>
           <template #suffix>
-            <img
-              :src="captcha"
-              class="absolute right-0 h-full cursor-pointer"
-              @click="updateCaptcha"
-            />
+            <div class="captcha-wrapper" v-if="captcha && !captchaError">
+              <img
+                :src="captcha"
+                class="captcha-image"
+                @click="updateCaptcha"
+                alt="驗證碼"
+              />
+            </div>
+            <div v-else-if="captchaLoading" class="captcha-loading">載入中...</div>
+            <div v-else-if="captchaError" class="captcha-error" @click="updateCaptcha" title="點擊重試">
+              <Icon icon="ant-design:reload-outlined" />
+            </div>
+            <div v-else class="captcha-loading">載入中...</div>
           </template>
         </a-input>
       </a-form-item>
@@ -80,6 +88,8 @@
 
   const loading = ref(false);
   const captcha = ref('');
+  const captchaLoading = ref(false);
+  const captchaError = ref(false);
   const showBackendKey = ref(false);
   const needCaptcha = ref(true); // 是否顯示驗證碼（可根據需求調整）
   
@@ -119,12 +129,24 @@
   };
 
   const updateCaptcha = async () => {
+    captchaLoading.value = true;
+    captchaError.value = false;
+    captcha.value = '';
+    
     try {
+      // 使用原有的驗證碼 API 調用方式
       const data = await Api.captcha.captchaCaptchaByImg({ width: 100, height: 50 });
       captcha.value = data.img;
-      loginFormModel.value.captchaId = data.id;
-    } catch (error) {
+      loginFormModel.value.captchaId = data.id || '';
+      captchaError.value = false;
+    } catch (error: any) {
       console.error('更新驗證碼失敗:', error);
+      captchaError.value = true;
+      // 如果驗證碼 API 失敗，暫時禁用驗證碼驗證
+      needCaptcha.value = false;
+      message.warning('驗證碼服務暫時無法使用，已自動跳過驗證碼驗證');
+    } finally {
+      captchaLoading.value = false;
     }
   };
 
@@ -253,6 +275,38 @@
 
       .ant-form-item-label {
         padding-right: 6px;
+      }
+    }
+
+    .captcha-wrapper {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding-right: 8px;
+    }
+
+    .captcha-image {
+      height: 32px;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .captcha-loading {
+      padding-right: 8px;
+      color: #999;
+      font-size: 12px;
+    }
+
+    .captcha-error {
+      padding-right: 8px;
+      color: #ff4d4f;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      
+      &:hover {
+        color: #ff7875;
       }
     }
   }
