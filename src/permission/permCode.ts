@@ -1,6 +1,14 @@
 /**
  * 从后端接口获取：/api/system/menus/permissions
  * @description 权限列表, 仅供开发时提供 ts 类型提示，无实际作用
+ * 
+ * 權限碼格式：類別:表單:存取
+ * - 第一段：類別（如 system, member, netdisk）
+ * - 第二段：表單/功能（如 role, user, data）
+ * - 第三段：存取操作（如 list, create, update, delete）
+ * 
+ * 特殊權限：
+ * - '*:*:*' 表示超級管理員，擁有所有類別、所有表單、所有存取權限
  */
 const _permissions = [
   'system:role:list',
