@@ -1,6 +1,15 @@
 import type { FormSchema } from '@/components/core/schema-form/';
 
-export const baseSchemas: FormSchema[] = [
+export interface MemberFormDto {
+  account: string;
+  password?: string;
+  memberLevel: string;
+  vipLevel?: string;
+  superior?: string;
+  status: number;
+}
+
+export const baseSchemas: FormSchema<MemberFormDto>[] = [
   {
     field: 'account',
     component: 'Input',

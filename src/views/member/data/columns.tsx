@@ -1,5 +1,4 @@
 import type { TableColumn } from '@/components/core/dynamic-table';
-import { Tag } from 'ant-design-vue';
 import { formatToDateTime } from '@/utils/dateUtil';
 
 export interface TableListItem {
@@ -129,19 +128,6 @@ export const baseColumns: TableColumnItem[] = [
           { label: 'VIP8', value: 'VIP8' },
           { label: '一般會員', value: '一般會員' },
         ],
-      },
-      colProps: { span: 6 },
-    },
-    hideInTable: true,
-  },
-  {
-    title: '會員層級',
-    dataIndex: 'memberLevel',
-    width: 120,
-    formItemProps: {
-      component: 'Input',
-      componentProps: {
-        placeholder: '請選擇',
       },
       colProps: { span: 6 },
     },

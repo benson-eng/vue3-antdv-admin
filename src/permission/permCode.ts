@@ -78,6 +78,16 @@ const _permissions = [
   'tool:storage:list',
   'tool:storage:delete',
   'upload:upload',
+  
+  // 會員管理
+  'member:data:list',
+  'member:data:create',
+  'member:data:read',
+  'member:data:update',
+  'member:data:delete',
+  'member:data:status',
+  'member:data:balance',
+  'member:data:export',
 ] as const;
 
 export type PermissionType = (typeof _permissions)[number];
