@@ -60,7 +60,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
         // options are passed on to @vue/babel-plugin-jsx
       }),
       // 指定 mkcert 的下载源为 coding，从 coding.net 镜像下载证书
-      mkcert({ source: 'coding' }),
+      // mkcert({ source: 'coding' }),
       // 开启 http2 代理
       Http2Proxy(),
       mockServerPlugin({ build: isBuild && VITE_MOCK_IN_PROD === 'true' }),

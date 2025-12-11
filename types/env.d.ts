@@ -13,6 +13,14 @@ interface ImportMetaEnv {
   readonly VITE_BASE_SOCKET_NSP: string;
   /** mock API 路径 */
   readonly VITE_MOCK_API: string;
+  /** 從 Vue 2 專案整合：AdminSystem API 基礎 URL */
+  readonly VITE_APP_BASE_API?: string;
+  /** 從 Vue 2 專案整合：CDN 基礎 URL */
+  readonly VITE_APP_CDN_BASE_URL?: string;
+  /** 是否在生產環境啟用 mock */
+  readonly VITE_MOCK_IN_PROD?: string;
+  /** 是否移除 console */
+  readonly VITE_DROP_CONSOLE?: string;
   // 更多环境变量...
 }
 

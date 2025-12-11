@@ -1,0 +1,17 @@
+// API 動作設定
+// 從 Vue 2 + Element UI 專案整合
+// 用於請求攔截器中判斷哪些 action 需要使用 spinner
+
+export default {
+  // spinner：讓使用者無法點選畫面
+  // 需要使用spinner的action name在這裡定義
+  actionsUsingSpinner: [
+    'addRace',
+  ],
+  // 限定檢查的gate way
+  actionGateWay: [
+    'accessGateway',
+    'accessUploadGateway',
+  ],
+};
+
