@@ -94,6 +94,7 @@
     hideAdvanceBtn: Boolean,
   });
 
+  // 使用自定義的 useI18n，不傳入 namespace，使用全局翻譯
   const { t } = useI18n();
   const { resetFields, submit } = useFormContext();
   const actionColOpt = computed(() => {

@@ -109,5 +109,10 @@
   "i18n-ally.enabledFrameworks": [
     "vue",
     "react"
-  ]
+  ],
+  // 禁用 Vetur，使用 Volar
+  "vetur.enable": false,
+  "vetur.validation.template": false,
+  "vetur.validation.script": false,
+  "vetur.validation.style": false
 }

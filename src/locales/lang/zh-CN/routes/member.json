@@ -1,4 +1,105 @@
 {
   "member": "會員管理",
-  "data": "會員資料"
+  "data": "會員資料",
+  "dataPage": {
+    "title": "會員資料",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "member": "會員",
+    "addAccount": "新增帳號",
+    "batchModify": "批次修改",
+    "batchDelete": "批量刪除",
+    "export": "匯出",
+    "operation": "操作",
+    "editStatus": "修改狀態",
+    "editBalance": "修改餘額",
+    "accountDetail": "帳戶詳細",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteMember": "確定要刪除此會員嗎?",
+    "confirmDeleteBatch": "確定要刪除選中的 {count} 筆資料嗎?",
+    "editSuccess": "編輯成功",
+    "addSuccess": "新增成功",
+    "deleteSuccess": "刪除成功",
+    "batchDeleteSuccess": "批量刪除成功",
+    "editFailed": "編輯失敗",
+    "addFailed": "新增失敗",
+    "deleteFailed": "刪除失敗",
+    "batchDeleteFailed": "批量刪除失敗",
+    "saveFailed": "保存失敗",
+    "statusFeatureDeveloping": "修改狀態功能開發中",
+    "balanceFeatureDeveloping": "修改餘額功能開發中",
+    "detailFeatureDeveloping": "帳戶詳細功能開發中",
+    "columns": {
+      "account": "會員帳號",
+      "status": "狀態",
+      "superior": "上級代理",
+      "superiorAccount": "上級會員",
+      "memberLevel": "會員層級",
+      "vipLevel": "會員等級",
+      "firstDeposit": "首存首出",
+      "registerIp": "駐冊IP",
+      "lastLoginIp": "最後登入IP",
+      "idCard": "身份證號",
+      "line": "Line",
+      "registerTime": "註冊時間",
+      "lastLoginTime": "最後登入時間",
+      "registerSource": "駐冊來源",
+      "depositCount": "終身存款次數",
+      "returnWaterLevel": "返水等級",
+      "promotionCode": "推廣代碼",
+      "createdAt": "創建時間",
+      "statusEnabled": "啟用中",
+      "statusDisabled": "停用",
+      "all": "全部",
+      "pleaseSelect": "請選擇",
+      "inputAccount": "輸入會員帳號",
+      "inputAgentAccount": "輸入代理帳號",
+      "inputIp": "請輸入Ip",
+      "inputIdCard": "請輸入身份證號",
+      "startTime": "開始時間",
+      "endTime": "結束時間",
+      "noWithdraw": "無首出",
+      "noDeposit": "無首存"
+    },
+    "form": {
+      "account": "會員帳號",
+      "password": "密碼",
+      "memberLevel": "會員層級",
+      "vipLevel": "VIP等級",
+      "superior": "上級代理",
+      "status": "狀態",
+      "inputAccount": "請輸入會員帳號",
+      "inputPassword": "請輸入密碼",
+      "selectMemberLevel": "請選擇會員層級",
+      "inputSuperiorAccount": "請輸入上級代理帳號",
+      "enabled": "啟用",
+      "disabled": "停用",
+      "memberLevelOptions": {
+        "inner": "金流內層",
+        "full": "金流全開",
+        "large": "大額入款",
+        "arbitrage": "套利總級",
+        "suspected": "疑似套利"
+      },
+      "vipLevelOptions": {
+        "vip2": "VIP2",
+        "vip8": "VIP8",
+        "normal": "一般會員"
+      }
+    },
+    "common": {
+      "resetText": "重置",
+      "queryText": "查詢",
+      "unfold": "展開",
+      "inputText": "請輸入",
+      "chooseText": "請選擇"
+    },
+    "component": {
+      "form": {
+        "putAway": "收起",
+        "unfold": "展開"
+      }
+    }
+  }
 }
