@@ -20,6 +20,7 @@ export const baseSchemas: FormSchema<MemberFormDto>[] = [
     field: 'password',
     component: 'InputPassword',
     label: '密碼',
+    vShow: ({ formModel }) => !formModel.id, // 編輯時隱藏
     rules: [{ required: true, message: '請輸入密碼' }],
   },
   {

@@ -1,3 +1,4 @@
+import { Tag } from 'ant-design-vue';
 import type { TableColumn } from '@/components/core/dynamic-table';
 import { formatToDateTime } from '@/utils/dateUtil';
 
@@ -61,12 +62,7 @@ export const baseColumns: TableColumnItem[] = [
     },
     customRender: ({ record }) => {
       const enable = ~~record.status === 1;
-      return (
-        <div class="flex items-center gap-1">
-          <span class={`inline-block w-2 h-2 rounded-full ${enable ? 'bg-green-500' : 'bg-red-500'}`}></span>
-          <span>{enable ? '啟用中' : '停用'}</span>
-        </div>
-      );
+      return <Tag color={enable ? 'green' : 'red'}>{enable ? '啟用中' : '停用'}</Tag>;
     },
   },
   {

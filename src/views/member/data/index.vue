@@ -63,13 +63,7 @@ const openFormModal = async (record: Partial<TableListItem>) => {
     },
     formProps: {
       labelWidth: 100,
-      schemas: baseSchemas.map((schema) => {
-        // 編輯時密碼不必填
-        if (schema.field === 'password' && record.id) {
-          return { ...schema, rules: [] };
-        }
-        return schema;
-      }),
+      schemas: baseSchemas,
     },
   });
 
@@ -93,6 +87,28 @@ const delRowConfirm = async (record: TableListItem) => {
   }
 };
 
+/**
+ * @description 批量刪除會員資料
+ * @param rowIds 選中的會員ID列表
+ */
+const delRowsConfirm = async (rowIds: string[]) => {
+  Modal.confirm({
+    title: '確認刪除',
+    content: `確定要刪除選中的 ${rowIds.length} 筆資料嗎?`,
+    async onOk() {
+      try {
+        await Promise.all(rowIds.map((id) => deleteMember(Number(id))));
+        message.success('批量刪除成功');
+        dynamicTableInstance?.reload();
+      } catch (error) {
+        console.error('批量刪除失敗:', error);
+        message.error('批量刪除失敗');
+      }
+    },
+  });
+};
+
+// 列配置（放在最後）
 const columns = ref<TableColumnItem[]>([
   ...baseColumns,
   {
@@ -149,27 +165,6 @@ const columns = ref<TableColumnItem[]>([
     ],
   },
 ]);
-
-/**
- * @description 批量刪除會員資料
- * @param rowIds 選中的會員ID列表
- */
-const delRowsConfirm = async (rowIds: string[]) => {
-  Modal.confirm({
-    title: '確認刪除',
-    content: `確定要刪除選中的 ${rowIds.length} 筆資料嗎?`,
-    async onOk() {
-      try {
-        await Promise.all(rowIds.map((id) => deleteMember(Number(id))));
-        message.success('批量刪除成功');
-        dynamicTableInstance?.reload();
-      } catch (error) {
-        console.error('批量刪除失敗:', error);
-        message.error('批量刪除失敗');
-      }
-    },
-  });
-};
 </script>
 
 <template>
