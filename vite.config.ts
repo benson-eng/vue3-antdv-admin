@@ -34,10 +34,12 @@ const __APP_INFO__ = {
  */
 export default ({ command, mode }: ConfigEnv): UserConfig => {
   // 环境变量
-  const { VITE_BASE_URL, VITE_DROP_CONSOLE, VITE_MOCK_IN_PROD } = loadEnv(mode, CWD)
+  const { VITE_BASE_URL, VITE_DROP_CONSOLE, VITE_MOCK_IN_PROD, VITE_ENABLE_MOCK } = loadEnv(mode, CWD)
 
   const isDev = command === 'serve'
   const isBuild = command === 'build'
+  const isMockFlag = (value?: string) => value === 'true'
+  const isMockEnabled = isMockFlag(VITE_ENABLE_MOCK) || isMockFlag(VITE_MOCK_IN_PROD)
 
   return {
     base: VITE_BASE_URL,
@@ -63,7 +65,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       mkcert({ source: 'coding' }),
       // 开启 http2 代理
       Http2Proxy(),
-      mockServerPlugin({ build: isBuild && VITE_MOCK_IN_PROD === 'true' }),
+      mockServerPlugin({ build: isBuild && isMockEnabled }),
       TinymceResourcePlugin({ baseUrl: '/tinymce-resource/' }),
       createSvgIconsPlugin({
         // Specify the icon folder to be cached
@@ -120,7 +122,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       port: 8088,
       open: true,
       proxy:
-        VITE_MOCK_IN_PROD === 'true'
+        isDev && isMockEnabled
           ? {}
           : {
               '^/api': {

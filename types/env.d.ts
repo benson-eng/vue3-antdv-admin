@@ -11,8 +11,10 @@ interface ImportMetaEnv {
   readonly VITE_BASE_SOCKET_PATH: string;
   /** socket 命名空间 */
   readonly VITE_BASE_SOCKET_NSP: string;
-  /** mock API 路径 */
+  /** mock API 路徑 */
   readonly VITE_MOCK_API: string;
+  /** 是否啟用 mock（開發/測試可開啟） */
+  readonly VITE_ENABLE_MOCK?: string;
   /** 從 Vue 2 專案整合：AdminSystem API 基礎 URL */
   readonly VITE_APP_BASE_API?: string;
   /** 從 Vue 2 專案整合：CDN 基礎 URL */

@@ -4,11 +4,12 @@
 
 import { request } from '@/utils/request';
 import type { IVueResponse } from '@/api/types';
+import { resolveAdminSystemPath } from '@/utils/mockSwitch';
 
 // 登入 API
 export const loginLocal = (data: { account: string; password: string }) =>
   request<IVueResponse>({
-    url: '/AdminSystem/api/login',
+    url: resolveAdminSystemPath('/AdminSystem/api/login'),
     method: 'post',
     data,
   });
@@ -16,7 +17,7 @@ export const loginLocal = (data: { account: string; password: string }) =>
 // 取得使用者資訊 API
 export const getUserInfoLocal = (data: { token: string }) =>
   request<IVueResponse>({
-    url: '/AdminSystem/api/getUserInfo',
+    url: resolveAdminSystemPath('/AdminSystem/api/getUserInfo'),
     method: 'post',
     data,
   });
@@ -24,7 +25,7 @@ export const getUserInfoLocal = (data: { token: string }) =>
 // 登出 API
 export const logoutLocal = (data: any = {}) =>
   request<IVueResponse>({
-    url: '/AdminSystem/api/logout',
+    url: resolveAdminSystemPath('/AdminSystem/api/logout'),
     method: 'post',
     data,
   });
@@ -36,7 +37,7 @@ export const getBackendKey = async (data: {
   };
 }) => {
   return request<IVueResponse>({
-    url: '/AdminSystem/api/getBackendKey',
+    url: resolveAdminSystemPath('/AdminSystem/api/getBackendKey'),
     method: 'post',
     data,
     timeout: 0,

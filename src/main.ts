@@ -9,6 +9,9 @@ import { setupAntd, setupAssets, setupGlobalMethods } from '@/plugins';
 
 const app = createApp(App);
 
+const shouldEnableMock =
+  import.meta.env.VITE_ENABLE_MOCK === 'true' || import.meta.env.VITE_MOCK_IN_PROD === 'true';
+
 function setupPlugins() {
   // 安装图标
   setupIcons();
@@ -22,7 +25,7 @@ function setupPlugins() {
 
 async function setupApp() {
   // 通过动态import可生成单独的chunk，结合全局替换变量，可实现按需加载，且不会对代码打包体积造成影响
-  if (import.meta.env.VITE_MOCK_IN_PROD === 'true') {
+  if (shouldEnableMock) {
     const { setupMock } = await import('../mocks/');
     // 启用 mock
     await setupMock();

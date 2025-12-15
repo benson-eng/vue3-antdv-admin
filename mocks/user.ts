@@ -22,6 +22,118 @@ export function setCaptchaCode(captchaId: string, code: string) {
   setTimeout(() => captchaStore.delete(captchaId), 5 * 60 * 1000);
 }
 
+const createLoginResponse = () => ({
+  accessToken: `mock-jwt-token-${Math.random().toString(36).substring(7)}`,
+  token: `mock-jwt-token-${Math.random().toString(36).substring(7)}`,
+  userData: {
+    id: 1,
+    username: 'admin',
+    masterAgent: 'mock-master',
+    agent: 'mock-agent',
+    currencies: ['USD', 'EUR'],
+  },
+});
+
+const loginHandler = async ({ request }: { request: Request }) => {
+  const body = (await request.json()) as any;
+  const account = body.account || body.username;
+  const password = body.password;
+  const verifyCode = body.verifyCode;
+  const captchaId = body.captchaId;
+
+  if (!account || !password) {
+    return HttpResponse.json(
+      {
+        code: -1,
+        message: '帳號或密碼不能為空',
+        data: null,
+      },
+      { status: 400 },
+    );
+  }
+
+  if (verifyCode || captchaId) {
+    if (!verifyCode || !captchaId) {
+      return HttpResponse.json(
+        {
+          code: -1,
+          message: '驗證碼與驗證碼 ID 必須同時提供',
+          data: null,
+        },
+        { status: 400 },
+      );
+    }
+
+    const storedCode = captchaStore.get(captchaId);
+    if (!storedCode || storedCode !== verifyCode) {
+      return HttpResponse.json(
+        {
+          code: -1,
+          message: '驗證碼錯誤或已過期',
+          data: null,
+        },
+        { status: 400 },
+      );
+    }
+    captchaStore.delete(captchaId);
+  }
+
+  if (account === 'admin' && password === 'a123456') {
+    await delay(1000);
+    return HttpResponse.json({
+      code: 200,
+      message: '登入成功',
+      data: createLoginResponse(),
+    });
+  }
+
+  return HttpResponse.json(
+    {
+      code: -1,
+      message: '用戶名或密碼錯誤',
+      data: null,
+    },
+    { status: 401 },
+  );
+};
+
+const getUserInfoResponse = () =>
+  HttpResponse.json({
+    code: 200,
+    message: '获取成功',
+    data: {
+      roles: ['admin'],
+      name: '管理员',
+      avatar: 'https://gw.alipayobjects.com/zos/rmsportal/WhxWfqPqFOtEFYAKBlFJ.jpg',
+      introduction: 'Mock 后台管理员',
+      email: 'admin@example.com',
+      level: 4,
+      website: 'https://example.com',
+      masterAgent: 'mock-master',
+      agent: 'mock-agent',
+      currencies: ['USD', 'EUR'],
+      account: 'admin',
+      shareholder: { account: 'mock-shareholder' },
+    },
+  })
+
+const logoutResponse = () =>
+  HttpResponse.json({
+    code: 200,
+    message: '登出成功',
+    data: null,
+  })
+
+const backendKeyResponse = () =>
+  HttpResponse.json({
+    code: 200,
+    message: 'BackendKey 取得成功',
+    data: {
+      id: 123,
+      secret: 'mock-secret',
+    },
+  })
+
 export default [
   http.get(serverApi('/user/:id'), async () => {
     await delay(1000);
@@ -34,48 +146,12 @@ export default [
       })),
     );
   }),
-  http.post(serverApi('/auth/login'), async ({ request }) => {
-    const body = await request.json() as any;
-    const { username, password, verifyCode, captchaId } = body;
-
-    // 驗證必填字段
-    if (!username || !password || !verifyCode || !captchaId) {
-      return HttpResponse.json({
-        code: -1,
-        message: '用戶名、密碼、驗證碼不能為空',
-        data: null,
-      }, { status: 400 });
-    }
-
-    // 驗證驗證碼
-    const storedCode = captchaStore.get(captchaId);
-    if (!storedCode || storedCode !== verifyCode) {
-      return HttpResponse.json({
-        code: -1,
-        message: '驗證碼錯誤或已過期',
-        data: null,
-      }, { status: 400 });
-    }
-
-    // 簡單的用戶驗證（開發環境）
-    if (username === 'admin' && password === 'a123456') {
-      // 驗證成功後刪除驗證碼
-      captchaStore.delete(captchaId);
-
-      await delay(1000);
-      return HttpResponse.json({
-        code: 200,
-        message: '登入成功',
-        data: {
-          token: `mock-jwt-token-${Math.random().toString(36).substring(7)}`,
-        },
-      });
-    }
-
-    return HttpResponse.json({
-      code: -1,
-      message: '用戶名或密碼錯誤',
-      data: null,
-    }, { status: 401 });
-  }),
+  http.post(serverApi('/auth/login'), loginHandler),
+  http.post('/AdminSystem/api/login', loginHandler),
+  http.post(serverApi('/auth/getUserInfo'), async () => await getUserInfoResponse()),
+  http.post('/AdminSystem/api/getUserInfo', async () => await getUserInfoResponse()),
+  http.post(serverApi('/auth/logout'), async () => await logoutResponse()),
+  http.post('/AdminSystem/api/logout', async () => await logoutResponse()),
+  http.post(serverApi('/auth/getBackendKey'), async () => await backendKeyResponse()),
+  http.post('/AdminSystem/api/getBackendKey', async () => await backendKeyResponse()),
 ];

@@ -2,9 +2,10 @@
 import type { DefaultBodyType, StrictRequest } from 'msw';
 import { ResultEnum } from '@/enums/httpEnum';
 import { uniqueSlash } from '@/utils/urlUtils';
+import { isMockEnabled } from '@/utils/mockSwitch';
 
 // 當 VITE_BASE_API_URL 為空時，使用 '/api' 作為預設值
-const baseApiUrl = import.meta.env.VITE_BASE_API_URL || '/api';
+const baseApiUrl = isMockEnabled ? '/api' : import.meta.env.VITE_BASE_API_URL || '/api';
 
 /**
  * msw 官方不支持配置 baseUrl, 需要自己手动处理
