@@ -1,5 +1,10 @@
 import { request } from '@/utils/request';
 
+/**
+ * =========================================
+ * API Path 定義（新制，未來可切 RESTful）
+ * =========================================
+ */
 const adminAccountCurrencyApi = {
   list: '/api/adminAccount/currency',
   create: '/api/adminAccount/currency',
@@ -7,58 +12,165 @@ const adminAccountCurrencyApi = {
   delete: '/api/adminAccount/currency',
 };
 
+/**
+ * =========================================
+ * 資料型別定義
+ * =========================================
+ */
 export interface CurrencyItem {
   id: number;
-  account: string;
-  currencyName: string;
+  currencyIndex: number;
   currencyCode: string;
-  status: number;
-  orderNo: number;
+  currencyName: string;
+  currencySymbol: string;
   createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 }
 
 export interface CurrencyListResponse {
   items: CurrencyItem[];
   meta: {
     totalItems: number;
-    itemCount: number;
-    itemsPerPage: number;
-    totalPages: number;
-    currentPage: number;
   };
 }
 
-export const listCurrency = (params?: Record<string, unknown>) =>
-  request<CurrencyListResponse>({
-    url: adminAccountCurrencyApi.list,
-    method: 'get',
-    params,
+/**
+ * Vue2 舊 API 使用的 payload
+ */
+export interface ICurrencyPayload {
+  id?: number;
+  currencyName: string;
+  currencySymbol: string;
+  masterAgent?: string;
+}
+
+/**
+ * =========================================
+ * 【主要使用】列表 API（轉換後統一格式）
+ * 對應後端：POST /AdminSystem/api/getCurrencyType
+ * =========================================
+ */
+export const listCurrency = async (
+  params?: { masterAgent?: string }
+): Promise<CurrencyListResponse> => {
+  const res = await request<any>({
+    url: '/AdminSystem/api/getCurrencyType',
+    method: 'post',
+    data: params,
   });
 
-export const createCurrency = (data: Partial<CurrencyItem>) =>
+  /**
+   * 實際後端回傳格式：
+   * {
+   *   data: [{
+   *     list: CurrencyItem[],
+   *     count: number,
+   *     masterAgent,
+   *     masterAgentId
+   *   }]
+   * }
+   */
+  
+  const raw = res?.[0];
+
+  const items =
+    raw?.list?.map((item: CurrencyItem) => ({
+      ...item,
+      masterAgent: raw.masterAgent,
+    })) ?? [];
+
+  return {
+    items,
+    meta: {
+      totalItems: raw?.count ?? 0,
+    },
+  } as CurrencyListResponse;
+};
+
+/**
+ * =========================================
+ * Vue2 舊 API（保留，不動）
+ * =========================================
+ */
+
+// 原：getCurrencyType
+export const getCurrencyType = (data: { masterAgent?: string }) =>
   request({
-    url: adminAccountCurrencyApi.create,
+    url: '/AdminSystem/api/getCurrencyType',
     method: 'post',
     data,
   });
 
-export const updateCurrency = (id: number, data: Partial<CurrencyItem>) =>
+// 原：createCurrencyType
+export const createCurrencyType = (data: ICurrencyPayload) =>
   request({
-    url: `${adminAccountCurrencyApi.update}/${id}`,
-    method: 'put',
+    url: '/AdminSystem/api/createCurrencyType',
+    method: 'post',
     data,
   });
 
-export const deleteCurrency = (id: number) =>
+// 原：updateCurrencyType
+export const updateCurrencyType = (data: {
+  id: number;
+  currencyName: string;
+  currencySymbol: string;
+}) =>
   request({
-    url: `${adminAccountCurrencyApi.delete}/${id}`,
-    method: 'delete',
+    url: '/AdminSystem/api/updateCurrencyType',
+    method: 'post',
+    data,
   });
 
+// 原：deleteCurrencyType
+export const deleteCurrencyType = (data: {
+  id: number;
+  masterAgent: string;
+}) =>
+  request({
+    url: '/AdminSystem/api/deleteCurrencyType',
+    method: 'post',
+    data,
+  });
+
+/**
+ * =========================================
+ * 新制 API（Vue3 / 新頁面建議使用）
+ * ⚠️ 目前後端尚未實作時請勿啟用
+ * =========================================
+ */
+
+// export const createCurrency = (data: Partial<CurrencyItem>) =>
+//   request({
+//     url: adminAccountCurrencyApi.create,
+//     method: 'post',
+//     data,
+//   });
+
+// export const updateCurrency = (id: number, data: Partial<CurrencyItem>) =>
+//   request({
+//     url: `${adminAccountCurrencyApi.update}/${id}`,
+//     method: 'put',
+//     data,
+//   });
+
+// export const deleteCurrency = (id: number) =>
+//   request({
+//     url: `${adminAccountCurrencyApi.delete}/${id}`,
+//     method: 'delete',
+//   });
+
+/**
+ * =========================================
+ * Default export（給 service / composable 用）
+ * =========================================
+ */
 export default {
   list: listCurrency,
-  create: createCurrency,
-  update: updateCurrency,
-  delete: deleteCurrency,
-};
 
+  // Vue2 舊 API
+  getCurrencyType,
+  createCurrencyType,
+  updateCurrencyType,
+  deleteCurrencyType,
+};

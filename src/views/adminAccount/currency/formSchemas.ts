@@ -2,12 +2,19 @@ import type { FormSchema } from '@/components/core/schema-form/';
 
 export const baseSchemas: FormSchema[] = [
   {
-    field: 'account',
+    field: 'masterAgent',
     component: 'Input',
-    label: '帳號',
-    rules: [{ required: true, message: '請輸入帳號' }],
+    label: '總代理',
+    rules: [{ required: true, message: '請輸入總代理' }],
     colProps: { span: 12 },
   },
+  // {
+  //   field: 'account',
+  //   component: 'Input',
+  //   label: '帳號',
+  //   rules: [{ required: false, message: '請輸入帳號' }],
+  //   colProps: { span: 12 },
+  // },
   {
     field: 'currencyCode',
     component: 'Input',

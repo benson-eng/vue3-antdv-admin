@@ -6,6 +6,10 @@ const adminSystemToMockMap: Record<string, string> = {
   '/AdminSystem/api/getUserInfo': '/api/auth/getUserInfo',
   '/AdminSystem/api/logout': '/api/auth/logout',
   '/AdminSystem/api/getBackendKey': '/api/auth/getBackendKey',
+  '/AdminSystem/api/getCurrencyType': '/api/adminAccount/currency',
+  '/AdminSystem/api/createCurrencyType': '/api/adminAccount/currency',
+  '/AdminSystem/api/updateCurrencyType': '/api/adminAccount/currency',
+  '/AdminSystem/api/deleteCurrencyType': '/api/adminAccount/currency',
 };
 
 export const isMockEnabled =

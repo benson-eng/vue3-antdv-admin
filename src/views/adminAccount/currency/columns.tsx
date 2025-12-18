@@ -27,15 +27,25 @@ export const baseColumns: TableColumnItem[] = [
     hideInSearch: true,
   },
   {
-    title: '帳號',
-    dataIndex: 'account',
-    width: 200,
-    sorter: true,
+    title: '總代理',
+    dataIndex: 'masterAgent',
+    width: 180,
     formItemProps: {
       component: 'Input',
+      componentProps: { placeholder: '請輸入總代理' },
       colProps: { span: 6 },
     },
   },
+  // {
+  //   title: '帳號',
+  //   dataIndex: 'account',
+  //   width: 200,
+  //   sorter: true,
+  //   formItemProps: {
+  //     component: 'Input',
+  //     colProps: { span: 6 },
+  //   },
+  // },
   {
     title: '貨幣名稱',
     dataIndex: 'currencyName',
