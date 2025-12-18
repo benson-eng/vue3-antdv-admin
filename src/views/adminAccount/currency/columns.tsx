@@ -8,6 +8,7 @@ export interface TableListItem {
   currencyName: string;
   currencyCode: string;
   currencySymbol: string;
+  currencyIndex?: number;
   createdAt?: string;
 }
 

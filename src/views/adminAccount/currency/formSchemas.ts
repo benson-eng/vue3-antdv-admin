@@ -21,6 +21,13 @@ export const baseSchemas: FormSchema[] = [
     colProps: { span: 12 },
   },
   {
+    field: 'currencyCode',
+    component: 'Input',
+    label: '貨幣代碼',
+    rules: [{ required: true, message: '請輸入貨幣代碼' }],
+    colProps: { span: 12 },
+  },
+  {
     field: 'currencyName',
     component: 'Input',
     label: '貨幣名稱',

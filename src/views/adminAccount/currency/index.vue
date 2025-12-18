@@ -13,7 +13,11 @@
           <!-- 總代理 -->
           <a-col :span="6">
             <a-form-item label="總代理" class="mb-0" :label-col="{ span: 10 }" :wrapper-col="{ span: 14 }">
-              <AdminAccountSelector v-model="searchMasterAgent" valueType="account" />
+              <AdminAccountSelector
+                v-model="searchMasterAgent"
+                valueType="account"
+                @update:selectedAgent="selectedMasterAgentInfo = $event ?? null"
+              />
             </a-form-item>
           </a-col>
 
@@ -64,49 +68,29 @@ import { baseSchemas } from './formSchemas';
 import type { TableColumnItem, TableListItem } from './columns';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import Api from '@/api/backend/adminAccount/currency';
+import type { AdminAccountItem } from '@/api/backend/adminAccount/admin';
 
 defineOptions({ name: 'AdminAccountCurrency' });
 
 type SearchPayload = {
   masterAgent?: string;
-  currencyName?: string;
-  currencyCode?: string;
 };
+type TableListItemWithIndex = TableListItem & { currencyIndex?: number };
 
 const [DynamicTable, tableInstance] = useTable({
   search: true, // 保留搜尋區容器
 });
 const [showModal] = useFormModal();
 const searchMasterAgent = ref<string | undefined>(undefined);
-const searchCurrencyName = ref('');
-const searchCurrencyCode = ref('');
+const selectedMasterAgentInfo = ref<AdminAccountItem | null>(null);
+const nextCurrencyIndex = ref(1);
 
 const getSearchPayload = (): SearchPayload => {
   const payload: SearchPayload = {};
   if (searchMasterAgent.value) {
     payload.masterAgent = searchMasterAgent.value;
   }
-  const currencyName = searchCurrencyName.value.trim();
-  if (currencyName) {
-    payload.currencyName = currencyName;
-  }
-
-  const currencyCode = searchCurrencyCode.value.trim();
-  if (currencyCode) {
-    payload.currencyCode = currencyCode;
-  }
   return payload;
-};
-
-const applySearch = () => {
-  tableInstance?.handleSubmit?.(getSearchPayload());
-};
-
-const resetSearch = () => {
-  searchMasterAgent.value = undefined;
-  searchCurrencyName.value = '';
-  searchCurrencyCode.value = '';
-  tableInstance?.handleSubmit?.({});
 };
 
 /** ✅ 同時保存 selectedRowKeys + selectedRows（關鍵） */
@@ -127,6 +111,12 @@ const loadTableData = async (params: LoadDataParams) => {
     ...getSearchPayload(),
   };
   const data = await Api.list(payload);
+  const items = data?.items ?? [];
+  const maxIndex = items.reduce(
+    (max, item) => Math.max(max, item?.currencyIndex ?? 0),
+    0,
+  );
+  nextCurrencyIndex.value = maxIndex + 1;
 
   rowSelection.value.selectedRowKeys = [];
   rowSelection.value.selectedRows = [];
@@ -134,7 +124,7 @@ const loadTableData = async (params: LoadDataParams) => {
 };
 
 
-const openFormModal = async (record?: Partial<TableListItem>) => {
+const openFormModal = async (record?: Partial<TableListItemWithIndex>) => {
   const isEdit = Boolean(record?.id);
 
   const [formRef] = await showModal({
@@ -146,15 +136,20 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
         if (isEdit && record?.id) {
           await Api.updateCurrencyType({
             id: Number(record.id),
+            currencyCode: values.currencyCode,
             currencyName: values.currencyName,
             currencySymbol: values.currencySymbol,
+            currencyIndex: record.currencyIndex,
           });
           message.success('編輯成功');
         } else {
+          const currencyIndexToUse = record?.currencyIndex ?? nextCurrencyIndex.value;
           await Api.createCurrencyType({
             adminAccountId: values.adminAccountId,
+            currencyCode: values.currencyCode,
             currencyName: values.currencyName,
             currencySymbol: values.currencySymbol,
+            currencyIndex: currencyIndexToUse,
           });
           message.success('新增成功');
         }
@@ -169,6 +164,10 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
 
   if (isEdit && record) {
     formRef?.setFieldsValue(record);
+  } else if (selectedMasterAgentInfo.value) {
+    formRef?.setFieldsValue({
+      adminAccountId: selectedMasterAgentInfo.value.id,
+    });
   }
 };
 

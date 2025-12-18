@@ -10,7 +10,8 @@ const adminAccountCurrencyApi = {
   create: '/api/adminAccount/currency',
   update: '/api/adminAccount/currency',
   delete: '/api/adminAccount/currency',
-};
+} as const;
+void adminAccountCurrencyApi;
 
 /**
  * =========================================
@@ -39,10 +40,11 @@ export interface CurrencyListResponse {
  * Vue2 舊 API 使用的 payload
  */
 export interface ICurrencyPayload {
-  id?: number;
   adminAccountId: number;
+  currencyCode: string;
   currencyName: string;
   currencySymbol: string;
+  currencyIndex?: number;
 }
 
 /**
@@ -114,6 +116,7 @@ export const createCurrencyType = (data: ICurrencyPayload) =>
 // 原：updateCurrencyType
 export const updateCurrencyType = (data: {
   id: number;
+  currencyCode: string;
   currencyName: string;
   currencySymbol: string;
 }) =>
