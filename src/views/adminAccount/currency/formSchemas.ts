@@ -1,24 +1,23 @@
-import type { FormSchema } from '@/components/core/schema-form/';
+// src/views/adminAccount/currency/formSchemas.ts
+import type { FormSchema } from '@/components/core/schema-form';
+import { getMasterAgentList } from '@/api/backend/adminAccount/admin';
 
 export const baseSchemas: FormSchema[] = [
   {
-    field: 'masterAgent',
-    component: 'Input',
+    field: 'adminAccountId',
     label: '總代理',
-    rules: [{ required: true, message: '請輸入總代理' }],
-    colProps: { span: 12 },
-  },
-  // {
-  //   field: 'account',
-  //   component: 'Input',
-  //   label: '帳號',
-  //   rules: [{ required: false, message: '請輸入帳號' }],
-  //   colProps: { span: 12 },
-  // },
-  {
-    field: 'currencyCode',
-    component: 'Input',
-    label: '貨幣代碼',
+    component: 'Select',
+    required: true,
+    componentProps: {
+      placeholder: '請選擇總代理',
+      request: async () => {
+        const list = await getMasterAgentList();
+        return list.map((item) => ({
+          label: item.account,
+          value: item.id,
+        }));
+      },
+    },
     colProps: { span: 12 },
   },
   {
@@ -29,26 +28,9 @@ export const baseSchemas: FormSchema[] = [
     colProps: { span: 12 },
   },
   {
-    field: 'status',
-    component: 'Select',
-    label: '狀態',
-    defaultValue: 1,
-    componentProps: {
-      options: [
-        { label: '啟用', value: 1 },
-        { label: '停用', value: 0 },
-      ],
-    },
-    colProps: { span: 12 },
-  },
-  {
-    field: 'orderNo',
-    component: 'InputNumber',
-    label: '排序',
-    componentProps: {
-      min: 0,
-      placeholder: '數字越小越靠前',
-    },
+    field: 'currencySymbol',
+    component: 'Input',
+    label: '貨幣符號',
     colProps: { span: 12 },
   },
 ];

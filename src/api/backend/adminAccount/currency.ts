@@ -40,9 +40,9 @@ export interface CurrencyListResponse {
  */
 export interface ICurrencyPayload {
   id?: number;
+  adminAccountId: number;
   currencyName: string;
   currencySymbol: string;
-  masterAgent?: string;
 }
 
 /**
@@ -78,6 +78,7 @@ export const listCurrency = async (
     raw?.list?.map((item: CurrencyItem) => ({
       ...item,
       masterAgent: raw.masterAgent,
+      adminAccountId:raw.masterAgentId
     })) ?? [];
 
   return {
