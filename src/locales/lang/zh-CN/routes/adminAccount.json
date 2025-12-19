@@ -1,5 +1,6 @@
 {
   "index": "後台帳戶",
-  "currency": "幣別管理"
+  "currency": "幣別管理",
+  "roles": "權限管理"
 }
 

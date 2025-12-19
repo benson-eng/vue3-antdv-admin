@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:PayCircle-outlined',
         },
       },
+      {
+        path: 'roles',
+        name: 'AdminAccountRoles',
+        component: () => import('@/views/adminAccount/roles/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.roles'),
+          icon: 'ant-design:SafetyCertificate-outlined',
+        },
+      },
     ],
   },
 ];
