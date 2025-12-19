@@ -1,11 +1,11 @@
 import type { FormSchema } from '@/components/core/schema-form';
 import RolesApi from '@/api/backend/adminAccount/roles';
 
-export type ShareholderFormValues = {
+export interface ShareholderFormValues {
   account: string;
   name: string;
   roles: number[];
-};
+}
 
 export const baseSchemas: FormSchema<ShareholderFormValues>[] = [
   {

@@ -1,7 +1,7 @@
 import type { FormSchema } from '@/components/core/schema-form';
 import RolesApi from '@/api/backend/adminAccount/roles';
 
-export type AgentFormValues = {
+export interface AgentFormValues {
   account: string;
   name: string;
   prefix: string;
@@ -10,7 +10,7 @@ export type AgentFormValues = {
   hashKey?: string;
   apiDomain?: string;
   whiteIPList?: string;
-};
+}
 
 export const getAgentSchemas = (opts: { canEditApiSettings: boolean }): FormSchema<AgentFormValues>[] => {
   return [
@@ -105,4 +105,3 @@ export const passwordSchemas: FormSchema[] = [
     },
   },
 ];
-

@@ -1,5 +1,5 @@
-import { Space, Tag } from 'ant-design-vue';
 import type { TableColumn } from '@/components/core/dynamic-table';
+import { Space, Tag } from 'ant-design-vue';
 
 export interface RoleItem {
   id: number;
@@ -36,10 +36,12 @@ export const baseColumns: TableColumnItem[] = [
     hideInSearch: true,
     customRender: ({ record }) => {
       const roles = Array.isArray(record.roles) ? record.roles : [];
-      if (!roles.length) return '-';
+      if (!roles.length) {
+        return '-';
+      }
       return (
         <Space size={4} wrap>
-          {roles.map((r) => (
+          {roles.map(r => (
             <Tag key={r.id} color="blue">
               {r.name}
             </Tag>
