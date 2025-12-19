@@ -3,6 +3,7 @@
   "masterAgent": "Master Agent",
   "masterAgentX": "Master Agent (Game)",
   "currency": "Currency Management",
+  "token": "Token Management",
   "roles": "Roles",
   "shareholder": "Shareholder",
   "machineSettingPublic": "Seat Settings (Shareholder)",

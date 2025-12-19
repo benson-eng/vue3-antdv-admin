@@ -3,6 +3,7 @@
   "masterAgent": "總代理管理",
   "masterAgentX": "總代理管理(遊戲)",
   "currency": "幣別管理",
+  "token": "代幣管理",
   "roles": "權限管理",
   "shareholder": "股東管理",
   "machineSettingPublic": "股東座位設定",

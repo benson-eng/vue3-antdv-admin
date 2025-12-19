@@ -41,6 +41,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'token',
+        name: 'AdminAccountToken',
+        component: () => import('@/views/adminAccount/token/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.token'),
+          icon: 'ant-design:PayCircle-outlined',
+        },
+      },
+      {
         path: 'roles',
         name: 'AdminAccountRoles',
         component: () => import('@/views/adminAccount/roles/index.vue'),
