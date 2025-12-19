@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:Team-outlined',
         },
       },
+      {
+        path: 'machineSettingPublic',
+        name: 'AdminAccountMachineSettingPublic',
+        component: () => import('@/views/adminAccount/machineSettingPublic/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.machineSettingPublic'),
+          icon: 'ant-design:Setting-outlined',
+        },
+      },
     ],
   },
 ];
