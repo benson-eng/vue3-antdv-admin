@@ -5,6 +5,7 @@
   "currency": "幣別管理",
   "token": "代幣管理",
   "roles": "權限管理",
+  "authenticator": "Authenticator管理",
   "shareholder": "股東管理",
   "machineSettingPublic": "股東座位設定",
   "agent": "代理商管理",

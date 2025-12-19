@@ -59,6 +59,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'authenticator',
+        name: 'AdminAccountAuthenticator',
+        component: () => import('@/views/adminAccount/authenticator/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.authenticator'),
+          icon: 'ant-design:SafetyCertificate-outlined',
+        },
+      },
+      {
         path: 'shareholder',
         name: 'AdminAccountShareholder',
         component: () => import('@/views/adminAccount/shareholder/index.vue'),

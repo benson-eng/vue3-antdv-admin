@@ -5,6 +5,7 @@
   "currency": "Currency Management",
   "token": "Token Management",
   "roles": "Roles",
+  "authenticator": "Authenticator",
   "shareholder": "Shareholder",
   "machineSettingPublic": "Seat Settings (Shareholder)",
   "agent": "Agent",
