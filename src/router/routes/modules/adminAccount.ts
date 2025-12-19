@@ -67,9 +67,17 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:Setting-outlined',
         },
       },
+      {
+        path: 'agent',
+        name: 'AdminAccountAgent',
+        component: () => import('@/views/adminAccount/agent/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.agent'),
+          icon: 'ant-design:UserSwitch-outlined',
+        },
+      },
     ],
   },
 ];
 
 export default routes;
-
