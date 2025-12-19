@@ -76,6 +76,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:UserSwitch-outlined',
         },
       },
+      {
+        path: 'agentSettings',
+        name: 'AdminAccountAgentSettings',
+        component: () => import('@/views/adminAccount/agentSettings/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.agentSettings'),
+          icon: 'ant-design:Setting-outlined',
+        },
+      },
     ],
   },
 ];

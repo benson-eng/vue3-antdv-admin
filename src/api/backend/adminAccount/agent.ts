@@ -7,11 +7,11 @@ import { request } from '@/utils/request';
  * =========================================
  */
 
-export type AgentRole = {
+export interface AgentRole {
   id: number;
   key?: string;
   name?: string;
-};
+}
 
 export type AgentItem = Record<string, any> & {
   id: number;
@@ -25,24 +25,26 @@ export type AgentItem = Record<string, any> & {
   lastLoginDatetime?: string;
   lastLoginIP?: string;
 
-  // 合併自 getAgentApiSettings 的欄位（方便列表/編輯）
+  /**
+   * 合併自 getAgentApiSettings 的欄位（方便列表/編輯）
+   */
   website?: string;
   apiDomain?: string;
   whiteIPList?: string;
   hashKey?: string;
 };
 
-export type AgentApiSettings = {
+export interface AgentApiSettings {
   website?: string;
   apiDomain?: string;
   whiteIPList?: string;
   hashKey?: string;
-};
+}
 
-export type AgentApiSettingsItem = {
+export interface AgentApiSettingsItem {
   account: string;
   apiSettings?: AgentApiSettings;
-};
+}
 
 /** 取得指定 MasterAgent 底下的 Agent 清單 */
 export const getAgentListByMasterAgent = (data: { masterAgent: string }) =>
@@ -139,4 +141,3 @@ export default {
   getAgentApiSettings,
   deleteAgentApiSettings,
 };
-

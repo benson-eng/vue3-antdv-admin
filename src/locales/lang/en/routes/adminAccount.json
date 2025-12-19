@@ -6,5 +6,6 @@
   "roles": "Roles",
   "shareholder": "Shareholder",
   "machineSettingPublic": "Seat Settings (Shareholder)",
-  "agent": "Agent"
+  "agent": "Agent",
+  "agentSettings": "Agent Settings"
 }
