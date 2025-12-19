@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:team-outlined',
         },
       },
+      {
+        path: 'memberPersonalInfo',
+        name: 'MemberPersonalInfo',
+        component: () => import('@/views/member/memberPersonalInfo/index.vue'),
+        meta: {
+          title: t('routes.member.memberPersonalInfo'),
+          icon: 'ant-design:idcard-outlined',
+        },
+      },
     ],
   },
 ];

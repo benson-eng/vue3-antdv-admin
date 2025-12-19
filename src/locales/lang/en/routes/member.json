@@ -1,6 +1,7 @@
 {
   "member": "Member Management",
   "data": "Member Data",
+  "memberPersonalInfo": "Member Personal Info",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -87,6 +88,73 @@
         "vip8": "VIP8",
         "normal": "Normal Member"
       }
+    }
+  },
+  "memberPersonalInfoPage": {
+    "title": "Member Personal Info",
+    "featureDeveloping": "Feature under development",
+    "common": {
+      "resetText": "Reset",
+      "queryText": "Query",
+      "unfold": "Unfold",
+      "inputText": "Please enter",
+      "chooseText": "Please select"
+    },
+    "component": {
+      "form": {
+        "putAway": "Collapse",
+        "unfold": "Unfold"
+      },
+      "table": {
+        "total": "Total {total} items"
+      }
+    },
+    "filters": {
+      "masterAgent": "Master Agent",
+      "agent": "Agent",
+      "member": "Member",
+      "dateType": "Date Type",
+      "dateTypeCreatedAt": "Register Time",
+      "dateTypeLastLoginTime": "Last Login Time",
+      "masterAgentRequired": "Please select master agent first",
+      "agentRequired": "Please select master agent/agent first",
+      "quick": {
+        "yesterday": "Yesterday",
+        "today": "Today",
+        "thisWeek": "This Week",
+        "lastWeek": "Last Week",
+        "thisMonth": "This Month",
+        "lastMonth": "Last Month"
+      }
+    },
+    "columns": {
+      "accountID": "Account ID",
+      "account": "Member Account",
+      "inputAccount": "Enter member account",
+      "dateType": "Date Type",
+      "dateTypeRegisterTime": "Register Time",
+      "dateTypeLastLoginTime": "Last Login Time",
+      "dateRange": "Date Range",
+      "startTime": "Start Time",
+      "endTime": "End Time",
+      "nickName": "Nickname",
+      "status": "Status",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled",
+      "all": "All",
+      "pleaseSelect": "Please Select",
+      "email": "Email",
+      "phoneNumber": "Phone",
+      "authProvider": "Auth Provider",
+      "birthday": "Birthday",
+      "registerTime": "Register Time",
+      "lastLoginTime": "Last Login Time",
+      "lastLoginIP": "Last Login IP",
+      "lastLoginIp": "Last Login IP",
+      "operation": "Operation",
+      "viewVipRecord": "VIP Records",
+      "viewPack": "Pack",
+      "viewWallet": "Wallet"
     }
   }
 }
