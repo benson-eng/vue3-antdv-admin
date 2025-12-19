@@ -30,6 +30,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:SafetyCertificate-outlined',
         },
       },
+      {
+        path: 'shareholder',
+        name: 'AdminAccountShareholder',
+        component: () => import('@/views/adminAccount/shareholder/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.shareholder'),
+          icon: 'ant-design:Team-outlined',
+        },
+      },
     ],
   },
 ];

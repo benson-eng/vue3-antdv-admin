@@ -1,6 +1,7 @@
 {
   "index": "Admin Account",
   "currency": "Currency Management",
-  "roles": "Roles"
+  "roles": "Roles",
+  "shareholder": "Shareholder"
 }
 

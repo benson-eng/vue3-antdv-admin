@@ -1,6 +1,7 @@
 {
   "index": "後台帳戶",
   "currency": "幣別管理",
-  "roles": "權限管理"
+  "roles": "權限管理",
+  "shareholder": "股東管理"
 }
 
