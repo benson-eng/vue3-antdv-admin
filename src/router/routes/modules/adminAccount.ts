@@ -13,6 +13,25 @@ const routes: RouteRecordRaw[] = [
     },
     children: [
       {
+        path: 'masterAgent',
+        name: 'AdminAccountMasterAgent',
+        component: () => import('@/views/adminAccount/masterAgent/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.masterAgent'),
+          icon: 'ant-design:UserSwitch-outlined',
+        },
+      },
+      {
+        // Vue2 既有：總代理管理(遊戲) masterAgentX（同頁但隱藏部分設定）
+        path: 'masterAgentX',
+        name: 'AdminAccountMasterAgentX',
+        component: () => import('@/views/adminAccount/masterAgent/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.masterAgentX'),
+          icon: 'ant-design:UserSwitch-outlined',
+        },
+      },
+      {
         path: 'currency',
         name: 'AdminAccountCurrency',
         component: () => import('@/views/adminAccount/currency/index.vue'),

@@ -1,5 +1,7 @@
 {
   "index": "Admin Account",
+  "masterAgent": "Master Agent",
+  "masterAgentX": "Master Agent (Game)",
   "currency": "Currency Management",
   "roles": "Roles",
   "shareholder": "Shareholder",
