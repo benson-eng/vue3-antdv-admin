@@ -15,4 +15,3 @@ export const getGlobalMaintainStatus = () =>
 export default {
   getGlobalMaintainStatus,
 };
-

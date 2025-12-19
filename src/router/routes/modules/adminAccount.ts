@@ -85,6 +85,24 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:Setting-outlined',
         },
       },
+      {
+        path: 'subaccount',
+        name: 'AdminAccountSubaccount',
+        component: () => import('@/views/adminAccount/subaccount/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.subaccount'),
+          icon: 'ant-design:User-outlined',
+        },
+      },
+      {
+        path: 'subaccountChildren',
+        name: 'AdminAccountSubaccountChildren',
+        component: () => import('@/views/adminAccount/subaccountChildren/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.subaccountChildren'),
+          icon: 'ant-design:User-outlined',
+        },
+      },
     ],
   },
 ];

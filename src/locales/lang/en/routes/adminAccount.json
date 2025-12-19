@@ -7,5 +7,7 @@
   "shareholder": "Shareholder",
   "machineSettingPublic": "Seat Settings (Shareholder)",
   "agent": "Agent",
-  "agentSettings": "Agent Settings"
+  "agentSettings": "Agent Settings",
+  "subaccount": "Subaccount",
+  "subaccountChildren": "Subaccount (Children)"
 }

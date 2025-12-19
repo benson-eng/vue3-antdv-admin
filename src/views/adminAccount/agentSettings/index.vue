@@ -78,7 +78,7 @@ const syncDiffFlags = () => {
   checkData.value.forEach((b) => {
     baseMap[b.name] = b;
   });
-  configSettingForm.value = configSettingForm.value.map(row => {
+  configSettingForm.value = configSettingForm.value.map((row) => {
     const base = baseMap[row.name];
     const changed = !base || base.value !== row.value;
     return { ...row, diff: Boolean(row.missing || changed) };

@@ -33,4 +33,3 @@ export default {
   getConfig2SettingAction,
   setConfig2Setting,
 };
-
