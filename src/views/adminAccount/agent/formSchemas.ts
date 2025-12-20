@@ -105,3 +105,4 @@ export const passwordSchemas: FormSchema[] = [
     },
   },
 ];
+

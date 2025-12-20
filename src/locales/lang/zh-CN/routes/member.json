@@ -2,6 +2,7 @@
   "member": "會員管理",
   "data": "會員資料",
   "memberPersonalInfo": "會員個資管理",
+  "vipSetting": "VIP特權設定",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",

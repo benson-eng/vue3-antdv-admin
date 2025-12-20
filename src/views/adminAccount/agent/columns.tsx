@@ -86,3 +86,4 @@ export const baseColumns: TableColumnItem[] = [
     customRender: ({ record }) => record.lastLoginIP || '-',
   },
 ];
+

@@ -92,3 +92,4 @@ export const queryAccountPersonalInfo = (params: QueryAccountPersonalInfoParams)
     },
     timeout: 0,
   });
+

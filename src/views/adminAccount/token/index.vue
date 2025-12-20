@@ -1,50 +1,17 @@
-<template>
-  <a-result v-if="!hasPermission" status="403" title="權限不足" sub-title="您的帳號等級無法使用此功能" />
-
-  <DynamicTable
-    v-else
-    row-key="id"
-    header-title="代幣管理"
-    :data-request="loadTableData"
-    :columns="columns"
-    :row-selection="rowSelection"
-    :form-props="{ schemas: [] }"
-  >
-    <template #form-formHeader>
-      <a-col :span="24">
-        <a-row :gutter="16" align="middle">
-          <!-- 總代理 -->
-          <a-col :span="6">
-            <a-form-item label="總代理" class="mb-0" :label-col="{ span: 10 }" :wrapper-col="{ span: 14 }">
-              <AdminAccountSelector v-model="searchMasterAgent" valueType="account" />
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-col>
-    </template>
-
-    <template #toolbar>
-      <a-space>
-        <a-button type="primary" @click="openFormModal()">新增</a-button>
-        <a-button type="default" :disabled="!hasSelected" @click="delRowsConfirm">批量刪除</a-button>
-      </a-space>
-    </template>
-  </DynamicTable>
-</template>
-
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { Modal, message } from 'ant-design-vue';
 import type { UploadFile } from 'ant-design-vue';
-import { useTable } from '@/components/core/dynamic-table';
+import type { TableColumnItem, TableListItem } from './columns';
+import type { TokenFormValues } from './formSchemas';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal } from 'ant-design-vue';
+import { computed, ref } from 'vue';
+import Api, { TokenType } from '@/api/backend/adminAccount/token';
+import { useTable } from '@/components/core/dynamic-table';
 import { useFormModal } from '@/hooks/useModal';
 import { useUserStore } from '@/store/modules/user';
-import Api, { TokenType } from '@/api/backend/adminAccount/token';
-import { baseColumns } from './columns';
-import type { TableColumnItem, TableListItem } from './columns';
-import { getTokenIconUrl } from './columns';
-import { getTokenSchemas, TransactionLimitType, type TokenFormValues } from './formSchemas';
+
+import { baseColumns, getTokenIconUrl } from './columns';
+import { getTokenSchemas, TransactionLimitType } from './formSchemas';
 
 defineOptions({ name: 'AdminAccountToken' });
 
@@ -104,8 +71,8 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
           throw new Error('請上傳代幣圖示');
         }
 
-        const transactionLimit =
-          values.transactionLimitType === TransactionLimitType.CanGift
+        const transactionLimit
+          = values.transactionLimitType === TransactionLimitType.CanGift
             ? Number(values.transactionLimit ?? 0)
             : 0;
 
@@ -123,7 +90,8 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
             iconFile: pickIconFile(iconFileList),
           });
           message.success('編輯成功');
-        } else {
+        }
+        else {
           const file = pickIconFile(iconFileList);
           if (!file) {
             // 未選新檔（只會是 url 預覽）→ 新增不允許
@@ -172,7 +140,8 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
       transactionLimit: record.transactionLimit ?? 0,
       iconFileList,
     });
-  } else {
+  }
+  else {
     // 預設帶入搜尋區已選的 masterAgent
     if (searchMasterAgent.value) {
       formRef?.setFieldsValue({ masterAgent: searchMasterAgent.value });
@@ -198,7 +167,7 @@ const delRowConfirm = async (record: TableListItem) => {
 /** ✅ 批量刪除：逐筆刪 */
 const delRowsConfirm = () => {
   const rows = rowSelection.value.selectedRows;
-  if (!rows.length) return;
+  if (!rows.length) { return; }
   Modal.confirm({
     title: '確認刪除',
     content: `將逐筆刪除 ${rows.length} 筆，是否繼續？`,
@@ -245,3 +214,40 @@ const columns = ref<TableColumnItem[]>([
 ]);
 </script>
 
+<template>
+  <a-result v-if="!hasPermission" status="403" title="權限不足" sub-title="您的帳號等級無法使用此功能" />
+
+  <DynamicTable
+    v-else
+    row-key="id"
+    header-title="代幣管理"
+    :data-request="loadTableData"
+    :columns="columns"
+    :row-selection="rowSelection"
+    :form-props="{ schemas: [] }"
+  >
+    <template #form-formHeader>
+      <a-col :span="24">
+        <a-row :gutter="16" align="middle">
+          <!-- 總代理 -->
+          <a-col :span="6">
+            <a-form-item label="總代理" class="mb-0" :label-col="{ span: 10 }" :wrapper-col="{ span: 14 }">
+              <AdminAccountSelector v-model="searchMasterAgent" value-type="account" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-col>
+    </template>
+
+    <template #toolbar>
+      <a-space>
+        <a-button type="primary" @click="openFormModal()">
+          新增
+        </a-button>
+        <a-button type="default" :disabled="!hasSelected" @click="delRowsConfirm">
+          批量刪除
+        </a-button>
+      </a-space>
+    </template>
+  </DynamicTable>
+</template>

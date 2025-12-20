@@ -30,6 +30,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:idcard-outlined',
         },
       },
+      {
+        path: 'vipSetting',
+        name: 'MemberVipSetting',
+        component: () => import('@/views/member/vipSetting2/index.vue'),
+        meta: {
+          title: t('routes.member.vipSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

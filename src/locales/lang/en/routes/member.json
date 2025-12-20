@@ -2,6 +2,7 @@
   "member": "Member Management",
   "data": "Member Data",
   "memberPersonalInfo": "Member Personal Info",
+  "vipSetting": "VIP Setting",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
