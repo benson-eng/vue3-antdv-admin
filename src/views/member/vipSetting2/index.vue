@@ -11,6 +11,7 @@ import VipApi from '@/api/backend/member/vipServer';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { getBaseName, isDistributionPlatform } from '@/utils/platform';
 
 defineOptions({ name: 'MemberVipSetting2' });
 
@@ -19,6 +20,21 @@ const userStore = useUserStore();
 const hasPermission = computed(() => userStore.level < 4);
 const isMasterAgentDisabled = computed(() => userStore.level >= 4);
 const canEdit = computed(() => userStore.level < 3);
+const isSuperAdmin = computed(() => userStore.level === 1);
+
+const baseName = computed(() => getBaseName());
+const isDistribution = computed(() => isDistributionPlatform());
+
+// Vue2 vipSetting2 的站台限制清單（影響欄位顯示/label）
+const restrictedBaseNameSet = new Set(['mabu77com', 'jhytw', 'luck-999com', 'ambmhcom', 'ww688bet']);
+const isRestrictedBaseName = computed(() => restrictedBaseNameSet.has(baseName.value));
+
+// Vue2: (not in list) && !distribution  || authLevel===1
+const canShowLevelLimitAndBadge = computed(() => (!isRestrictedBaseName.value && !isDistribution.value) || isSuperAdmin.value);
+const canShowPrivateTeamFields = computed(() => (!isRestrictedBaseName.value && !isDistribution.value) || isSuperAdmin.value);
+const canShowGuildFields = computed(() => !isDistribution.value || isSuperAdmin.value);
+
+const sendItemCountLabel = computed(() => (isRestrictedBaseName.value ? '贈禮次數' : '贈禮(道具) 次數'));
 
 const { t } = useI18n();
 const pageTitle = computed(() => t('routes.member.vipSetting'));
@@ -94,17 +110,23 @@ const rebuildColumns = () => {
     { title: '名稱', dataIndex: 'name', width: 140, align: 'center' },
   ];
 
-  const extra = vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3
-    ? ([
-        { title: '累積押注', dataIndex: 'totalBet', width: 140, align: 'center' },
-        { title: '等級限制', dataIndex: 'levelLimit', width: 140, align: 'center' },
-        { title: '勳章欄位', dataIndex: 'badgeSlotCount', width: 120, align: 'center' },
-        { title: '贈禮', dataIndex: 'sendGiftText', width: 140, align: 'center' },
-        { title: '收禮', dataIndex: 'receiveGiftText', width: 140, align: 'center' },
-        { title: '手續費', dataIndex: 'tipText', width: 140, align: 'center' },
-        { title: '會員期限', dataIndex: 'vipLimitText', width: 140, align: 'center' },
-      ] as any[])
-    : [];
+  let extra: any[] = [];
+  if (vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3) {
+    extra = [
+      { title: '累積押注', dataIndex: 'totalBet', width: 140, align: 'center' },
+      { title: '等級限制', dataIndex: 'levelLimit', width: 140, align: 'center' },
+      { title: '勳章欄位', dataIndex: 'badgeSlotCount', width: 120, align: 'center' },
+      { title: '贈禮', dataIndex: 'sendGiftText', width: 140, align: 'center' },
+      { title: '收禮', dataIndex: 'receiveGiftText', width: 140, align: 'center' },
+      { title: '手續費', dataIndex: 'tipText', width: 140, align: 'center' },
+      { title: '會員期限', dataIndex: 'vipLimitText', width: 140, align: 'center' },
+    ];
+
+    // Vue2: distribution 平台且非超管，列表不顯示 levelLimit / badgeSlotCount
+    if (isDistribution.value && userStore.level > 1) {
+      extra = extra.filter(c => c.dataIndex !== 'levelLimit' && c.dataIndex !== 'badgeSlotCount');
+    }
+  }
 
   const action = [
     {
@@ -127,7 +149,7 @@ const rebuildColumns = () => {
   columns.value = [...base, ...extra, ...action];
 };
 
-watch(vipDowngradeFormula, rebuildColumns, { immediate: true });
+watch([vipDowngradeFormula, isDistribution], rebuildColumns, { immediate: true });
 
 const loadTableData = async (_params: LoadDataParams) => {
   if (!masterAgent.value) {
@@ -211,8 +233,8 @@ interface FormState {
   sendItemCount: number;
   sendGiftMode: SendGiftMode;
   sendGift: number;
-  transactionMinLevelLimit: number;
-  transactionReservedBalance: number;
+  transactionMinLevelLimit: number | undefined;
+  transactionReservedBalance: number | undefined;
   tipType: -1 | 0 | 1;
   tip: number;
   receiveGift: 0 | 1;
@@ -236,8 +258,8 @@ const defaultFormState = (): FormState => ({
   sendItemCount: 1,
   sendGiftMode: 'not',
   sendGift: 1,
-  transactionMinLevelLimit: 0,
-  transactionReservedBalance: 0,
+  transactionMinLevelLimit: -1,
+  transactionReservedBalance: -1,
   tipType: -1,
   tip: 1,
   receiveGift: 0,
@@ -259,6 +281,25 @@ const existingExtraMap = ref<Record<string, VipExtraSetting>>({});
 
 const modalTitle = computed(() => (modalMode.value === 'add' ? '新增 VIP' : '編輯 VIP'));
 const isVipLevelDisabled = computed(() => userStore.level >= 3 || modalMode.value === 'edit');
+
+const showExtraBlock = computed(() => vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3);
+const showTransactionMinLevelLimit = computed(() => {
+  // Vue2: (vipDowngradeFormula===2||3) && sendGift!=not && (not in list) && !distribution || superAdmin
+  if (!showExtraBlock.value) {
+    return false;
+  }
+  if (form.sendGiftMode === 'not') {
+    return false;
+  }
+  return canShowLevelLimitAndBadge.value;
+});
+const showTransactionReservedBalance = computed(() => {
+  // Vue2: (vipDowngradeFormula===2||3) && sendGift!=not
+  if (!showExtraBlock.value) {
+    return false;
+  }
+  return form.sendGiftMode !== 'not';
+});
 
 const isInt = (v: any) => Number.isInteger(Number(v));
 const rules: Record<string, Rule[]> = {
@@ -332,10 +373,18 @@ const rules: Record<string, Rule[]> = {
   }],
   transactionMinLevelLimit: [{
     validator: async () => {
-      if (!(vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3)) {
+      if (!showExtraBlock.value) {
         return;
       }
-      if (form.sendGiftMode !== 'not' && (!isInt(form.transactionMinLevelLimit) || Number(form.transactionMinLevelLimit) < 0)) {
+      // Vue2：此欄位在特定站台 / distribution 平台會被隱藏，因此僅在顯示時才要求輸入
+      if (!showTransactionMinLevelLimit.value) {
+        return;
+      }
+      const v = form.transactionMinLevelLimit;
+      if (v === undefined) {
+        throw new Error('請輸入大於等於 0 的整數');
+      }
+      if (!isInt(v) || Number(v) < 0) {
         throw new Error('請輸入大於等於 0 的整數');
       }
     },
@@ -343,10 +392,18 @@ const rules: Record<string, Rule[]> = {
   }],
   transactionReservedBalance: [{
     validator: async () => {
-      if (!(vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3)) {
+      if (!showExtraBlock.value) {
         return;
       }
-      if (form.sendGiftMode !== 'not' && (!isInt(form.transactionReservedBalance) || Number(form.transactionReservedBalance) < 0)) {
+      // Vue2：sendGift!=not 時必填（不受 BaseName / distribution 影響）
+      if (form.sendGiftMode === 'not') {
+        return;
+      }
+      const v = form.transactionReservedBalance;
+      if (v === undefined) {
+        throw new Error('請輸入大於等於 0 的整數');
+      }
+      if (!isInt(v) || Number(v) < 0) {
         throw new Error('請輸入大於等於 0 的整數');
       }
     },
@@ -405,8 +462,17 @@ const syncSendGiftRelated = () => {
   if (form.sendGiftMode === 'not') {
     // 對齊 Vue2：不可贈禮時，關閉相關欄位
     form.tipType = -1;
-    form.transactionMinLevelLimit = 0;
-    form.transactionReservedBalance = 0;
+    form.transactionMinLevelLimit = -1;
+    form.transactionReservedBalance = -1;
+  }
+  else {
+    // 對齊 Vue2：可贈禮時，若原本為 -1 則清空，讓使用者輸入（若欄位被隱藏，會在送出時依規則處理）
+    if (Number(form.transactionMinLevelLimit) < 0) {
+      form.transactionMinLevelLimit = undefined;
+    }
+    if (Number(form.transactionReservedBalance) < 0) {
+      form.transactionReservedBalance = undefined;
+    }
   }
   if (form.sendGiftMode === 'unlimited') {
     // 不需要額度
@@ -426,7 +492,7 @@ const syncTipRelated = () => {
 };
 
 const buildExtraSettings = (vipSettingId: number, withIds = false) => {
-  if (!(vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3)) {
+  if (!showExtraBlock.value) {
     return [] as VipExtraSetting[];
   }
 
@@ -445,14 +511,38 @@ const buildExtraSettings = (vipSettingId: number, withIds = false) => {
         : Number(form.tip || 0);
   const sendItemCountValue = form.sendItemCountMode === 'unlimited' ? -1 : Number(form.sendItemCount || 0);
 
-  const base: Array<Omit<VipExtraSetting, 'id'>> = [
+  // 對齊 Vue2：transactionMinLevelLimit 在特定 BaseName / distribution 平台會被隱藏，值可能被排除
+  let transactionMinLevelLimitValue: number | undefined;
+  if (form.sendGiftMode === 'not') {
+    transactionMinLevelLimitValue = -1;
+  }
+  else if (showTransactionMinLevelLimit.value) {
+    transactionMinLevelLimitValue = Number(form.transactionMinLevelLimit ?? 0);
+  }
+  else if (isRestrictedBaseName.value) {
+    // Vue2: 特定站台若無輸入，預設 1
+    transactionMinLevelLimitValue = 1;
+  }
+  else if (isDistribution.value && !isSuperAdmin.value) {
+    // Vue2: distribution 平台(非超管)時欄位不顯示，可能不送此 extraSetting
+    transactionMinLevelLimitValue = undefined;
+  }
+  else {
+    transactionMinLevelLimitValue = Number(form.transactionMinLevelLimit ?? 0);
+  }
+
+  const transactionReservedBalanceValue = form.sendGiftMode === 'not'
+    ? -1
+    : Number(form.transactionReservedBalance ?? 0);
+
+  const base: Array<{ vipSettingId: number; name: string; type: string; value: any }> = [
     { vipSettingId, name: 'totalBet', type: 'normal', value: String(Number(form.totalBet ?? 0)) },
     { vipSettingId, name: 'levelLimit', type: 'normal', value: String(Number(form.levelLimit ?? 1)) },
     { vipSettingId, name: 'badgeSlotCount', type: 'normal', value: String(Number(form.badgeSlotCount ?? 3)) },
     { vipSettingId, name: 'sendItemCount', type: 'normal', value: String(Number(sendItemCountValue)) },
     { vipSettingId, name: 'sendGift', type: 'normal', value: String(Number(sendGiftValue)) },
-    { vipSettingId, name: 'transactionMinLevelLimit', type: 'normal', value: String(Number(form.sendGiftMode === 'not' ? -1 : form.transactionMinLevelLimit ?? 0)) },
-    { vipSettingId, name: 'transactionReservedBalance', type: 'normal', value: String(Number(form.sendGiftMode === 'not' ? -1 : form.transactionReservedBalance ?? 0)) },
+    { vipSettingId, name: 'transactionMinLevelLimit', type: 'normal', value: transactionMinLevelLimitValue === undefined ? undefined : String(Number(transactionMinLevelLimitValue)) },
+    { vipSettingId, name: 'transactionReservedBalance', type: 'normal', value: String(Number(transactionReservedBalanceValue)) },
     { vipSettingId, name: 'tip', type: 'normal', value: String(Number(tipValue)) },
     { vipSettingId, name: 'receiveGift', type: 'normal', value: String(Number(form.receiveGift ?? 0)) },
     { vipSettingId, name: 'vipLimit', type: 'normal', value: String(Number(form.vipLimit ?? 0)) },
@@ -463,11 +553,13 @@ const buildExtraSettings = (vipSettingId: number, withIds = false) => {
     { vipSettingId, name: 'isCanCreateGuild', type: 'normal', value: String(Number(form.isCanCreateGuild ?? 0)) },
   ];
 
+  const baseFiltered = base.filter(i => i.value !== undefined && i.value !== '');
+
   if (!withIds) {
-    return base as VipExtraSetting[];
+    return baseFiltered as VipExtraSetting[];
   }
 
-  return base.map((item) => {
+  return baseFiltered.map((item) => {
     const exist = existingExtraMap.value[item.name];
     return exist?.id ? ({ ...item, id: exist.id } as VipExtraSetting) : (item as VipExtraSetting);
   });
@@ -700,7 +792,7 @@ const handleSubmit = async () => {
 
     <template #toolbar>
       <a-space>
-        <a-button type="primary" :disabled="!masterAgent" @click="openCreate">
+        <a-button type="primary" :disabled="!masterAgent || !canEdit" @click="openCreate">
           新增
         </a-button>
       </a-space>
@@ -732,22 +824,22 @@ const handleSubmit = async () => {
         <a-input-number v-model:value="form.levelUpNeedPoint" style="width: 100%" :controls="false" />
       </a-form-item>
 
-      <template v-if="vipDowngradeFormula === 2 || vipDowngradeFormula === 3">
+      <template v-if="showExtraBlock">
         <a-divider>Extra Settings</a-divider>
 
         <a-form-item label="升級累積押注" name="totalBet" :rules="rules.totalBet">
           <a-input-number v-model:value="form.totalBet" style="width: 100%" :min="0" :controls="false" />
         </a-form-item>
 
-        <a-form-item label="升級等級限制" name="levelLimit" :rules="rules.levelLimit">
+        <a-form-item v-if="canShowLevelLimitAndBadge" label="升級等級限制" name="levelLimit" :rules="rules.levelLimit">
           <a-input-number v-model:value="form.levelLimit" style="width: 100%" :min="1" :controls="false" />
         </a-form-item>
 
-        <a-form-item label="勳章欄位(格)" name="badgeSlotCount">
+        <a-form-item v-if="canShowLevelLimitAndBadge" label="勳章欄位(格)" name="badgeSlotCount">
           <a-input-number v-model:value="form.badgeSlotCount" style="width: 100%" :controls="false" disabled />
         </a-form-item>
 
-        <a-form-item label="贈禮(道具) 次數" name="sendItemCount" :rules="rules.sendItemCount">
+        <a-form-item :label="sendItemCountLabel" name="sendItemCount" :rules="rules.sendItemCount">
           <a-space direction="vertical" style="width: 100%">
             <a-radio-group v-model:value="form.sendItemCountMode">
               <a-radio value="unlimited">
@@ -791,6 +883,7 @@ const handleSubmit = async () => {
         </a-form-item>
 
         <a-form-item
+          v-if="showTransactionMinLevelLimit"
           label="贈禮等級限制"
           name="transactionMinLevelLimit"
           :rules="rules.transactionMinLevelLimit"
@@ -800,11 +893,11 @@ const handleSubmit = async () => {
             style="width: 100%"
             :min="0"
             :controls="false"
-            :disabled="form.sendGiftMode === 'not'"
           />
         </a-form-item>
 
         <a-form-item
+          v-if="showTransactionReservedBalance"
           label="贈禮保留額度"
           name="transactionReservedBalance"
           :rules="rules.transactionReservedBalance"
@@ -814,7 +907,6 @@ const handleSubmit = async () => {
             style="width: 100%"
             :min="0"
             :controls="false"
-            :disabled="form.sendGiftMode === 'not'"
           />
         </a-form-item>
 
@@ -853,15 +945,15 @@ const handleSubmit = async () => {
           </a-radio-group>
         </a-form-item>
 
-        <a-form-item label="私群建立上限" name="privateTeamCreateCounts" :rules="rules.privateTeamCreateCounts">
+        <a-form-item v-if="canShowPrivateTeamFields" label="私群建立上限" name="privateTeamCreateCounts" :rules="rules.privateTeamCreateCounts">
           <a-input-number v-model:value="form.privateTeamCreateCounts" style="width: 100%" :min="0" :controls="false" />
         </a-form-item>
 
-        <a-form-item label="私群加入上限" name="privateTeamJoinCounts" :rules="rules.privateTeamJoinCounts">
+        <a-form-item v-if="canShowPrivateTeamFields" label="私群加入上限" name="privateTeamJoinCounts" :rules="rules.privateTeamJoinCounts">
           <a-input-number v-model:value="form.privateTeamJoinCounts" style="width: 100%" :min="0" :controls="false" />
         </a-form-item>
 
-        <a-form-item label="保留座時間" name="seatKeepTime" :rules="rules.seatKeepTime">
+        <a-form-item v-if="canShowPrivateTeamFields" label="保留座時間" name="seatKeepTime" :rules="rules.seatKeepTime">
           <a-input-number v-model:value="form.seatKeepTime" style="width: 100%" :min="0" :controls="false" />
         </a-form-item>
 
@@ -876,7 +968,7 @@ const handleSubmit = async () => {
           </a-radio-group>
         </a-form-item>
 
-        <a-form-item label="加入公會" name="isCanJoinGuild">
+        <a-form-item v-if="canShowGuildFields" label="加入公會" name="isCanJoinGuild">
           <a-radio-group v-model:value="form.isCanJoinGuild">
             <a-radio :value="1">
               可加入
@@ -887,7 +979,7 @@ const handleSubmit = async () => {
           </a-radio-group>
         </a-form-item>
 
-        <a-form-item label="創建公會" name="isCanCreateGuild">
+        <a-form-item v-if="canShowGuildFields" label="創建公會" name="isCanCreateGuild">
           <a-radio-group v-model:value="form.isCanCreateGuild">
             <a-radio :value="1">
               可創建

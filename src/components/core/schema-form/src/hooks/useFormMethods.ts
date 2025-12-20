@@ -1,5 +1,5 @@
 import { toRaw, unref } from 'vue';
-import { set, unset, isNil, uniqBy } from 'lodash-es';
+import { cloneDeep, set, unset, isNil, uniqBy } from 'lodash-es';
 import dayjs from 'dayjs';
 import { dateItemType, handleInputNumberValue } from '../helper';
 import type { SchemaFormEmitFn, SchemaFormProps } from '../schema-form';

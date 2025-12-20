@@ -19,6 +19,8 @@ interface ImportMetaEnv {
   readonly VITE_APP_BASE_API?: string;
   /** 從 Vue 2 專案整合：CDN 基礎 URL */
   readonly VITE_APP_CDN_BASE_URL?: string;
+  /** 從 Vue 2 專案整合：平台標記（例如 distribution） */
+  readonly VITE_APP_PLATFORM?: string;
   /** 是否在生產環境啟用 mock */
   readonly VITE_MOCK_IN_PROD?: string;
   /** 是否移除 console */
