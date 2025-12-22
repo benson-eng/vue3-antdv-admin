@@ -57,6 +57,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'IdentityMemberSetting',
+        name: 'IdentityMemberSetting',
+        component: () => import('@/views/member/identityMemberSetting/index.vue'),
+        meta: {
+          title: t('routes.member.identityMemberSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

@@ -1,31 +1,38 @@
 <script setup lang="ts">
+import type { MemberIdentityItem } from '@/api/backend/activitySystem';
 import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
-import type { FixedVipMemberInfo, VipSetting } from '@/api/backend/member/vipServer';
 import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-table';
 
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import { computed, onMounted, ref, watch } from 'vue';
-import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
-import VipApi from '@/api/backend/member/vipServer';
+import {
+  getMemberActivity,
+  IdentityType,
 
+  queryMemberIdentities,
+  removeMemberIdentity,
+  setMemberIdentity,
+} from '@/api/backend/activitySystem';
+import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
+
 import { useTable } from '@/components/core/dynamic-table';
+
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
 
 defineOptions({
-  name: 'FixedVipMemberSetting',
+  name: 'IdentityMemberSetting',
 });
 
-const i18n = useI18n('routes.member.fixedVipMemberSettingPage');
+const i18n = useI18n('routes.member.identityMemberSettingPage');
 const t = i18n.t;
 const userStore = useUserStore();
 
 const masterAgent = ref<string>('');
 const tableLoading = ref(false);
-const currentList = ref<FixedVipMemberInfo[]>([]);
-const vipList = ref<VipSetting[]>([]);
+const currentList = ref<MemberIdentityItem[]>([]);
 
 const [DynamicTable, tableInstance] = useTable({
   search: false,
@@ -33,25 +40,26 @@ const [DynamicTable, tableInstance] = useTable({
 
 const unselectableSet = computed(() => new Set(currentList.value.map(i => String(i.memberID ?? ''))));
 
-const vipMap = computed(() => {
-  const m = new Map<number, string>();
-  (vipList.value || []).forEach(v => m.set(Number(v.vipLevel), v.name));
-  return m;
-});
+const identityOptions = computed(() => [
+  { label: t('identityTypes.fraudulentOrRefund'), value: IdentityType.FRAUDULENT_OR_REFUND },
+  { label: t('identityTypes.lowCredibility'), value: IdentityType.LOW_CREDIBILITY },
+]);
 
-const vipOptions = computed(() => (vipList.value || []).map(v => ({ label: v.name, value: Number(v.vipLevel) })));
-
-const formatVipName = (vipLevel: unknown) => {
-  const n = Number(vipLevel);
-  if (!Number.isFinite(n)) {
-    return '';
+const formatIdentityLabel = (identity: unknown) => {
+  const n = Number(identity);
+  if (n === IdentityType.FRAUDULENT_OR_REFUND) {
+    return t('identityTypes.fraudulentOrRefund');
   }
-  return vipMap.value.get(n) || String(vipLevel ?? '');
+  if (n === IdentityType.LOW_CREDIBILITY) {
+    return t('identityTypes.lowCredibility');
+  }
+  return String(identity ?? '');
 };
 
-const form = ref<{ memberID: string; vip: number | undefined }>({
+const form = ref<{ memberID: string; identity: IdentityType | undefined; nowIdentityLabel: string }>({
   memberID: '',
-  vip: undefined,
+  identity: IdentityType.FRAUDULENT_OR_REFUND,
+  nowIdentityLabel: '',
 });
 
 // =========================
@@ -133,15 +141,6 @@ const onMemberPopupScroll = async (e: UIEvent) => {
 // Table + CRUD
 // =========================
 
-const fetchVipList = async () => {
-  if (!masterAgent.value) {
-    vipList.value = [];
-    return;
-  }
-  const list = await VipApi.listByMasterAgent({ masterAgent: masterAgent.value });
-  vipList.value = Array.isArray(list) ? list : [];
-};
-
 const loadTableData = async (_params: LoadDataParams) => {
   if (!masterAgent.value) {
     currentList.value = [];
@@ -150,7 +149,7 @@ const loadTableData = async (_params: LoadDataParams) => {
 
   tableLoading.value = true;
   try {
-    const list = await VipApi.getFixedVipMemberList({ masterAgent: masterAgent.value });
+    const list = await queryMemberIdentities({ masterAgent: masterAgent.value });
     const items = Array.isArray(list) ? list : [];
     currentList.value = items;
     return { items, meta: { totalItems: items.length } };
@@ -160,15 +159,15 @@ const loadTableData = async (_params: LoadDataParams) => {
   }
 };
 
-const columns = ref<TableColumn<FixedVipMemberInfo>[]>([
+const columns = ref<TableColumn<MemberIdentityItem>[]>([
   { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
   { title: t('columns.memberID'), dataIndex: 'memberID', hideInSearch: true },
   {
-    title: t('columns.vip'),
-    dataIndex: 'vip',
+    title: t('columns.identity'),
+    dataIndex: 'identity',
     width: 200,
     hideInSearch: true,
-    customRender: ({ text }) => formatVipName(text),
+    customRender: ({ text }) => formatIdentityLabel(text),
   },
   {
     title: t('columns.operation'),
@@ -198,24 +197,47 @@ type ModalMode = 'add' | 'edit';
 const modalOpen = ref(false);
 const modalSubmitting = ref(false);
 const modalMode = ref<ModalMode>('add');
+const originalIdentity = ref<number | undefined>(undefined);
 
 const modalTitle = computed(() => (modalMode.value === 'edit' ? t('titleEdit') : t('titleAdd')));
 
-function openModal(mode: ModalMode, record?: FixedVipMemberInfo) {
+const fetchNowIdentity = async (memberID: string) => {
+  if (!memberID) {
+    form.value.nowIdentityLabel = '';
+    return;
+  }
+  try {
+    const res = await getMemberActivity({ memberID });
+    form.value.nowIdentityLabel = res?.identity !== undefined ? formatIdentityLabel(res.identity) : '';
+  }
+  catch {
+    form.value.nowIdentityLabel = '';
+  }
+};
+
+async function openModal(mode: ModalMode, record?: MemberIdentityItem) {
   modalMode.value = mode;
   modalOpen.value = true;
   modalSubmitting.value = false;
 
-  form.value = { memberID: '', vip: undefined };
+  form.value = {
+    memberID: '',
+    identity: IdentityType.FRAUDULENT_OR_REFUND,
+    nowIdentityLabel: '',
+  };
+  originalIdentity.value = undefined;
+
   memberOptions.value = [];
   memberLastQueryText.value = '';
   memberLastAccountID.value = '';
 
   if (mode === 'edit' && record) {
     form.value.memberID = String(record.memberID ?? '');
-    form.value.vip = record.vip === undefined ? undefined : Number(record.vip);
-    // 編輯時確保 select 能顯示（避免沒搜尋時空白）
+    form.value.identity = Number(record.identity) as IdentityType;
+    originalIdentity.value = Number(record.identity);
+    // 確保編輯時 select 能顯示（避免沒搜尋時空白）
     memberOptions.value = [{ label: form.value.memberID, value: form.value.memberID, disabled: false }];
+    await fetchNowIdentity(form.value.memberID);
   }
 }
 
@@ -230,8 +252,8 @@ const validateForm = () => {
   if (!form.value.memberID) {
     throw new Error(t('notify.required'));
   }
-  const vip = Number(form.value.vip);
-  if (!Number.isFinite(vip)) {
+  const identity = Number(form.value.identity);
+  if (!Number.isFinite(identity)) {
     throw new TypeError(t('notify.required'));
   }
 };
@@ -241,11 +263,14 @@ const submitModal = async () => {
     validateForm();
     modalSubmitting.value = true;
 
-    await VipApi.setFixedVipMember({
-      masterAgent: masterAgent.value,
-      memberID: form.value.memberID,
-      vip: Number(form.value.vip),
-    });
+    const memberID = form.value.memberID;
+    const identity = Number(form.value.identity) as IdentityType;
+
+    // 對齊 Vue2：編輯時先移除舊身分再設定新身分
+    if (modalMode.value === 'edit' && Number.isFinite(Number(originalIdentity.value))) {
+      await removeMemberIdentity({ memberID, identity: Number(originalIdentity.value) });
+    }
+    await setMemberIdentity({ memberID, type: identity });
 
     message.success(modalMode.value === 'edit' ? t('editSuccess') : t('addSuccess'));
     closeModal();
@@ -259,11 +284,13 @@ const submitModal = async () => {
   }
 };
 
-async function onDelete(record: FixedVipMemberInfo) {
+async function onDelete(record: MemberIdentityItem) {
   if (!masterAgent.value) {
     return;
   }
   const memberID = String(record.memberID ?? '');
+  const identity = Number(record.identity);
+
   Modal.confirm({
     title: t('confirmDelete'),
     content: `${t('confirmDeleteContent')} ${memberID}`,
@@ -271,7 +298,7 @@ async function onDelete(record: FixedVipMemberInfo) {
     okType: 'danger',
     cancelText: t('cancel'),
     async onOk() {
-      await VipApi.removeFixedVipMember({ memberID });
+      await removeMemberIdentity({ memberID, identity });
       message.success(t('deleteSuccess'));
       tableInstance?.reload?.();
     },
@@ -280,23 +307,31 @@ async function onDelete(record: FixedVipMemberInfo) {
 
 watch(
   () => masterAgent.value,
-  async () => {
+  () => {
     // masterAgent 變更時，清掉 modal 內會員選單（避免跨總代殘留）
     memberOptions.value = [];
     memberLastQueryText.value = '';
     memberLastAccountID.value = '';
-    await fetchVipList();
     tableInstance?.reload?.();
   },
 );
 
-onMounted(async () => {
+watch(
+  () => form.value.memberID,
+  (v) => {
+    // member 變更時更新「目前身分」
+    if (!v) {
+      form.value.nowIdentityLabel = '';
+      return;
+    }
+    fetchNowIdentity(v);
+  },
+);
+
+onMounted(() => {
   // 對齊 Vue2：level>=4 直接鎖定總代理
   if (userStore.level >= 4) {
     masterAgent.value = userStore.masterAgent;
-  }
-  if (masterAgent.value) {
-    await fetchVipList();
   }
 });
 </script>
@@ -338,7 +373,7 @@ onMounted(async () => {
       :confirm-loading="modalSubmitting"
       :mask-closable="false"
       :destroy-on-close="true"
-      width="680px"
+      width="720px"
       @ok="submitModal"
       @cancel="closeModal"
     >
@@ -359,14 +394,12 @@ onMounted(async () => {
           />
         </a-form-item>
 
-        <a-form-item :label="t('form.vip')" required>
-          <a-select
-            v-model:value="form.vip"
-            :options="vipOptions"
-            :placeholder="t('form.vipPlaceholder')"
-            style="width: 100%"
-            allow-clear
-          />
+        <a-form-item :label="t('form.nowIdentity')">
+          <a-input :value="form.nowIdentityLabel" disabled />
+        </a-form-item>
+
+        <a-form-item :label="t('form.identity')" required>
+          <a-radio-group v-model:value="form.identity" :options="identityOptions" />
         </a-form-item>
       </a-form>
     </a-modal>

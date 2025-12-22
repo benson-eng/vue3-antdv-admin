@@ -87,7 +87,8 @@ defineOptions({
   name: 'TransactionMemberSetting',
 });
 
-const { t } = useI18n('routes.member.transactionMemberSettingPage');
+const i18n = useI18n('routes.member.transactionMemberSettingPage');
+const t = i18n.t;
 const userStore = useUserStore();
 
 const masterAgent = ref<string>('');
