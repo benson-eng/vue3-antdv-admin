@@ -15,5 +15,59 @@
     "rtp": "RTP",
     "maxBet": "最大押注",
     "betLimit": "押注上限"
+  },
+  "gameType": {
+    "slotGame": "老虎機",
+    "syncGame": "同步",
+    "fishingGame": "捕魚",
+    "arcadeMulti": "街機(多人)",
+    "arcadeSingle": "街機(單人)",
+    "arcade": "街機",
+    "poker": "撲克",
+    "table": "桌遊",
+    "cam": "視訊",
+    "lottery": "彩票",
+    "lobby": "大廳",
+    "unknown": "未知"
+  },
+  "levelExtraSetting": {
+    "labels": {
+      "iconSize": "圖示大小",
+      "platformFilter": "平台篩選",
+      "gameTypeFilter": "種類篩選",
+      "showNotOpen": "顯示未開啟遊戲",
+      "batch": "操作",
+      "setAll": "全選修改"
+    },
+    "columns": {
+      "sort": "排序",
+      "platform": "平台",
+      "gameType": "遊戲種類",
+      "gameID": "遊戲ID",
+      "gameName": "遊戲名稱",
+      "icon": "圖示",
+      "vipLock": "開放VIP",
+      "levelLock": "開放等級",
+      "levelUp": "等級提升",
+      "prizeItems": "勳章",
+      "tag": "標籤",
+      "clientSwitch": "遊戲入口維護",
+      "serverState": "遊戲開關"
+    },
+    "options": {
+      "nor": "一般",
+      "new": "新品",
+      "hot": "熱門"
+    },
+    "iconSize": {
+      "small": "小圖",
+      "big": "大圖"
+    },
+    "errors": {
+      "levelLock": "請輸入 0~999 的數字"
+    },
+    "warnings": {
+      "duplicateSort": "排序有重複，提交前請調整"
+    }
   }
 }

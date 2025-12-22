@@ -62,6 +62,55 @@ export interface BulkCreateLevelSettingParams {
 }
 
 /**
+ * =========================================================
+ * Vue2：admin-web/src/api/levelServer.ts - levelExtraSetting
+ * =========================================================
+ */
+
+export interface ListLevelExtraSettingByMasterAgentParams {
+  masterAgent: string;
+}
+
+/**
+ * 遊戲大廳設定（levelExtraSetting/listByMasterAgent）
+ */
+export interface LevelExtraSettingItem {
+  id: number;
+  masterAgent?: string;
+  gameID: string;
+  levelLock: number;
+  vipLock?: number;
+  levelUp: 0 | 1;
+  prizeItems: 0 | 1;
+  tag: 0 | 1 | 2;
+  sort: number;
+  clientSwitch: boolean;
+  [k: string]: any;
+}
+
+export interface CreateLevelExtraSettingParams {
+  masterAgent: string;
+  gameIDs: string[];
+}
+
+export interface UpdateLevelExtraSettingRow {
+  id: number;
+  gameID: string;
+  levelUp: 0 | 1;
+  levelLock: number;
+  vipLock?: number;
+  prizeItems: 0 | 1;
+  tag: 0 | 1 | 2;
+  sort: number;
+  clientSwitch: boolean;
+}
+
+export interface UpdateLevelExtraSettingParams {
+  masterAgent: string;
+  gameIDs: UpdateLevelExtraSettingRow[];
+}
+
+/**
  * 查詢遊戲等級
  */
 export const getMemberLevelInfo = (params: MemberLevelInfoParams) =>
@@ -118,6 +167,51 @@ export const bulkCreate = (params: BulkCreateLevelSettingParams) =>
     data: {
       server: 'levelServer',
       actionName: 'levelSetting/bulkCreate',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 取得遊戲大廳設定（對齊 Vue2：levelExtraSetting/listByMasterAgent）
+ */
+export const listLevelExtraSettingByMasterAgent = (params: ListLevelExtraSettingByMasterAgentParams) =>
+  request<LevelExtraSettingItem[]>({
+    url: '/AdminSystem/api/action/levelExtraSetting',
+    method: 'post',
+    data: {
+      server: 'levelServer',
+      actionName: 'levelExtraSetting/listByMasterAgent',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 新增遊戲大廳設定（缺少的 gameID 由後端補預設值；對齊 Vue2：levelExtraSetting/create）
+ */
+export const createLevelExtraSetting = (params: CreateLevelExtraSettingParams) =>
+  request({
+    url: '/AdminSystem/api/action/levelExtraSetting',
+    method: 'post',
+    data: {
+      server: 'levelServer',
+      actionName: 'levelExtraSetting/create',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 更新遊戲大廳設定（對齊 Vue2：levelExtraSetting/update）
+ */
+export const updateLevelExtraSetting = (params: UpdateLevelExtraSettingParams) =>
+  request({
+    url: '/AdminSystem/api/action/levelExtraSetting',
+    method: 'post',
+    data: {
+      server: 'levelServer',
+      actionName: 'levelExtraSetting/update',
       query: JSON.stringify(params),
     },
     timeout: 0,

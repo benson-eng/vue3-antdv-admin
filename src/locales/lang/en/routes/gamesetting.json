@@ -3,5 +3,6 @@
   "giveAway": "Give Away",
   "gameRestrictions": "Game Restrictions (Read)",
   "gameRestrictionsGlobalSetting": "Game Restrictions (Full)",
-  "gameRestrictionsFullSetting": "Game Restrictions (Full, Filtered)"
+  "gameRestrictionsFullSetting": "Game Restrictions (Full, Filtered)",
+  "levelExtraSetting": "Lobby Setting"
 }

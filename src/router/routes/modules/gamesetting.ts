@@ -48,6 +48,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:lock-outlined',
         },
       },
+      {
+        path: 'levelExtraSetting',
+        name: 'LevelExtraSetting',
+        component: () => import('@/views/gamesetting/levelExtraSetting/index.vue'),
+        meta: {
+          title: t('routes.gamesetting.levelExtraSetting'),
+          icon: 'ant-design:appstore-outlined',
+        },
+      },
     ],
   },
 ];

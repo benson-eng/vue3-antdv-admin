@@ -15,5 +15,59 @@
     "rtp": "RTP",
     "maxBet": "Max Bet",
     "betLimit": "Bet Limit"
+  },
+  "gameType": {
+    "slotGame": "Slot",
+    "syncGame": "Sync",
+    "fishingGame": "Fishing",
+    "arcadeMulti": "Arcade (Multi)",
+    "arcadeSingle": "Arcade (Single)",
+    "arcade": "Arcade",
+    "poker": "Poker",
+    "table": "Table",
+    "cam": "Live",
+    "lottery": "Lottery",
+    "lobby": "Lobby",
+    "unknown": "Unknown"
+  },
+  "levelExtraSetting": {
+    "labels": {
+      "iconSize": "Icon Size",
+      "platformFilter": "Platform Filter",
+      "gameTypeFilter": "Type Filter",
+      "showNotOpen": "Show Disabled Games",
+      "batch": "Batch",
+      "setAll": "Apply to All"
+    },
+    "columns": {
+      "sort": "Sort",
+      "platform": "Platform",
+      "gameType": "Game Type",
+      "gameID": "Game ID",
+      "gameName": "Game Name",
+      "icon": "Icon",
+      "vipLock": "VIP Lock",
+      "levelLock": "Level Lock",
+      "levelUp": "Level Up",
+      "prizeItems": "Badge",
+      "tag": "Tag",
+      "clientSwitch": "Client Maintenance",
+      "serverState": "Server Switch"
+    },
+    "options": {
+      "nor": "Normal",
+      "new": "New",
+      "hot": "Hot"
+    },
+    "iconSize": {
+      "small": "Small",
+      "big": "Large"
+    },
+    "errors": {
+      "levelLock": "Please enter a number from 0 to 999"
+    },
+    "warnings": {
+      "duplicateSort": "Duplicate sort values. Please adjust before commit."
+    }
   }
 }
