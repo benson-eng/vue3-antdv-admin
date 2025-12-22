@@ -3,6 +3,7 @@
   "data": "會員資料",
   "memberPersonalInfo": "會員個資管理",
   "vipSetting": "VIP特權設定",
+  "transactionMemberSetting": "會員交易設定",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -169,6 +170,40 @@
       "viewVipRecord": "VIP紀錄",
       "viewPack": "背包",
       "viewWallet": "錢包"
+    }
+  }
+  ,
+  "transactionMemberSettingPage": {
+    "title": "會員交易設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增會員交易設定",
+    "titleEdit": "編輯會員交易設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此會員交易設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "serviceTariff": "交易手續費(%)"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理",
+      "serviceTariff": "輸入 0 ~ 100 正整數"
+    },
+    "columns": {
+      "memberID": "會員",
+      "serviceTariff": "交易手續費(%)",
+      "operation": "操作"
     }
   }
 }

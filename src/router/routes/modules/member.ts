@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'TransactionMemberSetting',
+        name: 'TransactionMemberSetting',
+        component: () => import('@/views/member/transactionMemberSetting/index.vue'),
+        meta: {
+          title: t('routes.member.transactionMemberSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];
