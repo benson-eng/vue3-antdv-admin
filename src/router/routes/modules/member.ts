@@ -102,6 +102,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'getPlatformAccount',
+        name: 'GetPlatformAccount',
+        component: () => import('@/views/member/getPlatformAccount/index.vue'),
+        meta: {
+          title: t('routes.member.getPlatformAccount'),
+          icon: 'ant-design:user-outlined',
+        },
+      },
     ],
   },
 ];

@@ -10,6 +10,7 @@
   "memberLevel": "Member Game Level Setting",
   "levelRewardsSetting": "Game Level Reward Setting",
   "raceRankBlack": "Race Rank Blacklist",
+  "getPlatformAccount": "Platform Account Mapping",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -417,6 +418,25 @@
       "memberID": "Member",
       "blackReason": "Reason",
       "operation": "Operation"
+    }
+  },
+  "getPlatformAccountPage": {
+    "title": "Platform Account Mapping",
+    "search": "Query",
+    "reset": "Reset",
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent",
+      "memberPlaceholder": "Search by member id / account / nickname"
+    },
+    "notify": {
+      "masterAgentRequired": "Please select master agent first",
+      "memberRequired": "Please select member first",
+      "searchFinish": "Query finished"
+    },
+    "columns": {
+      "member": "Member",
+      "platform": "Platform",
+      "account": "Account"
     }
   }
 }
