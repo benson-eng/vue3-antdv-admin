@@ -46,3 +46,4 @@ export default {
   getAllAccount,
   bulkUpdateBackendKeyAndAuthenticator,
 };
+

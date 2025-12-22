@@ -62,3 +62,4 @@ export function isDistributionPlatform(): boolean {
   const envPlatform = (import.meta.env as any).VITE_APP_PLATFORM as string | undefined;
   return envPlatform === 'distribution';
 }
+

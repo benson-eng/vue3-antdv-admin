@@ -34,3 +34,4 @@ export default {
   setConfig2Setting,
 };
 
+
