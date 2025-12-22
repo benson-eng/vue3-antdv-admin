@@ -9,6 +9,7 @@
   "activityMemberSetting": "Fixed Member Activity Setting",
   "memberLevel": "Member Game Level Setting",
   "levelRewardsSetting": "Game Level Reward Setting",
+  "raceRankBlack": "Race Rank Blacklist",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -377,6 +378,45 @@
     },
     "errors": {
       "title": "Import errors"
+    }
+  }
+  ,
+  "raceRankBlackPage": {
+    "title": "Race Rank Blacklist",
+    "add": "Add",
+    "delete": "Remove",
+    "cancel": "Cancel",
+    "titleAdd": "Add Race Rank Blacklist",
+    "addSuccess": "Added to blacklist",
+    "deleteSuccess": "Removed from blacklist",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Confirm Remove",
+    "confirmDeleteContent": "Are you sure you want to remove this member from blacklist:",
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent",
+      "eventPlaceholder": "Please select event"
+    },
+    "form": {
+      "event": "Event",
+      "member": "Member",
+      "memberPlaceholder": "Search by member id / account / nickname",
+      "note": "Reason",
+      "notePlaceholder": "Enter blacklist reason"
+    },
+    "notify": {
+      "required": "This field is required",
+      "noteRequired": "Please enter reason",
+      "masterAgentRequired": "Please select master agent first",
+      "eventRequired": "Please select event first",
+      "settledDisabled": "Event has been settled. Operation is disabled.",
+      "resultRaceRankBlack": "This member is not in ranking list",
+      "noAwardItemWarning": "No award item configured for this event. Equip/unequip will be skipped."
+    },
+    "columns": {
+      "event": "Event",
+      "memberID": "Member",
+      "blackReason": "Reason",
+      "operation": "Operation"
     }
   }
 }

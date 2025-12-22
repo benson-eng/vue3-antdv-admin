@@ -9,6 +9,7 @@
   "activityMemberSetting": "固定會員活躍度設定",
   "memberLevel": "會員遊戲等級設定",
   "levelRewardsSetting": "遊戲等級獎勵設定",
+  "raceRankBlack": "比賽排名黑名單",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -387,6 +388,45 @@
     },
     "errors": {
       "title": "錯誤提醒"
+    }
+  }
+  ,
+  "raceRankBlackPage": {
+    "title": "比賽排名黑名單",
+    "add": "新增",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增比賽排名黑名單",
+    "addSuccess": "已加入黑名單",
+    "deleteSuccess": "已解除黑名單",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認解除",
+    "confirmDeleteContent": "確定要解除此會員黑名單：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理",
+      "eventPlaceholder": "請選擇活動"
+    },
+    "form": {
+      "event": "活動",
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "note": "原因",
+      "notePlaceholder": "請輸入加入黑名單原因"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "noteRequired": "請輸入原因",
+      "masterAgentRequired": "請先選擇總代理",
+      "eventRequired": "請先選擇活動",
+      "settledDisabled": "活動已結算，無法操作",
+      "resultRaceRankBlack": "此會員不在排行榜內",
+      "noAwardItemWarning": "此活動未設定獎勵道具，將略過穿戴/脫除流程"
+    },
+    "columns": {
+      "event": "活動",
+      "memberID": "會員",
+      "blackReason": "原因",
+      "operation": "操作"
     }
   }
 }

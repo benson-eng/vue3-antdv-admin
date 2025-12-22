@@ -93,6 +93,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'raceRankBlack',
+        name: 'RaceRankBlack',
+        component: () => import('@/views/member/raceRankBlack/index.vue'),
+        meta: {
+          title: t('routes.member.raceRankBlack'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

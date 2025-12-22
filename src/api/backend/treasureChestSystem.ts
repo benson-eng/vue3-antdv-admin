@@ -88,3 +88,64 @@ export const addTreasureCard = (params: AddTreasureCardParams) =>
     },
     timeout: 0,
   });
+
+/**
+ * =========================
+ * 玩家背包 / 穿戴（給比賽排行榜黑名單用）
+ * 對齊 Vue2：admin-web/src/api/treasureChestSystem.ts（節選）
+ * =========================
+ */
+
+export interface PlayerPackItem {
+  treasureItemID: string;
+  enabled?: boolean;
+  validFrom?: string | Date;
+  validUntil?: string | Date;
+  useState?: number;
+  itemType?: string;
+  itemName?: string;
+  bet?: number;
+  sourceType?: string;
+  [k: string]: any;
+}
+
+export interface PlayerPackV2Row {
+  type: string;
+  items: PlayerPackItem[];
+}
+
+export const getPlayerPackV2 = (params: { memberID: string; itemType?: string }) =>
+  request<PlayerPackV2Row[]>({
+    url: '/AdminSystem/api/action/playerPackV2',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'playerPackV2',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const equipItem = (params: { memberID: string; treasureItemID: string; playerPackID?: string }) =>
+  request({
+    url: '/AdminSystem/api/action/equipItem',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'equipItem',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const unequipItem = (params: { memberID: string; treasureItemID: string; playerPackID?: string }) =>
+  request({
+    url: '/AdminSystem/api/action/unequipItem',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'unequipItem',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });

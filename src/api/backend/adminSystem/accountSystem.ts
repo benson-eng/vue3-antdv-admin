@@ -93,4 +93,26 @@ export const queryAccountPersonalInfo = (params: QueryAccountPersonalInfoParams)
     timeout: 0,
   });
 
+export interface LogoutAction4PlatformParams {
+  /**
+   * `${account}@${agentID}`
+   */
+  memberID: string;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/member.ts -> /AdminSystem/api/action/logoutAction4Platform
+ */
+export const logoutAction4Platform = (params: LogoutAction4PlatformParams) =>
+  request({
+    url: '/AdminSystem/api/action/logoutAction4Platform',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'logoutAction4Platform',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 
