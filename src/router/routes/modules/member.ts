@@ -48,6 +48,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'FixedVipMemberSetting',
+        name: 'FixedVipMemberSetting',
+        component: () => import('@/views/member/fixedVipMemberSetting/index.vue'),
+        meta: {
+          title: t('routes.member.fixedVipMemberSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

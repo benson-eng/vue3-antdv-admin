@@ -33,6 +33,13 @@ export type VipSettingWithFile = VipSetting & {
   iconRaw?: File | null;
 };
 
+export interface FixedVipMemberInfo {
+  id?: number;
+  masterAgent: string;
+  memberID: string;
+  vip: number;
+}
+
 const server = 'vipServer';
 
 const buildActionUrl = (actionName: string) => `/AdminSystem/api/action/${actionName.replace('/', '-')}`;
@@ -135,6 +142,42 @@ export const updateVipExtraSetting = (params: { id: number; vipSettingId: number
     timeout: 0,
   });
 
+export const getFixedVipMemberList = (params: { masterAgent: string }) =>
+  request<FixedVipMemberInfo[]>({
+    url: buildActionUrl('fixedVipMember/list'),
+    method: 'post',
+    data: {
+      server,
+      actionName: 'fixedVipMember/list',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const setFixedVipMember = (params: { masterAgent: string; memberID: string; vip: number }) =>
+  request<FixedVipMemberInfo>({
+    url: buildActionUrl('fixedVipMember/set'),
+    method: 'post',
+    data: {
+      server,
+      actionName: 'fixedVipMember/set',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const removeFixedVipMember = (params: { memberID: string }) =>
+  request<{ result: boolean }>({
+    url: buildActionUrl('fixedVipMember/remove'),
+    method: 'post',
+    data: {
+      server,
+      actionName: 'fixedVipMember/remove',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   listByMasterAgent,
   createVipSetting,
@@ -142,6 +185,9 @@ export default {
   deleteVipSetting,
   createVipExtraSetting,
   updateVipExtraSetting,
+  getFixedVipMemberList,
+  setFixedVipMember,
+  removeFixedVipMember,
 };
 
 

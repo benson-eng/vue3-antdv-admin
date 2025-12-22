@@ -4,6 +4,7 @@
   "memberPersonalInfo": "會員個資管理",
   "vipSetting": "VIP特權設定",
   "transactionMemberSetting": "會員交易設定",
+  "fixedVipMemberSetting": "固定會員VIP設定",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -203,6 +204,40 @@
     "columns": {
       "memberID": "會員",
       "serviceTariff": "交易手續費(%)",
+      "operation": "操作"
+    }
+  }
+  ,
+  "fixedVipMemberSettingPage": {
+    "title": "固定會員VIP設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增固定會員VIP設定",
+    "titleEdit": "編輯固定會員VIP設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此固定會員VIP設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "vip": "VIP",
+      "vipPlaceholder": "請選擇 VIP"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "columns": {
+      "memberID": "會員",
+      "vip": "VIP",
       "operation": "操作"
     }
   }
