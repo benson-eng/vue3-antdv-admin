@@ -20,6 +20,12 @@ export interface ForceBingoPayload {
   debugStrip?: number[];
 }
 
+export interface GetConfigSettingResponse {
+  items: Array<number | number[]>;
+  gameID: string;
+  updatedAt?: string;
+}
+
 export const forceBingo = (gameID: string, memberID: string, forceBingoPayload: ForceBingoPayload) =>
   request({
     url: '/AdminSystem/api/action/forceBingo',
@@ -53,7 +59,29 @@ export const getConfigItem = (gameID: string, currencyType: string, item: string
     timeout: 60 * 1000,
   });
 
+/**
+ * 對齊 Vue2：admin-web/src/api/slotgameServer.ts -> getConfigSetting
+ * 用於讀取遊戲規格設定（rtp/maxBet/betLimit...）
+ */
+export const getConfigSetting = (gameID: string, masterAgent: string, currencyType: string, items: string[]) =>
+  request<GetConfigSettingResponse>({
+    url: '/AdminSystem/api/action/getConfigSetting',
+    method: 'post',
+    data: {
+      server: gameID,
+      actionName: 'getConfigSetting',
+      query: JSON.stringify({
+        gameID,
+        masterAgent,
+        currencyType,
+        items,
+      }),
+    },
+    timeout: 0,
+  });
+
 export default {
   forceBingo,
   getConfigItem,
+  getConfigSetting,
 };

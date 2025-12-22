@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:gift-outlined',
         },
       },
+      {
+        path: 'gameRestrictions',
+        name: 'GameRestrictions',
+        component: () => import('@/views/gamesetting/gameRestrictions/index.vue'),
+        meta: {
+          title: t('routes.gamesetting.gameRestrictions'),
+          icon: 'ant-design:lock-outlined',
+        },
+      },
     ],
   },
 ];

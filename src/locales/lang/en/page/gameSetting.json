@@ -1,0 +1,14 @@
+{
+  "title": {
+    "gameRestrictions": "Game Restrictions (Read)"
+  },
+  "labels": {
+    "currencyType": "Currency",
+    "gameID": "Game ID",
+    "gameName": "Game Name",
+    "rtp": "RTP",
+    "maxBet": "Max Bet",
+    "betLimit": "Bet Limit"
+  }
+}
+

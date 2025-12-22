@@ -1,0 +1,13 @@
+{
+  "title": {
+    "gameRestrictions": "遊戲規格設定(閱讀)"
+  },
+  "labels": {
+    "currencyType": "幣別",
+    "gameID": "遊戲ID",
+    "gameName": "遊戲名稱",
+    "rtp": "RTP",
+    "maxBet": "最大押注",
+    "betLimit": "押注上限"
+  }
+}
