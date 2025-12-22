@@ -115,4 +115,53 @@ export const logoutAction4Platform = (params: LogoutAction4PlatformParams) =>
     timeout: 0,
   });
 
+export interface CheckNicknameParams {
+  masterAgent: string;
+  nickname: string;
+}
+
+export interface CheckNicknameResult {
+  /**
+   * true: 可用
+   * false: 已存在 / 不可用
+   */
+  result: boolean;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/account.ts -> /AdminSystem/api/action/checkNickname
+ */
+export const checkNickname = (params: CheckNicknameParams) =>
+  request<CheckNicknameResult>({
+    url: '/AdminSystem/api/action/checkNickname',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'checkNickname',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface ChangeNicknameParams {
+  memberID: string;
+  nickname: string;
+  isForce?: boolean;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/account.ts -> /AdminSystem/api/action/changeNickname
+ */
+export const changeNickname = (params: ChangeNicknameParams) =>
+  request({
+    url: '/AdminSystem/api/action/changeNickname',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'changeNickname',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 

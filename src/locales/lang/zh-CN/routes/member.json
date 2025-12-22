@@ -12,6 +12,7 @@
   "raceRankBlack": "比賽排名黑名單",
   "getPlatformAccount": "會員帳號對照表",
   "suspensionList": "停權列表",
+  "memberNicknameAvatar": "會員暱稱頭像管理",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -378,6 +379,46 @@
       "changeLevel": "請輸入大於0之正整數",
       "success": "成功",
       "failed": "失敗"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    }
+  },
+  "memberNicknameAvatarPage": {
+    "title": "會員暱稱頭像管理",
+    "labels": {
+      "masterAgent": "總代理",
+      "search": "查詢帳號",
+      "account": "會員帳號",
+      "nickName": "暱稱",
+      "avatar": "頭像"
+    },
+    "buttons": {
+      "search": "查詢",
+      "updateNickName": "更新暱稱",
+      "updateAvatar": "更新頭像",
+      "confirm": "確認",
+      "cancel": "取消"
+    },
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱"
+    },
+    "avatar": {
+      "original": "原設定",
+      "selectPlaceholder": "請選擇頭像"
+    },
+    "notify": {
+      "updateSuccess": "更新成功",
+      "failed": "失敗",
+      "masterAgentRequired": "請先選擇總代理",
+      "memberRequired": "請先選擇會員",
+      "nickName": "請輸入暱稱",
+      "nickNameExist": "暱稱已存在",
+      "nickNameTooLong": "限{limit1}個中文字或{limit2}個英數字"
     },
     "noPermission": {
       "title": "權限不足",

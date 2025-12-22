@@ -120,6 +120,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:stop-outlined',
         },
       },
+      {
+        path: 'memberNicknameAvatar',
+        name: 'MemberNicknameAvatar',
+        component: () => import('@/views/member/memberNicknameAvatar/index.vue'),
+        meta: {
+          title: t('routes.member.memberNicknameAvatar'),
+          icon: 'ant-design:user-outlined',
+        },
+      },
     ],
   },
 ];

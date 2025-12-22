@@ -12,6 +12,7 @@
   "raceRankBlack": "Race Rank Blacklist",
   "getPlatformAccount": "Platform Account Mapping",
   "suspensionList": "Suspension List",
+  "memberNicknameAvatar": "Member Nickname & Avatar",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -460,6 +461,46 @@
       "memberID": "Member",
       "blackReason": "Reason",
       "operation": "Operation"
+    }
+  },
+  "memberNicknameAvatarPage": {
+    "title": "Member Nickname & Avatar",
+    "labels": {
+      "masterAgent": "Master Agent",
+      "search": "Search Account",
+      "account": "Member Account",
+      "nickName": "Nickname",
+      "avatar": "Avatar"
+    },
+    "buttons": {
+      "search": "Search",
+      "updateNickName": "Update Nickname",
+      "updateAvatar": "Update Avatar",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent"
+    },
+    "form": {
+      "memberPlaceholder": "Enter MemberID / Account / Nickname"
+    },
+    "avatar": {
+      "original": "Original",
+      "selectPlaceholder": "Please select avatar"
+    },
+    "notify": {
+      "updateSuccess": "Updated successfully",
+      "failed": "Failed",
+      "masterAgentRequired": "Please select master agent first",
+      "memberRequired": "Please select member first",
+      "nickName": "Please enter nickname",
+      "nickNameExist": "Nickname already exists",
+      "nickNameTooLong": "Limit {limit1} Chinese chars or {limit2} alphanumerics"
+    },
+    "noPermission": {
+      "title": "No permission",
+      "subTitle": "This feature is only available to certain account levels"
     }
   },
   "getPlatformAccountPage": {
