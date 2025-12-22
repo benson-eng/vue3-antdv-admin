@@ -7,6 +7,7 @@
   "fixedVipMemberSetting": "Fixed VIP Member Setting",
   "identityMemberSetting": "Fixed Member Identity Setting",
   "activityMemberSetting": "Fixed Member Activity Setting",
+  "memberLevel": "Member Game Level Setting",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -301,6 +302,34 @@
       "memberID": "Member",
       "activity": "Activity",
       "operation": "Operation"
+    }
+  }
+  ,
+  "memberLevelPage": {
+    "title": "Member Game Level Setting",
+    "search": "Query",
+    "confirm": "Update",
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent"
+    },
+    "form": {
+      "member": "Member",
+      "memberPlaceholder": "Search by member id / account / nickname",
+      "nickName": "Member",
+      "level": "Game Level",
+      "changeLevel": "Change Level",
+      "changeLevelPlaceholder": "Enter level"
+    },
+    "notify": {
+      "masterAgentRequired": "Please select master agent first",
+      "memberRequired": "Please select member first",
+      "changeLevel": "Enter a positive integer",
+      "success": "Success",
+      "failed": "Failed"
+    },
+    "noPermission": {
+      "title": "Permission denied",
+      "subTitle": "This feature is only available for certain roles"
     }
   }
 }

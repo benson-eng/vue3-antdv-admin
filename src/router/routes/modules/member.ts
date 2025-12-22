@@ -75,6 +75,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'MemberLevel',
+        name: 'MemberLevel',
+        component: () => import('@/views/member/memberLevel/index.vue'),
+        meta: {
+          title: t('routes.member.memberLevel'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

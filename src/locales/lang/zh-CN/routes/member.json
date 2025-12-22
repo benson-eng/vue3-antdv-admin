@@ -7,6 +7,7 @@
   "fixedVipMemberSetting": "固定會員VIP設定",
   "identityMemberSetting": "固定會員身分設定",
   "activityMemberSetting": "固定會員活躍度設定",
+  "memberLevel": "會員遊戲等級設定",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -311,6 +312,34 @@
       "memberID": "會員",
       "activity": "活躍度",
       "operation": "操作"
+    }
+  }
+  ,
+  "memberLevelPage": {
+    "title": "會員遊戲等級設定",
+    "search": "查詢",
+    "confirm": "修改",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "nickName": "會員帳戶",
+      "level": "遊戲等級",
+      "changeLevel": "變更等級",
+      "changeLevelPlaceholder": "請輸入等級"
+    },
+    "notify": {
+      "masterAgentRequired": "請先選擇總代理",
+      "memberRequired": "請先選擇會員",
+      "changeLevel": "請輸入大於0之正整數",
+      "success": "成功",
+      "failed": "失敗"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
     }
   }
 }
