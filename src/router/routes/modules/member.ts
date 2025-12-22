@@ -111,6 +111,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:user-outlined',
         },
       },
+      {
+        path: 'suspensionList',
+        name: 'SuspensionList',
+        component: () => import('@/views/member/suspensionList/index.vue'),
+        meta: {
+          title: t('routes.member.suspensionList'),
+          icon: 'ant-design:stop-outlined',
+        },
+      },
     ],
   },
 ];

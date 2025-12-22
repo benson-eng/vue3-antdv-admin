@@ -11,6 +11,7 @@
   "levelRewardsSetting": "遊戲等級獎勵設定",
   "raceRankBlack": "比賽排名黑名單",
   "getPlatformAccount": "會員帳號對照表",
+  "suspensionList": "停權列表",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -281,8 +282,47 @@
       "identity": "身分",
       "operation": "操作"
     }
-  }
-  ,
+  },
+  "suspensionListPage": {
+    "title": "停權列表",
+    "add": "新增",
+    "delete": "解除",
+    "cancel": "取消",
+    "titleAdd": "新增停權名單",
+    "addSuccess": "新增成功",
+    "deleteSuccess": "解除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認解除",
+    "confirmDeleteContent": "確定要解除此停權：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "suspensionType": "停權類型",
+      "suspensionReason": "停權原因",
+      "suspensionTime": "處罰時間"
+    },
+    "punishTypes": {
+      "platformSuspension": "平台停權",
+      "chatRoomBan": "聊天室禁言",
+      "giftBan": "禁止贈禮"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "columns": {
+      "id": "ID",
+      "accountID": "帳號ID",
+      "nickName": "暱稱",
+      "punishStatus": "停權類型",
+      "createdAt": "開始時間",
+      "punishReason": "停權原因",
+      "operation": "操作"
+    }
+  },
   "activityMemberSettingPage": {
     "title": "固定會員活躍度設定",
     "add": "新增",
@@ -316,8 +356,7 @@
       "activity": "活躍度",
       "operation": "操作"
     }
-  }
-  ,
+  },
   "memberLevelPage": {
     "title": "會員遊戲等級設定",
     "search": "查詢",
@@ -344,8 +383,7 @@
       "title": "權限不足",
       "subTitle": "此功能僅開放給特定層級帳號使用"
     }
-  }
-  ,
+  },
   "levelRewardsSettingPage": {
     "title": "遊戲等級獎勵設定",
     "exportExcel": "匯出Excel",
@@ -390,8 +428,7 @@
     "errors": {
       "title": "錯誤提醒"
     }
-  }
-  ,
+  },
   "raceRankBlackPage": {
     "title": "比賽排名黑名單",
     "add": "新增",

@@ -11,6 +11,7 @@
   "levelRewardsSetting": "Game Level Reward Setting",
   "raceRankBlack": "Race Rank Blacklist",
   "getPlatformAccount": "Platform Account Mapping",
+  "suspensionList": "Suspension List",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -269,6 +270,47 @@
     "columns": {
       "memberID": "Member",
       "identity": "Identity",
+      "operation": "Operation"
+    }
+  }
+  ,
+  "suspensionListPage": {
+    "title": "Suspension List",
+    "add": "Add",
+    "delete": "Lift",
+    "cancel": "Cancel",
+    "titleAdd": "Add Suspension",
+    "addSuccess": "Add successful",
+    "deleteSuccess": "Lift successful",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Confirm Lift",
+    "confirmDeleteContent": "Are you sure you want to lift this suspension:",
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent"
+    },
+    "form": {
+      "member": "Member",
+      "memberPlaceholder": "Search by member id / account / nickname",
+      "suspensionType": "Suspension Type",
+      "suspensionReason": "Reason",
+      "suspensionTime": "Duration"
+    },
+    "punishTypes": {
+      "platformSuspension": "Platform Suspension",
+      "chatRoomBan": "Chat Room Mute",
+      "giftBan": "Gift Ban"
+    },
+    "notify": {
+      "required": "This field is required",
+      "masterAgentRequired": "Please select master agent first"
+    },
+    "columns": {
+      "id": "ID",
+      "accountID": "Account ID",
+      "nickName": "Nickname",
+      "punishStatus": "Type",
+      "createdAt": "Start Time",
+      "punishReason": "Reason",
       "operation": "Operation"
     }
   }
