@@ -84,6 +84,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'levelRewardsSetting',
+        name: 'LevelRewardsSetting',
+        component: () => import('@/views/member/levelRewardsSetting/index.vue'),
+        meta: {
+          title: t('routes.member.levelRewardsSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

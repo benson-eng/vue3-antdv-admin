@@ -8,6 +8,7 @@
   "identityMemberSetting": "Fixed Member Identity Setting",
   "activityMemberSetting": "Fixed Member Activity Setting",
   "memberLevel": "Member Game Level Setting",
+  "levelRewardsSetting": "Game Level Reward Setting",
   "dataPage": {
     "title": "Member Data",
     "add": "Add",
@@ -330,6 +331,52 @@
     "noPermission": {
       "title": "Permission denied",
       "subTitle": "This feature is only available for certain roles"
+    }
+  }
+  ,
+  "levelRewardsSettingPage": {
+    "title": "Game Level Reward Setting",
+    "exportExcel": "Export Excel",
+    "importExcel": "Import Excel",
+    "reference": "Reference",
+    "save": "Save",
+    "close": "Close",
+    "import": "Import",
+    "importPreview": "Import Preview",
+    "saveSuccess": "Save successful",
+    "saveFailed": "Save failed",
+    "filters": {
+      "masterAgentPlaceholder": "Please select master agent"
+    },
+    "notify": {
+      "masterAgentRequired": "Please select master agent first"
+    },
+    "noPermission": {
+      "title": "Permission denied",
+      "subTitle": "This feature is only available for certain roles"
+    },
+    "columns": {
+      "id": "ID",
+      "level": "Level",
+      "awardStr": "Rewards"
+    },
+    "referenceColumns": {
+      "gameID": "Game",
+      "cardTypeList": "Card Types",
+      "betList": "Bets"
+    },
+    "importColumns": {
+      "level": "level",
+      "gameID": "gameID",
+      "cardItem": "cardItem",
+      "bet": "bet",
+      "creditRate": "creditRate",
+      "amount": "amount",
+      "startDate": "startDate",
+      "endDate": "endDate"
+    },
+    "errors": {
+      "title": "Import errors"
     }
   }
 }

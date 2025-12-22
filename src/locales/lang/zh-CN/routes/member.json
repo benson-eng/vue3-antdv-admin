@@ -8,6 +8,7 @@
   "identityMemberSetting": "固定會員身分設定",
   "activityMemberSetting": "固定會員活躍度設定",
   "memberLevel": "會員遊戲等級設定",
+  "levelRewardsSetting": "遊戲等級獎勵設定",
   "dataPage": {
     "title": "會員資料",
     "add": "新增",
@@ -340,6 +341,52 @@
     "noPermission": {
       "title": "權限不足",
       "subTitle": "此功能僅開放給特定層級帳號使用"
+    }
+  }
+  ,
+  "levelRewardsSettingPage": {
+    "title": "遊戲等級獎勵設定",
+    "exportExcel": "匯出Excel",
+    "importExcel": "匯入Excel",
+    "reference": "對照表",
+    "save": "保存",
+    "close": "關閉",
+    "import": "匯入",
+    "importPreview": "匯入預覽",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失敗",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "notify": {
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    },
+    "columns": {
+      "id": "ID",
+      "level": "等級",
+      "awardStr": "獎勵內容"
+    },
+    "referenceColumns": {
+      "gameID": "遊戲",
+      "cardTypeList": "卡種",
+      "betList": "押注"
+    },
+    "importColumns": {
+      "level": "level",
+      "gameID": "gameID",
+      "cardItem": "cardItem",
+      "bet": "bet",
+      "creditRate": "creditRate",
+      "amount": "amount",
+      "startDate": "startDate",
+      "endDate": "endDate"
+    },
+    "errors": {
+      "title": "錯誤提醒"
     }
   }
 }
