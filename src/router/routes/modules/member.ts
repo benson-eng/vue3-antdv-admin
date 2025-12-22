@@ -66,6 +66,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:star-outlined',
         },
       },
+      {
+        path: 'ActivityMemberSetting',
+        name: 'ActivityMemberSetting',
+        component: () => import('@/views/member/activityMemberSetting/index.vue'),
+        meta: {
+          title: t('routes.member.activityMemberSetting'),
+          icon: 'ant-design:star-outlined',
+        },
+      },
     ],
   },
 ];

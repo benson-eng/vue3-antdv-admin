@@ -46,6 +46,25 @@ export interface GetMemberActivityResult {
   identity: IdentityType | number;
 }
 
+export interface QueryFixedMemberActivitiesParams {
+  masterAgent: string;
+}
+
+export interface FixedMemberActivityItem {
+  id?: string | number;
+  memberID: string;
+  activity: number;
+}
+
+export interface FixMemberActivityParams {
+  memberID: string;
+  activity: number;
+}
+
+export interface CancelFixedMemberActivityParams {
+  memberID: string;
+}
+
 export const queryMemberIdentities = (params: QueryMemberIdentitiesParams) =>
   request<MemberIdentityItem[]>({
     url: '/AdminSystem/api/action/queryMemberIdentities',
@@ -94,10 +113,49 @@ export const getMemberActivity = (params: GetMemberActivityParams) =>
     timeout: 0,
   });
 
+export const queryFixedMemberActivities = (params: QueryFixedMemberActivitiesParams) =>
+  request<FixedMemberActivityItem[]>({
+    url: '/AdminSystem/api/action/queryFixedMemberActivities',
+    method: 'post',
+    data: {
+      server: 'activitySystem',
+      actionName: 'queryFixedMemberActivities',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const fixMemberActivity = (params: FixMemberActivityParams) =>
+  request({
+    url: '/AdminSystem/api/action/fixMemberActivity',
+    method: 'post',
+    data: {
+      server: 'activitySystem',
+      actionName: 'fixMemberActivity',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const cancelFixedMemberActivity = (params: CancelFixedMemberActivityParams) =>
+  request({
+    url: '/AdminSystem/api/action/cancelFixedMemberActivity',
+    method: 'post',
+    data: {
+      server: 'activitySystem',
+      actionName: 'cancelFixedMemberActivity',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   queryMemberIdentities,
   setMemberIdentity,
   removeMemberIdentity,
   getMemberActivity,
+  queryFixedMemberActivities,
+  fixMemberActivity,
+  cancelFixedMemberActivity,
 };
 
