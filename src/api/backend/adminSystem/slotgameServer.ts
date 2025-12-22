@@ -71,6 +71,8 @@ export const getConfigSetting = (gameID: string, masterAgent: string, currencyTy
       server: gameID,
       actionName: 'getConfigSetting',
       query: JSON.stringify({
+        // 對齊 Vue2：後端會需要 userID（沿用 9999）
+        userID: '9999',
         gameID,
         masterAgent,
         currencyType,
@@ -80,8 +82,47 @@ export const getConfigSetting = (gameID: string, masterAgent: string, currencyTy
     timeout: 0,
   });
 
+export interface SetConfigSettingResponse {
+  items: string[];
+  success: boolean[];
+  updatedAt: string;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/slotgameServer.ts -> setConfigSetting
+ * 用於寫入遊戲規格設定（支援 updatedAt 樂觀鎖）
+ */
+export const setConfigSetting = (
+  gameID: string,
+  masterAgent: string,
+  currencyType: string,
+  items: string[],
+  data: Array<string | number | string[] | number[] | boolean | null>,
+  updatedAt?: Date | string,
+) =>
+  request<SetConfigSettingResponse>({
+    url: '/AdminSystem/api/action/setConfigSetting',
+    method: 'post',
+    data: {
+      server: gameID,
+      actionName: 'setConfigSetting',
+      query: JSON.stringify({
+        // 對齊 Vue2：後端會需要 userID（沿用 9999）
+        userID: '9999',
+        masterAgent,
+        currencyType,
+        items,
+        data,
+        updatedAt,
+      }),
+    },
+    timeout: 0,
+  });
+
 export default {
   forceBingo,
   getConfigItem,
   getConfigSetting,
+  setConfigSetting,
 };
+

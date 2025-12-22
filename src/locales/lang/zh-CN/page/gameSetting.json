@@ -1,6 +1,12 @@
 {
   "title": {
-    "gameRestrictions": "遊戲規格設定(閱讀)"
+    "gameRestrictions": "遊戲規格設定(閱讀)",
+    "gameRestrictionsGlobalSetting": "遊戲規格設定(完整)"
+  },
+  "buttons": {
+    "exportExcel": "匯出 Excel",
+    "importExcel": "匯入 Excel",
+    "commit": "提交"
   },
   "labels": {
     "currencyType": "幣別",

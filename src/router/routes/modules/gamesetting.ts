@@ -30,9 +30,26 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:lock-outlined',
         },
       },
+      {
+        path: 'gameRestrictionsGlobalSetting',
+        name: 'GameRestrictionsGlobalSetting',
+        component: () => import('@/views/gamesetting/gameRestrictionsGlobalSetting/index.vue'),
+        meta: {
+          title: t('routes.gamesetting.gameRestrictionsGlobalSetting'),
+          icon: 'ant-design:lock-outlined',
+        },
+      },
+      {
+        path: 'gameRestrictionsFullSetting',
+        name: 'GameRestrictionsFullSetting',
+        component: () => import('@/views/gamesetting/gameRestrictionsGlobalSetting/index.vue'),
+        meta: {
+          title: t('routes.gamesetting.gameRestrictionsFullSetting'),
+          icon: 'ant-design:lock-outlined',
+        },
+      },
     ],
   },
 ];
 
 export default routes;
-

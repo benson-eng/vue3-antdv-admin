@@ -48,8 +48,34 @@ export const gameList = (params: { masterAgent: string; agent?: string }) =>
     timeout: 0,
   });
 
+export const getGameIDList = (params: { masterAgent: string /* agent?: string */ }) =>
+  request<string[] | null>({
+    url: '/AdminSystem/api/action/getGameIDList',
+    method: 'post',
+    data: {
+      server: 'gameManager',
+      actionName: 'getGameIDList',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const setGameIDList = (params: { masterAgent: string; gameIDList: string[] /* agent?: string */ }) =>
+  request<boolean>({
+    url: '/AdminSystem/api/action/setGameIDList',
+    method: 'post',
+    data: {
+      server: 'gameManager',
+      actionName: 'setGameIDList',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   isExternalGame,
   globalGameList,
   gameList,
+  getGameIDList,
+  setGameIDList,
 };

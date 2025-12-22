@@ -1,6 +1,12 @@
 {
   "title": {
-    "gameRestrictions": "Game Restrictions (Read)"
+    "gameRestrictions": "Game Restrictions (Read)",
+    "gameRestrictionsGlobalSetting": "Game Restrictions (Full)"
+  },
+  "buttons": {
+    "exportExcel": "Export Excel",
+    "importExcel": "Import Excel",
+    "commit": "Commit"
   },
   "labels": {
     "currencyType": "Currency",
@@ -11,4 +17,3 @@
     "betLimit": "Bet Limit"
   }
 }
-

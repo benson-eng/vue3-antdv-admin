@@ -1,6 +1,7 @@
 {
   "title": "遊戲設定",
   "giveAway": "後台送獎",
-  "gameRestrictions": "遊戲規格設定(閱讀)"
+  "gameRestrictions": "遊戲規格設定(閱讀)",
+  "gameRestrictionsGlobalSetting": "遊戲規格設定(完整)",
+  "gameRestrictionsFullSetting": "遊戲規格設定(完整)(過濾)"
 }
-
