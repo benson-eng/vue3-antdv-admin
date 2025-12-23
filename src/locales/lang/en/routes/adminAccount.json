@@ -2,6 +2,7 @@
   "index": "Admin Account",
   "masterAgent": "Master Agent",
   "masterAgentX": "Master Agent (Game)",
+  "createWizard": "Create Wizard",
   "currency": "Currency Management",
   "token": "Token Management",
   "roles": "Roles",

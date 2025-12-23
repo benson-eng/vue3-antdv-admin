@@ -40,6 +40,9 @@
         <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
           新增
         </a-button>
+        <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
+          導引式建立
+        </a-button>
       </a-space>
     </template>
   </DynamicTable>
@@ -49,7 +52,7 @@
 import { computed, ref } from 'vue';
 import { message, Modal, Tag, Switch } from 'ant-design-vue';
 import type { Dayjs } from 'dayjs';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useTable } from '@/components/core/dynamic-table';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { useFormModal } from '@/hooks/useModal';
@@ -62,6 +65,7 @@ defineOptions({ name: 'AdminAccountMasterAgent' });
 
 const userStore = useUserStore();
 const canCreate = computed(() => userStore.level === 2);
+const router = useRouter();
 const route = useRoute();
 const isMasterAgentX = computed(() => route.name === 'AdminAccountMasterAgentX' || String(route.path).endsWith('/masterAgentX'));
 
@@ -69,6 +73,10 @@ const [DynamicTable, tableInstance] = useTable({
   search: true, // 保留搜尋區容器
 });
 const [showModal] = useFormModal();
+
+const goCreateWizard = () => {
+  router.push({ name: 'AdminAccountMasterAgentCreateWizard' });
+};
 
 const searchAccount = ref<string>('');
 const searchIsEnabled = ref<'true' | 'false' | undefined>(undefined);

@@ -13,6 +13,18 @@ const routes: RouteRecordRaw[] = [
     },
     children: [
       {
+        path: 'create-wizard',
+        name: 'AdminAccountMasterAgentCreateWizard',
+        component: () => import('@/views/adminAccount/masterAgent/createWizard/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.createWizard'),
+          hideInMenu: true,
+          // 讓側邊欄高亮仍停留在「總代理管理」
+          activeMenu: 'AdminAccountMasterAgent',
+          keepAlive: false,
+        },
+      },
+      {
         path: 'masterAgent',
         name: 'AdminAccountMasterAgent',
         component: () => import('@/views/adminAccount/masterAgent/index.vue'),
