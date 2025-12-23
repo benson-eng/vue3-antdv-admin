@@ -4,5 +4,7 @@
   "gameRestrictions": "遊戲規格設定(閱讀)",
   "gameRestrictionsGlobalSetting": "遊戲規格設定(完整)",
   "gameRestrictionsFullSetting": "遊戲規格設定(完整)(過濾)",
-  "levelExtraSetting": "遊戲大廳設定"
+  "levelExtraSetting": "遊戲大廳設定",
+  "configSetting": "客端配置檔"
 }
+

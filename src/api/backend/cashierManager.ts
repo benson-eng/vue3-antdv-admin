@@ -30,3 +30,4 @@ export const getPlatformAccount = (params: GetPlatformAccountParams) =>
 export default {
   getPlatformAccount,
 };
+

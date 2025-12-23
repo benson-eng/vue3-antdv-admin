@@ -57,6 +57,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:appstore-outlined',
         },
       },
+      {
+        path: 'configSetting',
+        name: 'ConfigSetting',
+        component: () => import('@/views/gamesetting/configSetting/index.vue'),
+        meta: {
+          title: t('routes.gamesetting.configSetting'),
+          icon: 'ant-design:setting-outlined',
+        },
+      },
     ],
   },
 ];

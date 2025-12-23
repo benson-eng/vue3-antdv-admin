@@ -4,5 +4,7 @@
   "gameRestrictions": "Game Restrictions (Read)",
   "gameRestrictionsGlobalSetting": "Game Restrictions (Full)",
   "gameRestrictionsFullSetting": "Game Restrictions (Full, Filtered)",
-  "levelExtraSetting": "Lobby Setting"
+  "levelExtraSetting": "Lobby Setting",
+  "configSetting": "Client Config"
 }
+

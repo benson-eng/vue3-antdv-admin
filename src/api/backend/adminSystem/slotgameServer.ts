@@ -26,6 +26,24 @@ export interface GetConfigSettingResponse {
   updatedAt?: string;
 }
 
+/**
+ * 對齊 Vue2：admin-web/src/api/slotgameServer.ts -> getRemoteConfig
+ * 回傳可能為空物件 {} 或包含 remoteConfig 路徑的物件
+ */
+export interface GetRemoteConfigResponse {
+  remoteConfig?: string;
+  [k: string]: any;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/slotgameServer.ts -> uploadRemoteConfig
+ * 回傳通常包含 remoteConfig 路徑
+ */
+export interface UploadRemoteConfigResponse {
+  remoteConfig?: string;
+  [k: string]: any;
+}
+
 export const forceBingo = (gameID: string, memberID: string, forceBingoPayload: ForceBingoPayload) =>
   request({
     url: '/AdminSystem/api/action/forceBingo',
@@ -119,10 +137,63 @@ export const setConfigSetting = (
     timeout: 0,
   });
 
+/**
+ * 取得遠端配置檔資訊（remoteConfig 路徑）
+ * 後端：POST /AdminSystem/api/getRemoteConfig
+ */
+export const getRemoteConfig = (data: { masterAgent: string }) =>
+  request<GetRemoteConfigResponse>({
+    url: '/AdminSystem/api/getRemoteConfig',
+    method: 'post',
+    data,
+    timeout: 0,
+  });
+
+/**
+ * 讀取 CDN 上的 JSON 配置內容
+ * 注意：此為跨網域 fetch，若 CDN/瀏覽器策略阻擋會回傳 null
+ */
+export const getRemoteConfigDetail = async <T = any>(url: string): Promise<T | null> => {
+  try {
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      return null;
+    }
+    return (await res.json()) as T;
+  }
+  catch (e) {
+    console.error('getRemoteConfigDetail failed', e);
+    return null;
+  }
+};
+
+/**
+ * 上傳遠端配置檔
+ * 後端：POST /AdminSystem/api/uploadRemoteConfig（multipart/form-data）
+ */
+export const uploadRemoteConfig = (params: { masterAgent: string; imageFile: File; name: string }) => {
+  const formData = new FormData();
+  formData.append('masterAgent', params.masterAgent);
+  formData.append('name', params.name);
+  formData.append('imageFile', params.imageFile);
+
+  return request<UploadRemoteConfigResponse>({
+    url: '/AdminSystem/api/uploadRemoteConfig',
+    method: 'post',
+    data: formData,
+    requestType: 'form',
+    timeout: 0,
+  });
+};
+
 export default {
   forceBingo,
   getConfigItem,
   getConfigSetting,
   setConfigSetting,
+  getRemoteConfig,
+  getRemoteConfigDetail,
+  uploadRemoteConfig,
 };
+
 
