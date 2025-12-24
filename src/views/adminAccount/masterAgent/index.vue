@@ -75,7 +75,12 @@ const [DynamicTable, tableInstance] = useTable({
 const [showModal] = useFormModal();
 
 const goCreateWizard = () => {
-  router.push({ name: 'AdminAccountMasterAgentCreateWizard' });
+  // 根據當前路由判斷 accountType
+  const accountType = isMasterAgentX.value ? 'masterAgentX' : 'masterAgent';
+  router.push({
+    path: '/adminAccount/create-wizard',
+    query: { accountType },
+  });
 };
 
 const searchAccount = ref<string>('');

@@ -166,6 +166,9 @@ export const useTabsViewStore = defineStore(
 
     /** 关闭左侧 */
     const closeLeftTabs = (route: RouteLocationNormalizedLoaded) => {
+      if ((window as any).__isBeforeUnloadPrompting?.value) {
+        return;
+      }
       const index = tabsList.value.findIndex(item => item.fullPath === route.fullPath);
       if (index > 0) {
         // 確保不關閉首頁
@@ -177,6 +180,9 @@ export const useTabsViewStore = defineStore(
 
     /** 关闭右侧 */
     const closeRightTabs = (route: RouteLocationNormalizedLoaded) => {
+      if ((window as any).__isBeforeUnloadPrompting?.value) {
+        return;
+      }
       const index = tabsList.value.findIndex(item => item.fullPath === route.fullPath);
       if (index >= 0 && index < tabsList.value.length - 1) {
         // 確保不關閉首頁
@@ -188,6 +194,9 @@ export const useTabsViewStore = defineStore(
 
     /** 关闭其他 */
     const closeOtherTabs = (route: RouteLocationNormalizedLoaded) => {
+      if ((window as any).__isBeforeUnloadPrompting?.value) {
+        return;
+      }
       const targetIndex = tabsList.value.findIndex(item => item.fullPath === route.fullPath);
       if (targetIndex !== -1) {
         const current = tabsList.value[targetIndex];
@@ -202,6 +211,9 @@ export const useTabsViewStore = defineStore(
 
     /** 关闭当前页 */
     const closeCurrentTab = (route: RouteLocationNormalizedLoaded) => {
+      if ((window as any).__isBeforeUnloadPrompting?.value) {
+        return;
+      }
       // ====================================================
       // 🏠 首頁保護：首頁不可關閉
       // ====================================================
@@ -272,6 +284,9 @@ export const useTabsViewStore = defineStore(
 
     /** 关闭全部 */
     const closeAllTabs = () => {
+      if ((window as any).__isBeforeUnloadPrompting?.value) {
+        return;
+      }
       // 確保 tabsList 是 Array
       if (!Array.isArray(tabsList.value)) {
         tabsList.value = [];

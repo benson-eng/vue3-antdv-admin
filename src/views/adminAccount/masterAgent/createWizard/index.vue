@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import type Step1BasicInfo from './components/Step1BasicInfo.vue';
-import type Step2Roles from './components/Step2Roles.vue';
-import type Step4NetworkSecurity from './components/Step4NetworkSecurity.vue';
-import type Step5FirebaseAnalytics from './components/Step5FirebaseAnalytics.vue';
-import type Step6PaymentKeys from './components/Step6PaymentKeys.vue';
-import type Step7CustomerAndSocial from './components/Step7CustomerAndSocial.vue';
-import type Step8PaymentSettings from './components/Step8PaymentSettings.vue';
-import type Step9SmsSettings from './components/Step9SmsSettings.vue';
-import type Step10SlotSettings from './components/Step10SlotSettings.vue';
-import type Step11Recaptcha from './components/Step11Recaptcha.vue';
-import type Step12AdvancedSettings from './components/Step12AdvancedSettings.vue';
 import { message, Modal } from 'ant-design-vue';
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { wizardStateManager } from '@/router/router-guards';
 import { useTabsViewStore } from '@/store/modules/tabsView';
 import { useUserStore } from '@/store/modules/user';
+import Step1BasicInfo from './components/Step1BasicInfo.vue';
+import Step2Roles from './components/Step2Roles.vue';
 import Step3WalletAndFormula from './components/Step3WalletAndFormula.vue';
+import Step4NetworkSecurity from './components/Step4NetworkSecurity.vue';
+import Step5FirebaseAnalytics from './components/Step5FirebaseAnalytics.vue';
+import Step6PaymentKeys from './components/Step6PaymentKeys.vue';
+
+import Step7CustomerAndSocial from './components/Step7CustomerAndSocial.vue';
+import Step8PaymentSettings from './components/Step8PaymentSettings.vue';
+import Step9SmsSettings from './components/Step9SmsSettings.vue';
+import Step10SlotSettings from './components/Step10SlotSettings.vue';
+import Step11Recaptcha from './components/Step11Recaptcha.vue';
+import Step12AdvancedSettings from './components/Step12AdvancedSettings.vue';
 import { buildInternalSettings, buildRemoteConfigURLs, generateHashKey, generateSecret } from './utils';
 
 defineOptions({ name: 'AdminAccountMasterAgentCreateWizard' });
@@ -272,21 +273,12 @@ const initializeWizard = () => {
   return true;
 };
 
-/**
- * 重新整理保護：beforeunload 事件處理
- */
-const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-  if (isWizardActive.value && !isWizardCompleted.value) {
-    console.log('[Wizard][流程保護] 偵測到重新整理，顯示確認視窗');
-    // 標準瀏覽器確認視窗
-    e.preventDefault();
-    e.returnValue = '重新整理會結束建立程序，並關閉此頁';
-    return e.returnValue;
-  }
-};
-
 const goBack = () => {
-  router.push({ name: 'AdminAccountMasterAgent' });
+  // 根據 accountType 返回到正確的頁面
+  const targetRouteName = formModel.accountType === 'masterAgentX'
+    ? 'AdminAccountMasterAgentX'
+    : 'AdminAccountMasterAgent';
+  router.push({ name: targetRouteName });
 };
 
 /**
@@ -323,10 +315,18 @@ const validateCurrentStep = async (): Promise<boolean> => {
 };
 
 /**
+ * 檢查 Step 是否可點擊
+ */
+const isStepClickable = (i: number) => {
+  return stepStates[i]?.touched && stepStates[i]?.valid;
+};
+
+/**
  * Step 點擊事件處理
  */
 const onStepClick = async (targetStep: number) => {
-  console.log('[Wizard][click step]', targetStep);
+  const clickable = isStepClickable(targetStep);
+  console.log('[Wizard][click step]', { step: targetStep, clickable });
 
   // 尚未填寫過的 step，不允許直接跳
   if (!stepStates[targetStep]?.touched) {
@@ -935,17 +935,13 @@ onMounted(() => {
     return; // 非法進入，已顯示警告並導向首頁
   }
 
-  // 掛載重新整理保護
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  console.log('[Wizard][生命週期] 組件已掛載，流程保護已啟動');
+  console.log('[Wizard][生命週期] 組件已掛載，流程保護已啟動（路由守衛）');
 });
 
 /**
  * 生命週期：組件卸載前
  */
 onBeforeUnmount(() => {
-  // 移除重新整理保護
-  window.removeEventListener('beforeunload', handleBeforeUnload);
   isWizardActive.value = false;
   // 如果 Wizard 未完成，清除活動狀態
   if (!isWizardCompleted.value) {
@@ -971,136 +967,185 @@ onBeforeUnmount(() => {
 
       <a-steps
         :current="currentStep"
-        class="steps"
+        class="steps steps-readonly"
+
         @change="onStepClick"
       >
         <a-step
           title="Step 1"
           description="帳戶類型與基本資料"
           :status="getStepStatus(0)"
+          :class="{
+            'step-clickable': isStepClickable(0),
+            'step-disabled': !isStepClickable(0),
+          }"
         />
         <a-step
           title="Step 2"
           description="角色與權限"
           :status="getStepStatus(1)"
+          :class="{
+            'step-clickable': isStepClickable(1),
+            'step-disabled': !isStepClickable(1),
+          }"
         />
         <a-step
           title="Step 3"
           description="錢包與等級設定"
           :status="getStepStatus(2)"
+          :class="{
+            'step-clickable': isStepClickable(2),
+            'step-disabled': !isStepClickable(2),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 4"
           description="網路與安全設定"
           :status="getStepStatus(3)"
+          :class="{
+            'step-clickable': isStepClickable(3),
+            'step-disabled': !isStepClickable(3),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 5"
           description="Firebase / GA"
           :status="getStepStatus(4)"
+          :class="{
+            'step-clickable': isStepClickable(4),
+            'step-disabled': !isStepClickable(4),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 6"
           description="支付金鑰設定"
           :status="getStepStatus(5)"
+          :class="{
+            'step-clickable': isStepClickable(5),
+            'step-disabled': !isStepClickable(5),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 7"
           description="客服與社群登入"
           :status="getStepStatus(6)"
+          :class="{
+            'step-clickable': isStepClickable(6),
+            'step-disabled': !isStepClickable(6),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 8"
           description="金流設定"
           :status="getStepStatus(7)"
+          :class="{
+            'step-clickable': isStepClickable(7),
+            'step-disabled': !isStepClickable(7),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 9"
           description="簡訊設定"
           :status="getStepStatus(8)"
+          :class="{
+            'step-clickable': isStepClickable(8),
+            'step-disabled': !isStepClickable(8),
+          }"
         />
         <a-step
           title="Step 10"
           description="老虎機設定"
           :status="getStepStatus(9)"
+          :class="{
+            'step-clickable': isStepClickable(9),
+            'step-disabled': !isStepClickable(9),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 11"
           description="人機驗證設定"
           :status="getStepStatus(10)"
+          :class="{
+            'step-clickable': isStepClickable(10),
+            'step-disabled': !isStepClickable(10),
+          }"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
           title="Step 12"
           description="進階設定"
           :status="getStepStatus(11)"
+          :class="{
+            'step-clickable': isStepClickable(11),
+            'step-disabled': !isStepClickable(11),
+          }"
         />
       </a-steps>
 
       <div class="content">
         <Step1BasicInfo
-          v-if="currentStep === 0"
+          v-show="currentStep === 0"
           ref="step1Ref"
           :form-model="formModel"
         />
         <Step2Roles
-          v-else-if="currentStep === 1"
+          v-show="currentStep === 1"
           ref="step2Ref"
           :form-model="formModel"
         />
         <Step3WalletAndFormula
-          v-else-if="currentStep === 2"
+          v-show="currentStep === 2"
           :form-model="formModel"
         />
         <Step4NetworkSecurity
-          v-else-if="currentStep === 3 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
           ref="step4Ref"
           :form-model="formModel"
         />
         <Step5FirebaseAnalytics
-          v-else-if="currentStep === 4 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 4 && formModel.accountType === 'masterAgent'"
           ref="step5Ref"
           :form-model="formModel"
         />
         <Step6PaymentKeys
-          v-else-if="currentStep === 5 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 5 && formModel.accountType === 'masterAgent'"
           ref="step6Ref"
           :form-model="formModel"
         />
         <Step7CustomerAndSocial
-          v-else-if="currentStep === 6 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 6 && formModel.accountType === 'masterAgent'"
           ref="step7Ref"
           :form-model="formModel"
         />
         <Step8PaymentSettings
-          v-else-if="currentStep === 7 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 7 && formModel.accountType === 'masterAgent'"
           ref="step8Ref"
           :form-model="formModel"
         />
         <Step9SmsSettings
-          v-else-if="currentStep === 8 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 8 && formModel.accountType === 'masterAgent'"
           ref="step9Ref"
           :form-model="formModel"
         />
         <Step10SlotSettings
-          v-else-if="currentStep === 9"
+          v-show="currentStep === 9"
           ref="step10Ref"
           :form-model="formModel"
         />
         <Step11Recaptcha
-          v-else-if="currentStep === 10 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 10 && formModel.accountType === 'masterAgent'"
           ref="step11Ref"
           :form-model="formModel"
         />
         <Step12AdvancedSettings
-          v-else-if="currentStep === 11 && formModel.accountType === 'masterAgent' && userStore.level === 1"
+          v-show="currentStep === 11 && formModel.accountType === 'masterAgent' && userStore.level === 1"
           ref="step12Ref"
           :form-model="formModel"
         />
@@ -1152,6 +1197,31 @@ onBeforeUnmount(() => {
 
 .steps {
   margin-bottom: 16px;
+}
+
+/* ==============================
+   Wizard Steps 強制唯讀模式
+   ============================== */
+
+/* 預設：所有 step 一律不顯示 pointer */
+.steps-readonly :deep(.ant-steps-item),
+.steps-readonly :deep(.ant-steps-item *),
+.steps-readonly :deep(.ant-steps-item-container) {
+  cursor: default !important;
+}
+
+/* 只有「已完成」的 step 才允許顯示 pointer */
+.steps-readonly :deep(.step-clickable),
+.steps-readonly :deep(.step-clickable .ant-steps-item),
+.steps-readonly :deep(.step-clickable .ant-steps-item-container),
+.steps-readonly :deep(.step-clickable .ant-steps-item *) {
+  cursor: pointer !important;
+}
+
+/* 未完成 step：完全不可互動 */
+.steps-readonly :deep(.step-disabled),
+.steps-readonly :deep(.step-disabled *) {
+  pointer-events: none !important;
 }
 
 .content {

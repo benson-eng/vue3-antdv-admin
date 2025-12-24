@@ -7,6 +7,10 @@ defineOptions({ name: 'Step1BasicInfo' });
 
 const props = defineProps<Props>();
 
+// [DEBUG] 印出接收到的 props（特別是 formModel）
+console.log('[Step1BasicInfo][DEBUG] 接收到的 props:', props);
+console.log('[Step1BasicInfo][DEBUG] formModel 內容:', props.formModel);
+
 interface Props {
   formModel: {
     accountType: 'masterAgent' | 'masterAgentX' | undefined;
@@ -68,6 +72,8 @@ watch(
 );
 
 onMounted(() => {
+  // [DEBUG] 確認元件是否有被掛載
+  console.log('[Step1BasicInfo][DEBUG] 元件已掛載，formModel 當前值:', props.formModel);
   loadShareholders();
 });
 </script>
@@ -79,6 +85,11 @@ onMounted(() => {
     :label-col="{ span: 6 }"
     :wrapper-col="{ span: 14 }"
   >
+    <!--
+      帳戶類型由 Wizard 入口決定，Step1 不提供選擇
+      保留 formModel.accountType 和驗證規則，但隱藏 UI 讓使用者無法選擇
+    -->
+    <!--
     <a-form-item
       label="帳戶類型"
       name="accountType"
@@ -93,6 +104,7 @@ onMounted(() => {
         </a-radio>
       </a-radio-group>
     </a-form-item>
+    -->
 
     <a-form-item
       label="後台帳號"

@@ -25,6 +25,11 @@ const wizardState = {
 };
 
 /**
+ * 記錄待導向的目標路由（當從 Wizard 切換到其他頁籤時）
+ */
+let pendingTargetRoute: RouteLocationNormalized | null = null;
+
+/**
  * 檢查是否為 Wizard 路由
  */
 const isWizardRoute = (route: RouteLocationNormalized): boolean => {
@@ -32,10 +37,10 @@ const isWizardRoute = (route: RouteLocationNormalized): boolean => {
 };
 
 /**
- * 關閉 Wizard 並導向首頁
+ * 關閉 Wizard 並導向目標路由（如果有 pendingTargetRoute 則導向該路由，否則導向首頁）
  */
-const closeWizardAndGoHome = (router: Router) => {
-  console.log('[Wizard][路由守衛] 關閉 Wizard 並導向首頁');
+const closeWizardAndGoToTarget = (router: Router) => {
+  console.log('[Wizard][路由守衛] 關閉 Wizard 並導向目標路由', { pendingTargetRoute });
   wizardState.isActive = false;
   wizardState.isCompleted = true;
 
@@ -45,9 +50,22 @@ const closeWizardAndGoHome = (router: Router) => {
     tabsViewStore.closeCurrentTab(currentTab);
   }
 
-  router.push({ name: HOME_ROUTE_NAME }).catch((err) => {
-    console.error('[Wizard][路由守衛] 導向首頁失敗:', err);
-  });
+  // 如果有待導向的目標路由，導向該路由；否則導向首頁
+  if (pendingTargetRoute) {
+    router.push(pendingTargetRoute).catch((err) => {
+      console.error('[Wizard][路由守衛] 導向目標路由失敗:', err);
+      // 如果導向目標路由失敗，回退到首頁
+      router.push({ name: HOME_ROUTE_NAME }).catch((err2) => {
+        console.error('[Wizard][路由守衛] 導向首頁失敗:', err2);
+      });
+    });
+    pendingTargetRoute = null; // 清除待導向路由
+  }
+  else {
+    router.push({ name: HOME_ROUTE_NAME }).catch((err) => {
+      console.error('[Wizard][路由守衛] 導向首頁失敗:', err);
+    });
+  }
 };
 
 export function createRouterGuards(router: Router, whiteNameList: WhiteNameList) {
@@ -69,6 +87,9 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
         isCompleted: wizardState.isCompleted,
       });
 
+      // 記錄目標路由
+      pendingTargetRoute = to;
+
       // 顯示確認視窗
       Modal.confirm({
         title: '離開建立程序',
@@ -77,12 +98,14 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
         cancelText: '取消',
         onOk: () => {
           console.log('[Wizard][路由守衛] 使用者確認離開，關閉 Wizard');
-          closeWizardAndGoHome(router);
-          // 允許導航到目標路由
-          next();
+          closeWizardAndGoToTarget(router);
+          // 取消原本的導航，因為 closeWizardAndGoToTarget 已經處理了導航
+          next(false);
         },
         onCancel: () => {
           console.log('[Wizard][路由守衛] 使用者取消離開，留在 Wizard');
+          // 清除待導向路由（因為用戶取消了）
+          pendingTargetRoute = null;
           // 取消導航，留在原頁面
           next(false);
         },
@@ -94,6 +117,7 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
     if (isWizardRoute(to)) {
       wizardState.isActive = true;
       wizardState.isCompleted = false;
+      pendingTargetRoute = null; // 清除待導向路由（進入 Wizard 時重置）
       console.log('[Wizard][路由守衛] 進入 Wizard 頁面，啟動流程保護');
     }
 
