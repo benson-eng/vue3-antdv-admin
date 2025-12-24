@@ -7,9 +7,9 @@ import { Button as AButton, Col as ACol, Pagination as APagination, Row as ARow,
 // import currency from 'currency.js';
 import dayjs from 'dayjs';
 
-import { computed, h, onMounted, ref, watch } from 'vue';
+import { computed, h, ref } from 'vue';
 import { queryAccountsNickName } from '@/api/backend/adminSystem/accountSystem';
-import { gameList, getGamePlayerLists, globalGameList } from '@/api/backend/adminSystem/gameManagerServer';
+import { gameList as getGameListAPI, getGamePlayerLists, globalGameList } from '@/api/backend/adminSystem/gameManagerServer';
 import { getStatistics } from '@/api/backend/adminSystem/gameStatistics';
 // TODO: AgentIDSelector 組件需要從 Vue2 遷移到 Vue3
 // import AgentIDSelector from '@/components/AgentIDSelector/AgentIDSelector.vue';
@@ -25,15 +25,13 @@ const { t } = useI18n();
 const userStore = useUserStore();
 
 const currencyType = ref<string>('');
-const agentID = ref<string>('');
-const gameList = ref<Record<string, string>>({});
+const gameListData = ref<Record<string, string>>({});
 const listLoading = ref(false);
 const hasNickNameList = ref<Record<string, string>>({});
 /**
  * 股東
  */
 const selectedShareholder = ref<string>('');
-const customShareholderList = ref([{ name: '無股東', value: '__NO_MATCH__' }]);
 const masterAgentList = ref<any[]>([]);
 
 // 搜尋條件
@@ -78,7 +76,6 @@ const playerTableLimit = ref(10);
 const getAuthLevel = computed(() => userStore.level);
 const getShareholder = computed(() => userStore.shareholder);
 const getMasterAgent = computed(() => userStore.masterAgent);
-const getUserAgent = computed(() => userStore.agent);
 
 // 分頁數據
 const paginatedData = computed(() => {
@@ -120,7 +117,7 @@ const columns = computed<TableColumnType[]>(() => [
     dataIndex: 'gameID',
     key: 'game',
     customRender: ({ record }: any) => {
-      return `${record.gameID} - ${gameList.value[record.gameID] || record.gameID}`;
+      return `${record.gameID} - ${gameListData.value[record.gameID] || record.gameID}`;
     },
   },
 ]);
@@ -142,7 +139,7 @@ const getOnlineMember = async () => {
   searchResult.value.onlineMemberList = [];
   listLoading.value = true;
 
-  let postData: any = {
+  const postData: any = {
     masterAgents: [],
     agent: '',
   };
@@ -172,11 +169,13 @@ const getOnlineMember = async () => {
 
   try {
     const result: any = await getGamePlayerLists(postData);
-    let memberIDs: any[] = [];
+    const memberIDs: any[] = [];
 
     postData.masterAgents.forEach(async (masterAgent: string) => {
       const gamePlayerData = result.data[masterAgent];
-      if (!gamePlayerData || !gamePlayerData.gamePlayerList) { return; }
+      if (!gamePlayerData || !gamePlayerData.gamePlayerList) {
+        return;
+      }
 
       const gameIDs = Object.keys(gamePlayerData.gamePlayerList);
       gameIDs.forEach((gameID: string) => {
@@ -240,7 +239,7 @@ const searchHandler = async () => {
 
   try {
     const result = await getStatistics(searchConditions.value);
-    const staticsResult = result.data?.items?.[0];
+    const staticsResult = (result as any).data?.items?.[0] || result.items?.[0];
     await getOnlineMember();
 
     if (!staticsResult) {
@@ -256,28 +255,30 @@ const searchHandler = async () => {
   }
 };
 
-const onShareholderChanged = async (payload: { shareholder: string }) => {
-  // console.log("onShareholderChanged", payload);
-};
+// TODO: AgentIDSelector 遷移後啟用
+// const onShareholderChanged = async (_payload: { shareholder: string }) => {
+//   // console.log("onShareholderChanged", payload);
+// };
 
-const onMasterAgentChanged = async (payload: any) => {
-  console.log('onMasterAgentChanged', payload);
-  clearSearchResult();
-  if (payload?.currencyType) {
-    currencyType.value = payload.currencyType;
-  }
-  if (payload?.masterAgent) {
-    searchConditions.value.masterAgent = payload.masterAgent;
-  }
-  searchResult.value.onlineMemberList = [];
-  await getNameList();
-};
+// const onMasterAgentChanged = async (payload: any) => {
+//   console.log('onMasterAgentChanged', payload);
+//   clearSearchResult();
+//   if (payload?.currencyType) {
+//     currencyType.value = payload.currencyType;
+//   }
+//   if (payload?.masterAgent) {
+//     searchConditions.value.masterAgent = payload.masterAgent;
+//   }
+//   searchResult.value.onlineMemberList = [];
+//   await getNameList();
+// };
 
 /**
  * 取得 遊戲清單 各語系名稱 dialog
+ * TODO: AgentIDSelector 遷移後啟用
  */
-const getNameList = async () => {
-  gameList.value = {};
+const _getNameList = async () => {
+  gameListData.value = {};
   let res: any;
 
   try {
@@ -287,7 +288,7 @@ const getNameList = async () => {
     else {
       const masterAgent = searchConditions.value.masterAgent;
       if (masterAgent) {
-        res = await gameList({ masterAgent });
+        res = await getGameListAPI({ masterAgent });
       }
     }
 
@@ -297,7 +298,7 @@ const getNameList = async () => {
         if (item.language && item.language.tw) {
           gameName = item.language.tw;
         }
-        gameList.value[item.gameID] = gameName;
+        gameListData.value[item.gameID] = gameName;
       });
     }
   }
@@ -310,6 +311,11 @@ const getNameList = async () => {
 /**
  * 暫時使用簡單的數字格式化，待 currency.js 遷移後恢復完整功能
  */
+const addSymbol = (src: string) => {
+  const symbol = CurrencySymbol.symbol(currencyType.value as any);
+  return `${symbol}${src}`;
+};
+
 const financial = (x: any) => {
   // const temp = currency(x, { separator: ',' }).format();
   // 暫時使用簡單格式化
@@ -318,23 +324,6 @@ const financial = (x: any) => {
   const result = addSymbol(temp);
   return result;
 };
-
-const addSymbol = (src: string) => {
-  const symbol = CurrencySymbol.symbol(currencyType.value as any);
-  return `${symbol}${src}`;
-};
-
-const handleAllList = (list: any) => {
-  // console.log("🌍 全部 masterAgent 清單", list);
-  masterAgentList.value = list;
-};
-
-watch(
-  () => searchConditions.value.agentID,
-  async (newAgentID: string) => {
-    // await this.getOnlineMember();
-  },
-);
 </script>
 
 <template>

@@ -12,7 +12,8 @@ import { LOGIN_NAME, PAGE_NOT_FOUND_NAME, REDIRECT_NAME } from './constant';
 
 NProgress.configure({ showSpinner: false }); // NProgress Configuration
 
-const defaultRoutePath = '/dashboard/mabu';
+const defaultRoutePath = '/home';
+const HOME_ROUTE_NAME = 'Home';
 
 /**
  * Wizard 流程保護：全局狀態管理
@@ -44,7 +45,7 @@ const closeWizardAndGoHome = (router: Router) => {
     tabsViewStore.closeCurrentTab(currentTab);
   }
 
-  router.push({ name: 'dashboard-mabu' }).catch((err) => {
+  router.push({ name: HOME_ROUTE_NAME }).catch((err) => {
     console.error('[Wizard][路由守衛] 導向首頁失敗:', err);
   });
 };
@@ -201,7 +202,7 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
     if (userStore.token && to.name !== LOGIN_NAME) {
       const tabsViewStore = useTabsViewStore();
       // 確保首頁 Tab 存在（在登入後首次導航時）
-      if (tabsViewStore.tabsList.length === 0 || !tabsViewStore.tabsList.find(tab => tab.name === 'dashboard-mabu')) {
+      if (tabsViewStore.tabsList.length === 0 || !tabsViewStore.tabsList.find(tab => tab.name === HOME_ROUTE_NAME)) {
         tabsViewStore.ensureHomeTabExists();
       }
     }

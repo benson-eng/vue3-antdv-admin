@@ -1,16 +1,23 @@
 <template>
-  <div class="logo">
+  <div class="logo cursor-pointer" @click="goHome">
     <img src="~@/assets/images/logo.png" alt="" />
     <h2 v-show="!collapsed" class="title">One Piece</h2>
   </div>
 </template>
 
 <script setup>
+  import { useRouter } from 'vue-router';
+
   defineProps({
     collapsed: {
       type: Boolean,
     },
   });
+
+  const router = useRouter();
+  const goHome = () => {
+    router.push({ name: 'Home' });
+  };
 </script>
 
 <style lang="less" scoped>

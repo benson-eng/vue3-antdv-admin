@@ -13,6 +13,12 @@
 
   // 点击菜单
   const clickMenuItem = (menuItem: RouteRecordRaw) => {
+    // 如果點擊的是首頁，直接導向首頁
+    if (menuItem.name === 'Home') {
+      router.push({ name: 'Home' });
+      return;
+    }
+
     const { isExt, extOpenMode, type } = menuItem?.meta || {};
 
     if (type === 0 && !menuItem.redirect) return;
@@ -26,6 +32,15 @@
   };
 
   const menus = computed(() => {
+    // 首頁路由定義
+    const homeRoute = {
+      name: 'Home',
+      path: '/home',
+      meta: {
+        title: '首頁',
+      },
+    };
+
     if (route.meta?.namePath) {
       let children = userStore.menus;
       const paths = route.meta?.namePath?.map((item) => {
@@ -33,18 +48,18 @@
         children = a?.children || [];
         return a;
       });
+      // 第一層永遠是首頁
       return [
-        {
-          name: '__index',
-          meta: {
-            title: '首页',
-          },
-          children: userStore.menus,
-        },
+        homeRoute,
         ...paths,
       ];
     }
-    return route.matched;
+    // 如果當前路由不是首頁，第一層仍然是首頁
+    if (route.name !== 'Home') {
+      return [homeRoute, ...route.matched];
+    }
+    // 如果當前就是首頁，只顯示首頁
+    return [homeRoute];
   });
 
   const getSelectKeys = (rotueIndex: number) => {
@@ -56,7 +71,16 @@
   <a-breadcrumb>
     <template v-for="(routeItem, rotueIndex) in menus" :key="routeItem?.name">
       <a-breadcrumb-item>
-        <TitleI18n :title="routeItem?.meta?.title" class="cursor-pointer" />
+        <span
+          v-if="routeItem?.name === 'Home'"
+          class="cursor-pointer"
+          @click="clickMenuItem(routeItem as RouteRecordRaw)"
+        >
+          <TitleI18n :title="routeItem?.meta?.title" />
+        </span>
+        <template v-else>
+          <TitleI18n :title="routeItem?.meta?.title" class="cursor-pointer" />
+        </template>
         <template v-if="routeItem?.children?.length" #overlay>
           <a-menu :selected-keys="getSelectKeys(rotueIndex)">
             <template v-for="childItem in routeItem?.children" :key="childItem.name">

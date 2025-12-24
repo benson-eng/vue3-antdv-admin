@@ -8,7 +8,11 @@
       @change="changePage"
       @edit="editTabItem"
     >
-      <a-tab-pane v-for="tabItem in tabsViewStore.getTabsList" :key="tabItem.fullPath">
+      <a-tab-pane
+        v-for="tabItem in tabsViewStore.getTabsList"
+        :key="tabItem.fullPath"
+        :closable="tabItem.name !== 'Home'"
+      >
         <template #tab>
           <TabsOperator
             :ref="(ins: TabsOperatorInstance) => (itemRefs[tabItem.fullPath] = ins)"

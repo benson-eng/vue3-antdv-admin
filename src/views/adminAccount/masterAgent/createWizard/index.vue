@@ -230,7 +230,7 @@ const closeWizardAndGoHome = () => {
   }
 
   // 導向首頁
-  router.push({ name: 'dashboard-mabu' }).catch((err) => {
+  router.push({ name: 'DashboardMabu' }).catch((err) => {
     console.error('[Wizard][流程保護] 導向首頁失敗:', err);
   });
 };

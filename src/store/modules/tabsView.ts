@@ -33,7 +33,7 @@ export const useTabsViewStore = defineStore(
 
     /** 檢查是否為首頁路由（不可關閉） */
     const isHomeRoute = (route: RouteLocationNormalizedLoaded): boolean => {
-      return route.name === 'dashboard-mabu';
+      return route.name === 'Home';
     };
 
     /** 檢查是否為 Wizard 路由 */
@@ -68,21 +68,21 @@ export const useTabsViewStore = defineStore(
 
     /** 確保首頁存在於 tabsList 中 */
     const ensureHomeTabExists = () => {
-      // 確保 tabsList 是 Array
+      // 確保 tabsList 是 Array，防止 undefined.map 錯誤
       if (!Array.isArray(tabsList.value)) {
         tabsList.value = [];
       }
 
-      const homeRoute = router.getRoutes().find(r => r.name === 'dashboard-mabu');
+      const homeRoute = router.getRoutes().find(r => r.name === 'Home');
       if (homeRoute) {
-        const homeTab = tabsList.value.find(tab => tab.name === 'dashboard-mabu');
+        const homeTab = tabsList.value.find(tab => tab.name === 'Home');
         if (!homeTab) {
           try {
             // 首頁不存在，添加首頁
-            const resolvedRoute = router.resolve({ name: 'dashboard-mabu' });
+            const resolvedRoute = router.resolve({ name: 'Home' });
             const homeRouteLocation: RouteLocationNormalizedLoaded = {
               ...resolvedRoute,
-              matched: resolvedRoute.matched || [],
+              matched: Array.isArray(resolvedRoute.matched) ? resolvedRoute.matched : [],
             } as RouteLocationNormalizedLoaded;
             const rawRoute = getRawRoute(homeRouteLocation);
             // 確保首頁永遠在第一個位置
@@ -95,12 +95,18 @@ export const useTabsViewStore = defineStore(
         }
         else {
           // 如果首頁存在但不在第一個位置，移到第一個
-          const homeIndex = tabsList.value.findIndex(tab => tab.name === 'dashboard-mabu');
+          const homeIndex = tabsList.value.findIndex(tab => tab.name === 'Home');
           if (homeIndex > 0) {
             const homeTab = tabsList.value.splice(homeIndex, 1)[0];
             tabsList.value.unshift(homeTab);
             console.log('[TabsView] 首頁已移動到第一個位置');
           }
+        }
+      }
+      else {
+        // 如果找不到首頁路由，初始化為空陣列（避免 undefined.map）
+        if (tabsList.value.length === 0) {
+          console.warn('[TabsView] 找不到首頁路由 Home');
         }
       }
     };
@@ -251,13 +257,13 @@ export const useTabsViewStore = defineStore(
           router.push(targetRoute).catch((err) => {
             console.error('[TabsView] 導航失敗:', err);
             // 如果導航失敗，強制導向首頁
-            router.push({ name: 'dashboard-mabu' });
+            router.push({ name: 'Home' });
           });
         }
         else {
           // 如果沒有任何 tab，確保首頁存在並導向
           ensureHomeTabExists();
-          router.push({ name: 'dashboard-mabu' }).catch((err) => {
+          router.push({ name: 'Home' }).catch((err) => {
             console.error('[TabsView] 導向首頁失敗:', err);
           });
         }
@@ -280,7 +286,7 @@ export const useTabsViewStore = defineStore(
         ensureHomeTabExists();
       }
       // 導向首頁
-      router.push({ name: 'dashboard-mabu' }).catch((err) => {
+      router.push({ name: 'Home' }).catch((err) => {
         console.error('[TabsView] 導向首頁失敗:', err);
       });
     };

@@ -46,6 +46,10 @@ const isCurrentRoute = (route) => {
 
 /** 关闭当前页面 */
 const removeTab = () => {
+  // 首頁不可關閉
+  if (props.tabItem.name === 'Home') {
+    return message.warning('首頁不可關閉！');
+  }
   // 基本檢查：如果只有一個 tab，不允許關閉
   // 注意：tabsViewStore.closeCurrentTab 中已有更詳細的保護邏輯（首頁保護、Wizard 保護）
   if (tabsList.value.length === 1) {
@@ -141,7 +145,7 @@ defineExpose({
           <ReloadOutlined />
           {{ $t('layout.multipleTab.reload') }}
         </a-menu-item>
-        <a-menu-item key="2" @click="removeTab">
+        <a-menu-item key="2" :disabled="tabItem.name === 'Home'" @click="removeTab">
           <CloseOutlined />
           {{ $t('layout.multipleTab.close') }}
         </a-menu-item>
