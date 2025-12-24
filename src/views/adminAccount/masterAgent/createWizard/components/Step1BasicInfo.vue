@@ -1,7 +1,14 @@
 <script setup lang="ts">
+/* eslint-disable vue/no-mutating-props */
+// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
+// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import { onMounted, ref, watch } from 'vue';
 import ShareholderApi from '@/api/backend/adminAccount/shareholder';
+import { useFormModal } from '@/hooks/useModal';
+import { useUserStore } from '@/store/modules/user';
+import { baseSchemas } from '@/views/adminAccount/shareholder/formSchemas';
 
 defineOptions({ name: 'Step1BasicInfo' });
 
@@ -25,6 +32,8 @@ interface Props {
 const formRef = ref<FormInstance>();
 const shareholderOptions = ref<Array<{ label: string; value: string }>>([]);
 const loadingShareholders = ref(false);
+const userStore = useUserStore();
+const [showModal] = useFormModal();
 
 // 暴露驗證方法給父元件
 defineExpose({
@@ -59,6 +68,78 @@ const loadShareholders = async () => {
   finally {
     loadingShareholders.value = false;
   }
+};
+
+/**
+ * 生成後端密鑰（用於新增股東）
+ */
+const toBase32 = (bytes: Uint8Array) => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0;
+  let value = 0;
+  let output = '';
+
+  for (let i = 0; i < bytes.length; i++) {
+    value = (value << 8) | bytes[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += alphabet[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    output += alphabet[(value << (5 - bits)) & 31];
+  }
+
+  return output;
+};
+
+const generateBackendKey = () => {
+  /**
+   * 160-bit
+   */
+  const bytes = window.crypto.getRandomValues(new Uint8Array(20));
+  return toBase32(bytes);
+};
+
+/**
+ * 開啟新增股東 dialog
+ */
+const openAddShareholderModal = async () => {
+  const [formRef] = await showModal({
+    modalProps: {
+      title: '新增股東',
+      width: 700,
+      async onFinish(values) {
+        const payloadRoles = Array.isArray(values.roles)
+          ? values.roles.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+          : [];
+
+        await ShareholderApi.createShareholderAccount({
+          account: String(values.account),
+          password: '123456',
+          name: String(values.name),
+          roles: payloadRoles,
+          backendKey: generateBackendKey(),
+        });
+        message.success('新增成功');
+
+        // 重新載入歸屬股東清單
+        await loadShareholders();
+      },
+    },
+    formProps: {
+      labelWidth: 120,
+      schemas: baseSchemas,
+    },
+  });
+
+  // 設置角色欄位的禁用狀態
+  formRef?.updateSchema([
+    { field: 'account', componentProps: { disabled: false } },
+    { field: 'roles', componentProps: { disabled: userStore.level !== 2 } },
+  ]);
 };
 
 // 當 accountType 變更為 masterAgentX 時，清空 website
@@ -143,13 +224,19 @@ onMounted(() => {
     </a-form-item>
 
     <a-form-item label="歸屬股東" name="shareholderAccount">
-      <a-select
-        v-model:value="formModel.shareholderAccount"
-        :options="shareholderOptions"
-        allow-clear
-        placeholder="請選擇股東（可選）"
-        :loading="loadingShareholders"
-      />
+      <div style="display: flex; gap: 8px; align-items: center">
+        <a-select
+          v-model:value="formModel.shareholderAccount"
+          :options="shareholderOptions"
+          allow-clear
+          placeholder="請選擇股東（可選）"
+          :loading="loadingShareholders"
+          style="flex: 1"
+        />
+        <a-button type="primary" @click="openAddShareholderModal">
+          增加股東
+        </a-button>
+      </div>
     </a-form-item>
   </a-form>
 </template>

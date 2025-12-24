@@ -462,7 +462,6 @@ async function nextOriginal() {
       console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
       console.log('Create Payload:', JSON.parse(JSON.stringify(payload)));
 
-      message.success('帳戶建立成功！您可以繼續設定進階選項，或稍後在編輯頁面補齊。');
       currentStep.value = 2;
     }
     catch (error: any) {
