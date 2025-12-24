@@ -7,12 +7,23 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/dashboard',
     name: moduleName,
-    redirect: '/dashboard/welcome',
+    redirect: '/dashboard/mabu',
     meta: {
       title: t('routes.dashboard.dashboard'),
       icon: 'ant-design:dashboard-outlined',
     },
     children: [
+      {
+        path: 'mabu',
+        name: `${moduleName}-mabu`,
+        meta: {
+          title: t('routes.dashboard.mabu'),
+          icon: 'ant-design:dashboard-outlined',
+          affix: true,
+          noCache: true,
+        },
+        component: () => import('@/views/dashboard/mabu/index.vue'),
+      },
       {
         path: 'welcome',
         name: `${moduleName}-welcome`,

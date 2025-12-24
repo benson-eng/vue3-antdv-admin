@@ -1,3 +1,77 @@
+<script setup lang="ts">
+import type { FormInstance } from 'ant-design-vue';
+import { onMounted, ref, watch } from 'vue';
+import ShareholderApi from '@/api/backend/adminAccount/shareholder';
+
+defineOptions({ name: 'Step1BasicInfo' });
+
+const props = defineProps<Props>();
+
+interface Props {
+  formModel: {
+    accountType: 'masterAgent' | 'masterAgentX' | undefined;
+    account: string;
+    name: string;
+    website: string;
+    currencyCode: string;
+    shareholderAccount: string;
+  };
+}
+
+const formRef = ref<FormInstance>();
+const shareholderOptions = ref<Array<{ label: string; value: string }>>([]);
+const loadingShareholders = ref(false);
+
+// 暴露驗證方法給父元件
+defineExpose({
+  validate: async () => {
+    try {
+      await formRef.value?.validate();
+      return true;
+    }
+    catch {
+      return false;
+    }
+  },
+  formRef,
+});
+
+/**
+ * 載入股東列表
+ */
+const loadShareholders = async () => {
+  try {
+    loadingShareholders.value = true;
+    const list = await ShareholderApi.getShareholderList({});
+    const items = (Array.isArray(list) ? list : []).filter((i: any) => Boolean(i?.isMasterAccount));
+    shareholderOptions.value = items.map((i: any) => ({
+      label: `${i.name ?? ''} (${i.account})`,
+      value: i.account,
+    }));
+  }
+  catch (error) {
+    console.error('載入股東列表失敗:', error);
+  }
+  finally {
+    loadingShareholders.value = false;
+  }
+};
+
+// 當 accountType 變更為 masterAgentX 時，清空 website
+watch(
+  () => props.formModel.accountType,
+  (newVal) => {
+    if (newVal === 'masterAgentX') {
+      props.formModel.website = '';
+    }
+  },
+);
+
+onMounted(() => {
+  loadShareholders();
+});
+</script>
+
 <template>
   <a-form
     ref="formRef"
@@ -11,8 +85,12 @@
       :rules="[{ required: true, message: '請選擇帳戶類型' }]"
     >
       <a-radio-group v-model:value="formModel.accountType">
-        <a-radio value="masterAgent">總代理</a-radio>
-        <a-radio value="masterAgentX">總代理（遊戲）</a-radio>
+        <a-radio value="masterAgent">
+          總代理
+        </a-radio>
+        <a-radio value="masterAgentX">
+          總代理（遊戲）
+        </a-radio>
       </a-radio-group>
     </a-form-item>
 
@@ -63,73 +141,3 @@
     </a-form-item>
   </a-form>
 </template>
-
-<script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import type { FormInstance } from 'ant-design-vue';
-import ShareholderApi from '@/api/backend/adminAccount/shareholder';
-
-defineOptions({ name: 'Step1BasicInfo' });
-
-interface Props {
-  formModel: {
-    accountType: 'masterAgent' | 'masterAgentX' | undefined;
-    account: string;
-    name: string;
-    website: string;
-    currencyCode: string;
-    shareholderAccount: string;
-  };
-}
-
-const props = defineProps<Props>();
-
-const formRef = ref<FormInstance>();
-const shareholderOptions = ref<Array<{ label: string; value: string }>>([]);
-const loadingShareholders = ref(false);
-
-// 暴露驗證方法給父元件
-defineExpose({
-  validate: async () => {
-    try {
-      await formRef.value?.validate();
-      return true;
-    } catch {
-      return false;
-    }
-  },
-  formRef,
-});
-
-// 載入股東列表
-const loadShareholders = async () => {
-  try {
-    loadingShareholders.value = true;
-    const list = await ShareholderApi.getShareholderList({});
-    const items = (Array.isArray(list) ? list : []).filter((i: any) => Boolean(i?.isMasterAccount));
-    shareholderOptions.value = items.map((i: any) => ({
-      label: `${i.name ?? ''} (${i.account})`,
-      value: i.account,
-    }));
-  } catch (error) {
-    console.error('載入股東列表失敗:', error);
-  } finally {
-    loadingShareholders.value = false;
-  }
-};
-
-// 當 accountType 變更為 masterAgentX 時，清空 website
-watch(
-  () => props.formModel.accountType,
-  (newVal) => {
-    if (newVal === 'masterAgentX') {
-      props.formModel.website = '';
-    }
-  },
-);
-
-onMounted(() => {
-  loadShareholders();
-});
-</script>
-

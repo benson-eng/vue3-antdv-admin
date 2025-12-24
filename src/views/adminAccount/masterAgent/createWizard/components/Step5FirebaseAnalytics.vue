@@ -1,3 +1,92 @@
+<script setup lang="ts">
+import type { FormInstance } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+import { ref } from 'vue';
+
+defineOptions({ name: 'Step5FirebaseAnalytics' });
+
+const props = defineProps<Props>();
+
+interface Props {
+  formModel: {
+    gaKey: string;
+    firebaseSdkConfig: string;
+    firebaseAdminSdkConfig: string;
+    firebaseConfig: string;
+  };
+}
+
+const formRef = ref<FormInstance>();
+
+/**
+ * 格式化 JSON（輕量檢查）
+ */
+const formatJson = (fieldName: 'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
+  const value = props.formModel[fieldName];
+  if (!value || !value.trim()) {
+    message.warning('欄位為空，無法格式化');
+    return;
+  }
+
+  const trimmed = value.trim();
+  // 檢查是否看起來像 JSON（以 { 或 [ 開頭）
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    message.warning('內容不是 JSON 格式（應以 { 或 [ 開頭）');
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    const formatted = JSON.stringify(parsed, null, 2);
+    props.formModel[fieldName] = formatted;
+    message.success('JSON 格式化成功');
+  }
+  catch (error) {
+    message.warning('JSON 格式錯誤，無法格式化');
+  }
+};
+
+/**
+ * 輕量驗證 JSON（僅檢查，不阻擋）
+ */
+const validateJson = (value: string): boolean => {
+  if (!value || !value.trim()) { return true; } // 空值視為有效
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) { return true; } // 不是 JSON 格式，不檢查
+  try {
+    JSON.parse(trimmed);
+    return true;
+  }
+  catch {
+    return false;
+  }
+};
+
+// 暴露方法給父元件
+defineExpose({
+  formRef,
+  /** Step 5 不需要驗證，所有欄位都是選填 */
+  validate: async () => {
+    // 輕量檢查 JSON 格式（僅警告，不阻擋）
+    const fields: Array<'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig'> = [
+      'firebaseSdkConfig',
+      'firebaseAdminSdkConfig',
+      'firebaseConfig',
+    ];
+    let hasWarning = false;
+    fields.forEach((field) => {
+      if (!validateJson(props.formModel[field])) {
+        hasWarning = true;
+      }
+    });
+    if (hasWarning) {
+      message.warning('部分欄位 JSON 格式可能有誤，但不影響繼續');
+    }
+    return true;
+  },
+});
+</script>
+
 <template>
   <a-form
     ref="formRef"
@@ -67,91 +156,3 @@
     </a-form-item>
   </a-form>
 </template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { message } from 'ant-design-vue';
-import type { FormInstance } from 'ant-design-vue';
-
-defineOptions({ name: 'Step5FirebaseAnalytics' });
-
-interface Props {
-  formModel: {
-    gaKey: string;
-    firebaseSdkConfig: string;
-    firebaseAdminSdkConfig: string;
-    firebaseConfig: string;
-  };
-}
-
-const props = defineProps<Props>();
-
-const formRef = ref<FormInstance>();
-
-/**
- * 格式化 JSON（輕量檢查）
- */
-const formatJson = (fieldName: 'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
-  const value = props.formModel[fieldName];
-  if (!value || !value.trim()) {
-    message.warning('欄位為空，無法格式化');
-    return;
-  }
-
-  const trimmed = value.trim();
-  // 檢查是否看起來像 JSON（以 { 或 [ 開頭）
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-    message.warning('內容不是 JSON 格式（應以 { 或 [ 開頭）');
-    return;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    const formatted = JSON.stringify(parsed, null, 2);
-    props.formModel[fieldName] = formatted;
-    message.success('JSON 格式化成功');
-  } catch (error) {
-    message.warning('JSON 格式錯誤，無法格式化');
-  }
-};
-
-/**
- * 輕量驗證 JSON（僅檢查，不阻擋）
- */
-const validateJson = (value: string): boolean => {
-  if (!value || !value.trim()) return true; // 空值視為有效
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return true; // 不是 JSON 格式，不檢查
-  try {
-    JSON.parse(trimmed);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-// 暴露方法給父元件
-defineExpose({
-  formRef,
-  /** Step 5 不需要驗證，所有欄位都是選填 */
-  validate: async () => {
-    // 輕量檢查 JSON 格式（僅警告，不阻擋）
-    const fields: Array<'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig'> = [
-      'firebaseSdkConfig',
-      'firebaseAdminSdkConfig',
-      'firebaseConfig',
-    ];
-    let hasWarning = false;
-    fields.forEach((field) => {
-      if (!validateJson(props.formModel[field])) {
-        hasWarning = true;
-      }
-    });
-    if (hasWarning) {
-      message.warning('部分欄位 JSON 格式可能有誤，但不影響繼續');
-    }
-    return true;
-  },
-});
-</script>
-

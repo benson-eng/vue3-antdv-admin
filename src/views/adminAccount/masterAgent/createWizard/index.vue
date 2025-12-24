@@ -1,33 +1,52 @@
 <script setup lang="ts">
-import { message } from 'ant-design-vue';
-import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import Api from '@/api/backend/adminAccount/masterAgent';
+import type Step1BasicInfo from './components/Step1BasicInfo.vue';
+import type Step2Roles from './components/Step2Roles.vue';
+import type Step4NetworkSecurity from './components/Step4NetworkSecurity.vue';
+import type Step5FirebaseAnalytics from './components/Step5FirebaseAnalytics.vue';
+import type Step6PaymentKeys from './components/Step6PaymentKeys.vue';
+import type Step7CustomerAndSocial from './components/Step7CustomerAndSocial.vue';
+import type Step8PaymentSettings from './components/Step8PaymentSettings.vue';
+import type Step9SmsSettings from './components/Step9SmsSettings.vue';
+import type Step10SlotSettings from './components/Step10SlotSettings.vue';
+import type Step11Recaptcha from './components/Step11Recaptcha.vue';
+import type Step12AdvancedSettings from './components/Step12AdvancedSettings.vue';
+import { message, Modal } from 'ant-design-vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { wizardStateManager } from '@/router/router-guards';
+import { useTabsViewStore } from '@/store/modules/tabsView';
 import { useUserStore } from '@/store/modules/user';
-import Step1BasicInfo from './components/Step1BasicInfo.vue';
-import Step2Roles from './components/Step2Roles.vue';
 import Step3WalletAndFormula from './components/Step3WalletAndFormula.vue';
-import Step4NetworkSecurity from './components/Step4NetworkSecurity.vue';
-import Step5FirebaseAnalytics from './components/Step5FirebaseAnalytics.vue';
-import Step6PaymentKeys from './components/Step6PaymentKeys.vue';
-import Step7CustomerAndSocial from './components/Step7CustomerAndSocial.vue';
-import Step8PaymentSettings from './components/Step8PaymentSettings.vue';
-import Step9SmsSettings from './components/Step9SmsSettings.vue';
-import Step10SlotSettings from './components/Step10SlotSettings.vue';
-import Step11Recaptcha from './components/Step11Recaptcha.vue';
-import Step12AdvancedSettings from './components/Step12AdvancedSettings.vue';
 import { buildInternalSettings, buildRemoteConfigURLs, generateHashKey, generateSecret } from './utils';
 
 defineOptions({ name: 'AdminAccountMasterAgentCreateWizard' });
 
 type AccountType = 'masterAgent' | 'masterAgentX';
 
+interface StepStatus {
+  touched: boolean;
+  valid: boolean;
+}
+
+const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const tabsViewStore = useTabsViewStore();
 
 const currentStep = ref<number>(0);
 const isSubmitting = ref<boolean>(false);
 const createdAccountId = ref<number | null>(null);
+/**
+ * Wizard 是否已完成
+ */
+const isWizardCompleted = ref<boolean>(false);
+/**
+ * Wizard 是否處於活動狀態
+ */
+const isWizardActive = ref<boolean>(false);
+
+/** Step 狀態管理 */
+const stepStates = reactive<Record<number, StepStatus>>({});
 
 /** Step 3 的初始值（用於判斷是否有變動） */
 const step3InitialValues = ref<ReturnType<typeof getStep3Defaults> | null>(null);
@@ -195,127 +214,146 @@ const formModel = reactive<{
   remoteConfigURLs: '',
 });
 
+/**
+ * 關閉 Wizard 並導向首頁
+ */
+const closeWizardAndGoHome = () => {
+  console.log('[Wizard][流程保護] 關閉 Wizard 並導向首頁');
+  isWizardActive.value = false;
+  isWizardCompleted.value = true;
+  wizardStateManager.setCompleted(true); // 同步全局狀態
+
+  // 關閉當前頁籤
+  const currentTab = tabsViewStore.getCurrentTab;
+  if (currentTab) {
+    tabsViewStore.closeCurrentTab(currentTab);
+  }
+
+  // 導向首頁
+  router.push({ name: 'dashboard-mabu' }).catch((err) => {
+    console.error('[Wizard][流程保護] 導向首頁失敗:', err);
+  });
+};
+
+/**
+ * 檢查 accountType 是否合法
+ */
+const validateAccountType = (accountType: string | undefined): accountType is AccountType => {
+  return accountType === 'masterAgent' || accountType === 'masterAgentX';
+};
+
+/**
+ * 初始化 Wizard：檢查是否為非法進入
+ */
+const initializeWizard = () => {
+  const accountType = route.query.accountType as string | undefined;
+
+  console.log('[Wizard][初始化] 檢查 accountType:', accountType);
+
+  // 檢查 accountType 是否存在且合法
+  if (!accountType || !validateAccountType(accountType)) {
+    console.warn('[Wizard][流程保護] 非法進入：無法判斷建立程序種類', { accountType });
+    Modal.warning({
+      title: '無法進入建立程序',
+      content: '無法判斷建立程序種類，將關閉此頁',
+      okText: '確認',
+      onOk: () => {
+        closeWizardAndGoHome();
+      },
+    });
+    return false;
+  }
+
+  // 設定 accountType
+  formModel.accountType = accountType;
+  isWizardActive.value = true;
+  wizardStateManager.setActive(true); // 同步全局狀態
+  console.log('[Wizard][初始化] Wizard 已啟動，accountType:', accountType);
+  return true;
+};
+
+/**
+ * 重新整理保護：beforeunload 事件處理
+ */
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (isWizardActive.value && !isWizardCompleted.value) {
+    console.log('[Wizard][流程保護] 偵測到重新整理，顯示確認視窗');
+    // 標準瀏覽器確認視窗
+    e.preventDefault();
+    e.returnValue = '重新整理會結束建立程序，並關閉此頁';
+    return e.returnValue;
+  }
+};
+
 const goBack = () => {
   router.push({ name: 'AdminAccountMasterAgent' });
 };
 
 /**
- * 計算是否顯示「下一步」按鈕
+ * Steps 總數（固定為 12，涵蓋所有可能的 steps）
  */
-const shouldShowNextButton = computed(() => {
-  // Step 0-2 都顯示
-  if (currentStep.value < 3) {
-    return true;
-  }
-  // Step 3：masterAgent 有 Step 4，masterAgentX 沒有
-  if (currentStep.value === 3) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 4：僅 masterAgent 顯示（因為有 Step 5）
-  if (currentStep.value === 4) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 5：僅 masterAgent 顯示（因為有 Step 6）
-  if (currentStep.value === 5) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 6：僅 masterAgent 顯示（因為有 Step 7）
-  if (currentStep.value === 6) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 7：僅 masterAgent 顯示（因為有 Step 8）
-  if (currentStep.value === 7) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 8：僅 masterAgent 顯示（因為有 Step 9）
-  if (currentStep.value === 8) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 9：僅 masterAgent 顯示（因為有 Step 10）
-  if (currentStep.value === 9) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 10：所有帳戶類型都顯示
-  if (currentStep.value === 10) {
-    return true;
-  }
-  // Step 11：僅 masterAgent 顯示（因為有 Step 12）
-  if (currentStep.value === 11) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 12：僅 masterAgent 且 level === 1 顯示
-  if (currentStep.value === 12) {
-    return formModel.accountType === 'masterAgent' && userStore.level === 1;
-  }
-  // Step 12 之後（待實作）
-  return false;
-});
+const TOTAL_STEPS = 12;
 
 /**
- * 計算「下一步」按鈕文字
+ * 初始化 Step 狀態
  */
-const getNextButtonText = computed(() => {
-  if (currentStep.value === 2) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 3) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 4) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 5) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 6) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 7) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 8) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 9) {
-    return '下一步';
-  }
-  if (currentStep.value === 10) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 11) {
-    return '完成';
-  }
-  return '下一步';
-});
-
-/**
- * 跳過 Step 4
- */
-const skipStep4 = () => {
-  // 不處理資料，直接進入下一步
-  // TODO: 進入 Step 5（目前先停留在 Step 4）
-  message.info('已跳過網路與安全設定');
-};
-
-const prev = () => {
-  if (currentStep.value > 0) {
-    // 如果從 Step 3 返回，清除初始值記錄（下次進入時重新記錄）
-    if (currentStep.value === 2) {
-      step3InitialValues.value = null;
+const initializeStepStates = () => {
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    if (!stepStates[i]) {
+      stepStates[i] = {
+        touched: false,
+        valid: false,
+      };
     }
-    // 處理跳過邏輯：masterAgentX 從 Step 5 返回時要跳過 Step 4
-    let prevStep = currentStep.value - 1;
-    if (formModel.accountType === 'masterAgentX' && prevStep === 4) {
-      prevStep = 3; // 跳過 Step 4，直接到 Step 3
-    }
-    if (formModel.accountType === 'masterAgentX' && prevStep === 3) {
-      prevStep = 2; // 跳過 Step 4，直接到 Step 3（但這裡 prevStep 已經是 3，所以不需要再調整）
-    }
-    currentStep.value = prevStep;
   }
 };
 
-const next = async () => {
+// 初始化 Step 狀態
+initializeStepStates();
+
+/**
+ * Step 驗證入口（暫時版）
+ */
+const validateCurrentStep = async (): Promise<boolean> => {
+  console.log('[Wizard][validate]', {
+    step: currentStep.value,
+    data: JSON.parse(JSON.stringify(formModel)),
+  });
+  return true;
+};
+
+/**
+ * Step 點擊事件處理
+ */
+const onStepClick = async (targetStep: number) => {
+  console.log('[Wizard][click step]', targetStep);
+
+  // 尚未填寫過的 step，不允許直接跳
+  if (!stepStates[targetStep]?.touched) {
+    console.warn('[Wizard] step not touched, blocked', targetStep);
+    return;
+  }
+
+  // 若目前 step 尚未驗證通過，不允許離開
+  if (!stepStates[currentStep.value]?.valid) {
+    const ok = await validateCurrentStep();
+    if (!ok) {
+      console.warn('[Wizard] current step invalid, blocked');
+      return;
+    }
+
+    stepStates[currentStep.value].touched = true;
+    stepStates[currentStep.value].valid = true;
+  }
+
+  currentStep.value = targetStep;
+};
+
+/**
+ * 原有的 next 邏輯（由 onNext 調用）
+ * 注意：此函數定義在 onNext 之後，但使用函數聲明以支持提升
+ */
+async function nextOriginal() {
   /** Step 1 驗證 */
   if (currentStep.value === 0) {
     const isValid = await step1Ref.value?.validate();
@@ -728,9 +766,193 @@ const next = async () => {
 
     // 直接完成（不呼叫 API）
     message.info('進階設定已儲存（待後續 API 整合）');
+    // 標記 Wizard 為已完成
+    isWizardCompleted.value = true;
+    isWizardActive.value = false;
+    wizardStateManager.setCompleted(true); // 同步全局狀態
     // TODO: 進入下一步或完成（目前先停留在 Step 12）
   }
+}
+
+/**
+ * Next（下一步）邏輯
+ */
+const onNext = async () => {
+  const ok = await validateCurrentStep();
+  if (!ok) {
+    return;
+  }
+
+  stepStates[currentStep.value].touched = true;
+  stepStates[currentStep.value].valid = true;
+
+  console.log('[Wizard][next]', {
+    step: currentStep.value,
+    confirmed: true,
+    formModel: JSON.parse(JSON.stringify(formModel)),
+  });
+
+  // 調用原有的 next 邏輯（但會經過驗證）
+  await nextOriginal();
 };
+
+/**
+ * 計算 Step 的狀態
+ */
+const getStepStatus = (stepIndex: number): 'wait' | 'process' | 'finish' => {
+  if (stepIndex === currentStep.value) {
+    return 'process'; // 當前步驟
+  }
+  if (stepStates[stepIndex]?.valid === true) {
+    return 'finish'; // 已完成
+  }
+  return 'wait'; // 未完成
+};
+
+/**
+ * 計算是否顯示「下一步」按鈕
+ */
+const shouldShowNextButton = computed(() => {
+  // Step 0-2 都顯示
+  if (currentStep.value < 3) {
+    return true;
+  }
+  // Step 3：masterAgent 有 Step 4，masterAgentX 沒有
+  if (currentStep.value === 3) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 4：僅 masterAgent 顯示（因為有 Step 5）
+  if (currentStep.value === 4) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 5：僅 masterAgent 顯示（因為有 Step 6）
+  if (currentStep.value === 5) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 6：僅 masterAgent 顯示（因為有 Step 7）
+  if (currentStep.value === 6) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 7：僅 masterAgent 顯示（因為有 Step 8）
+  if (currentStep.value === 7) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 8：僅 masterAgent 顯示（因為有 Step 9）
+  if (currentStep.value === 8) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 9：僅 masterAgent 顯示（因為有 Step 10）
+  if (currentStep.value === 9) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 10：所有帳戶類型都顯示
+  if (currentStep.value === 10) {
+    return true;
+  }
+  // Step 11：僅 masterAgent 顯示（因為有 Step 12）
+  if (currentStep.value === 11) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 12：僅 masterAgent 且 level === 1 顯示
+  if (currentStep.value === 12) {
+    return formModel.accountType === 'masterAgent' && userStore.level === 1;
+  }
+  // Step 12 之後（待實作）
+  return false;
+});
+
+/**
+ * 計算「下一步」按鈕文字
+ */
+const getNextButtonText = computed(() => {
+  if (currentStep.value === 2) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 3) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 4) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 5) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 6) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 7) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 8) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 9) {
+    return '下一步';
+  }
+  if (currentStep.value === 10) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 11) {
+    return '完成';
+  }
+  return '下一步';
+});
+
+/**
+ * 跳過 Step 4
+ */
+const skipStep4 = () => {
+  // 不處理資料，直接進入下一步
+  // TODO: 進入 Step 5（目前先停留在 Step 4）
+  message.info('已跳過網路與安全設定');
+};
+
+const prev = () => {
+  if (currentStep.value > 0) {
+    // 如果從 Step 3 返回，清除初始值記錄（下次進入時重新記錄）
+    if (currentStep.value === 2) {
+      step3InitialValues.value = null;
+    }
+    // 處理跳過邏輯：masterAgentX 從 Step 5 返回時要跳過 Step 4
+    let prevStep = currentStep.value - 1;
+    if (formModel.accountType === 'masterAgentX' && prevStep === 4) {
+      prevStep = 3; // 跳過 Step 4，直接到 Step 3
+    }
+    if (formModel.accountType === 'masterAgentX' && prevStep === 3) {
+      prevStep = 2; // 跳過 Step 4，直接到 Step 3（但這裡 prevStep 已經是 3，所以不需要再調整）
+    }
+    currentStep.value = prevStep;
+  }
+};
+
+/**
+ * 生命週期：組件掛載時
+ */
+onMounted(() => {
+  // 初始化 Wizard（檢查非法進入）
+  const isValid = initializeWizard();
+  if (!isValid) {
+    return; // 非法進入，已顯示警告並導向首頁
+  }
+
+  // 掛載重新整理保護
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  console.log('[Wizard][生命週期] 組件已掛載，流程保護已啟動');
+});
+
+/**
+ * 生命週期：組件卸載前
+ */
+onBeforeUnmount(() => {
+  // 移除重新整理保護
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  isWizardActive.value = false;
+  // 如果 Wizard 未完成，清除活動狀態
+  if (!isWizardCompleted.value) {
+    wizardStateManager.setActive(false);
+  }
+  console.log('[Wizard][生命週期] 組件即將卸載，流程保護已移除');
+});
 </script>
 
 <template>
@@ -747,50 +969,78 @@ const next = async () => {
         </a-space>
       </div>
 
-      <a-steps :current="currentStep" class="steps">
-        <a-step title="Step 1" description="帳戶類型與基本資料" />
-        <a-step title="Step 2" description="角色與權限" />
-        <a-step title="Step 3" description="錢包與等級設定" />
+      <a-steps
+        :current="currentStep"
+        class="steps"
+        @change="onStepClick"
+      >
+        <a-step
+          title="Step 1"
+          description="帳戶類型與基本資料"
+          :status="getStepStatus(0)"
+        />
+        <a-step
+          title="Step 2"
+          description="角色與權限"
+          :status="getStepStatus(1)"
+        />
+        <a-step
+          title="Step 3"
+          description="錢包與等級設定"
+          :status="getStepStatus(2)"
+        />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 4"
           description="網路與安全設定"
+          :status="getStepStatus(3)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 5"
           description="Firebase / GA"
+          :status="getStepStatus(4)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 6"
           description="支付金鑰設定"
+          :status="getStepStatus(5)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 7"
           description="客服與社群登入"
+          :status="getStepStatus(6)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 8"
           description="金流設定"
+          :status="getStepStatus(7)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 9"
           description="簡訊設定"
+          :status="getStepStatus(8)"
         />
-        <a-step title="Step 10" description="老虎機設定" />
+        <a-step
+          title="Step 10"
+          description="老虎機設定"
+          :status="getStepStatus(9)"
+        />
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 11"
           description="人機驗證設定"
+          :status="getStepStatus(10)"
         />
         <a-step
           v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
           title="Step 12"
           description="進階設定"
+          :status="getStepStatus(11)"
         />
       </a-steps>
 
@@ -865,7 +1115,7 @@ const next = async () => {
             v-if="shouldShowNextButton"
             type="primary"
             :loading="isSubmitting"
-            @click="next"
+            @click="onNext"
           >
             {{ getNextButtonText }}
           </a-button>

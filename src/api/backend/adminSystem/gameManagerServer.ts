@@ -72,11 +72,46 @@ export const setGameIDList = (params: { masterAgent: string; gameIDList: string[
     timeout: 0,
   });
 
+export interface IGetGamePlayerListRes {
+  data: {
+    gamePlayerList?: Record<string, string[]>;
+    [masterAgent: string]: {
+      gamePlayerList: Record<string, string[]>;
+    } | Record<string, string[]> | undefined;
+  };
+}
+
+export const getGamePlayerList = (params: { masterAgent: string; agent?: string }) =>
+  request<IGetGamePlayerListRes>({
+    url: '/AdminSystem/api/action/getGamePlayerList',
+    method: 'post',
+    data: {
+      server: 'gameManager',
+      actionName: 'getGamePlayerList',
+      query: JSON.stringify(params),
+    },
+  });
+
+export const getGamePlayerLists = (params: { masterAgents: string[]; agent?: string }) =>
+  request<IGetGamePlayerListRes>({
+    url: '/AdminSystem/api/action/getGamePlayerLists',
+    method: 'post',
+    data: {
+      server: 'gameManager',
+      actionName: 'getGamePlayerLists',
+      query: JSON.stringify(params),
+    },
+  });
+
 export default {
   isExternalGame,
   globalGameList,
   gameList,
   getGameIDList,
   setGameIDList,
+  getGamePlayerList,
+  getGamePlayerLists,
 };
+
+
 

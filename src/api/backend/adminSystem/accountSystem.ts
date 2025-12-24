@@ -164,5 +164,38 @@ export const changeNickname = (params: ChangeNicknameParams) =>
     timeout: 0,
   });
 
+export interface QueryAccountsNickNameParams {
+  memberIDs: string[];
+}
+
+export interface QueryAccountsNickNameItem {
+  memberID: string;
+  accountID: string;
+  nickName: string;
+}
+
+export interface QueryAccountsNickNameResult {
+  data: {
+    result: QueryAccountsNickNameItem[];
+  };
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/member.ts -> /AdminSystem/api/action/queryAccountsNickName
+ */
+export const queryAccountsNickName = (params: QueryAccountsNickNameParams) =>
+  request<QueryAccountsNickNameResult>({
+    url: '/AdminSystem/api/action/queryAccountsNickName',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'queryAccountsNickName',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+
+
 
 
