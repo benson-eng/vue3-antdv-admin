@@ -46,6 +46,13 @@
       </a-space>
     </template>
   </DynamicTable>
+
+  <CreateWizardDialog
+    :visible="wizardVisible"
+    :account-type="isMasterAgentX ? 'masterAgentX' : 'masterAgent'"
+    @update:visible="handleWizardClose"
+    @success="handleWizardSuccess"
+  />
 </template>
 
 <script setup lang="tsx">
@@ -60,6 +67,7 @@ import { useUserStore } from '@/store/modules/user';
 import Api, { type MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import { baseColumns, type TableColumnItem, type TableListItem } from './columns';
 import { getMasterAgentSchemas, passwordSchemas } from './formSchemas';
+import CreateWizardDialog from '../components/CreateWizardDialog.vue';
 
 defineOptions({ name: 'AdminAccountMasterAgent' });
 
@@ -74,13 +82,20 @@ const [DynamicTable, tableInstance] = useTable({
 });
 const [showModal] = useFormModal();
 
+const wizardVisible = ref<boolean>(false);
+
 const goCreateWizard = () => {
-  // 根據當前路由判斷 accountType
-  const accountType = isMasterAgentX.value ? 'masterAgentX' : 'masterAgent';
-  router.push({
-    path: '/adminAccount/create-wizard',
-    query: { accountType },
-  });
+  wizardVisible.value = true;
+};
+
+const handleWizardClose = () => {
+  wizardVisible.value = false;
+};
+
+const handleWizardSuccess = () => {
+  wizardVisible.value = false;
+  // 重新載入表格資料
+  tableInstance?.reload();
 };
 
 const searchAccount = ref<string>('');
