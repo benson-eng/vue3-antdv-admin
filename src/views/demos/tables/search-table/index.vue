@@ -4,6 +4,10 @@ import { useTable } from '@/components/core/dynamic-table'
 import { waitTime } from '@/utils/common'
 import { columns, tableData } from './columns'
 
+defineOptions({
+  name: 'DemosQueryForm',
+})
+
 const [DynamicTable, dynamicTableInstance] = useTable()
 
 const loadData = async (params): Promise<API.TableListResult> => {

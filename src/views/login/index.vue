@@ -82,6 +82,10 @@
   import Api from '@/api/';
   import { to } from '@/utils/awaitTo';
 
+  defineOptions({
+    name: 'Login',
+  });
+
   const route = useRoute();
   const router = useRouter();
   const userStore = useUserStore();

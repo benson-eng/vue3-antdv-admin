@@ -6,6 +6,10 @@ import { useTable } from '@/components/core/dynamic-table'
 
 import { columns } from './columns'
 
+defineOptions({
+  name: 'DemosTableWzry',
+})
+
 const [DynamicTable, dynamicTableInstance] = useTable()
 
 function defaultHeader() {
