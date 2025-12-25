@@ -1,0 +1,23 @@
+{
+  "column": {
+    "sendTime": "查詢時間",
+    "gameID": "遊戲",
+    "lobbyID": "廳別",
+    "seatID": "座位號碼",
+    "memberID": "會員",
+    "totalBetL": "押注",
+    "totalWin": "贏分",
+    "odds": "倍數",
+    "playDateTime": "遊玩時間",
+    "isFavorite": "我的最愛",
+    "createdAt": "建立時間"
+  },
+  "notify": {
+    "required": "會員為必填欄位",
+    "masterAgentRequired": "請先選擇總代理"
+  },
+  "common": {
+    "search": "查詢"
+  }
+}
+
