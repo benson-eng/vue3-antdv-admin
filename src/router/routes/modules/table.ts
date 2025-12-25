@@ -5,7 +5,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/table',
     name: 'Table',
-      redirect: '/table/cashRecord-table',
+    redirect: '/table/cashRecord-table',
     meta: {
       title: t('routes.table.title'),
       icon: 'ant-design:table-outlined',
@@ -30,9 +30,17 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'gameRecord-table',
+        name: 'GameRecordTable',
+        component: () => import('@/views/table/gameRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.gameRecord'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
     ],
   },
 ];
 
 export default routes;
-
