@@ -104,6 +104,26 @@ export interface IGetPlaybackResponse {
   data: any;
 }
 
+export interface IQueryGameAwardParams {
+  agentID?: string;
+  memberID?: string;
+  account?: string;
+  accountID?: string;
+  gameID?: string;
+  gameType?: string;
+  winType?: string[];
+  date?: [Date, Date];
+  page?: number;
+  limit?: number;
+}
+
+export interface IQueryGameAwardResponse {
+  data: {
+    items: IGameRecord[];
+    total: number;
+  };
+}
+
 /**
  * 查詢遊戲紀錄
  */
@@ -114,6 +134,21 @@ export const getGameRecord = (params: IQueryGameRecordParams) =>
     data: {
       server: 'gameRecordReader',
       actionName: 'queryGameRecord',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 查詢遊戲彩金紀錄
+ */
+export const queryGameAward = (params: IQueryGameAwardParams) =>
+  request<IQueryGameAwardResponse>({
+    url: '/AdminSystem/api/action/queryGameAward',
+    method: 'post',
+    data: {
+      server: 'gameRecordReader',
+      actionName: 'queryGameAward',
       query: JSON.stringify(params),
     },
     timeout: 0,
@@ -153,5 +188,6 @@ export default {
   getGameRecord,
   getPlayback,
   queryGrandPrizeRecord,
+  queryGameAward,
 };
 

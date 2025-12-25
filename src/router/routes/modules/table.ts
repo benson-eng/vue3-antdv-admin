@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'gameJpRecord-table',
+        name: 'GameJpRecordTable',
+        component: () => import('@/views/table/gameJpRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.gameJpRecord'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
     ],
   },
 ];
