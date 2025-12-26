@@ -1,8 +1,4 @@
 {
   "title": "Report System",
-  "grandPrizeRecord": "Grand Prize Record",
-  "cashRecord": "Cash Record",
-  "gameRecord": "Game Record",
-  "gameJpRecord": "Game Jackpot Record"
+  "cashRecord": "Cash Record"
 }
-

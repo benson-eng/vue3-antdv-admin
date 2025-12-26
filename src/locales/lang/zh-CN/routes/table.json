@@ -1,7 +1,4 @@
 {
   "title": "報表系統",
-  "grandPrizeRecord": "遊戲大獎紀錄",
-  "cashRecord": "金錢紀錄",
-  "gameRecord": "遊戲紀錄",
-  "gameJpRecord": "遊戲彩金紀錄"
+  "cashRecord": "金錢紀錄"
 }

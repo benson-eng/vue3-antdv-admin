@@ -13,15 +13,6 @@ const routes: RouteRecordRaw[] = [
     },
     children: [
       {
-        path: 'grandPrizeRecord-table',
-        name: 'GrandPrizeRecordTable',
-        component: () => import('@/views/table/grandPrizeRecord-table/index.vue'),
-        meta: {
-          title: t('routes.table.grandPrizeRecord'),
-          icon: 'ant-design:table-outlined',
-        },
-      },
-      {
         path: 'cashRecord-table',
         name: 'CashRecordTable',
         component: () => import('@/views/table/cashRecord-table/index.vue'),
@@ -30,24 +21,7 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
-      {
-        path: 'gameRecord-table',
-        name: 'GameRecordTable',
-        component: () => import('@/views/table/gameRecord-table/index.vue'),
-        meta: {
-          title: t('routes.table.gameRecord'),
-          icon: 'ant-design:table-outlined',
-        },
-      },
-      {
-        path: 'gameJpRecord-table',
-        name: 'GameJpRecordTable',
-        component: () => import('@/views/table/gameJpRecord-table/index.vue'),
-        meta: {
-          title: t('routes.table.gameJpRecord'),
-          icon: 'ant-design:table-outlined',
-        },
-      },
+      // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },
 ];
