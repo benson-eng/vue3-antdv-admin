@@ -38,53 +38,53 @@ export enum EMailStatus {
   EXCEEDED_QUOTA = 5,
 }
 
-export type MailBalanceExchangeContent = {
+export interface MailBalanceExchangeContent {
   contentType: EMailExchangeContentTypes.BALANCE;
   currency: string;
   balance: number;
   isFreeBalance?: boolean;
-};
+}
 
-export type MailTokenExchangeContent = {
+export interface MailTokenExchangeContent {
   contentType: EMailExchangeContentTypes.TOKEN;
   tokenID: string;
   amount: number;
-};
+}
 
-export type MailItemExchangeContent = {
+export interface MailItemExchangeContent {
   contentType: EMailExchangeContentTypes.ITEM;
   treasureItemID: string;
   amount: number;
   expiredInMS?: number;
   availableInMS?: number;
   vip?: number;
-};
+}
 
 export type MailExchangeContent = MailBalanceExchangeContent | MailItemExchangeContent | MailTokenExchangeContent;
 
-type ExchangeMailAction = {
+interface ExchangeMailAction {
   type: EMailActionTypes.EXCHANGE;
   contents: MailExchangeContent[];
-};
+}
 
-type OpenWindowMailAction = {
+interface OpenWindowMailAction {
   type: EMailActionTypes.OPEN_INTERNAL_WINDOW;
   text: string;
-};
+}
 
-export type DoNothingMailAction = {
+export interface DoNothingMailAction {
   type: EMailActionTypes.DO_NOTHING;
-};
+}
 
-export type IRedirectMailAction = {
+export interface IRedirectMailAction {
   type: EMailActionTypes.REDIRECT;
   location: string;
-};
+}
 
-export type IRedirectUrlAction = {
+export interface IRedirectUrlAction {
   type: EMailActionTypes.REDIRECT_URL;
   url: string;
-};
+}
 
 export type MailAction = ExchangeMailAction | OpenWindowMailAction | DoNothingMailAction | IRedirectMailAction | IRedirectUrlAction;
 
@@ -128,4 +128,3 @@ export const queryMemberMailRecords = async (params: QueryMemberMailRecordsParam
     timeout: 0,
   });
 };
-
