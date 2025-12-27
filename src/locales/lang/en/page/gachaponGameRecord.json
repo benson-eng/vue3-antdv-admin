@@ -1,0 +1,39 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "eventID": "Event ID",
+    "playDateTime": "Play Date Time",
+    "spending": "Spending",
+    "gain": "Gain"
+  },
+  "tables": {
+    "roundID": "Round ID",
+    "eventID": "Event ID",
+    "memberID": "Member ID",
+    "vip": "VIP",
+    "spendingType": "Spending Type",
+    "spendingDetails": "Spending Details",
+    "spendingAmount": "Spending Amount",
+    "gainType": "Gain Type",
+    "gainDetails": "Gain Details",
+    "gainAmount": "Gain Amount",
+    "playDateTime": "Play Date Time"
+  },
+  "awardType": {
+    "Currency": "Currency",
+    "Treasures": "Treasures",
+    "Token": "Token"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields are required",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "datePicker": {
+    "startDate": "Start Date",
+    "dueDate": "End Date"
+  }
+}
+

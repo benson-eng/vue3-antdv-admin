@@ -1,0 +1,39 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "eventID": "活動ID",
+    "playDateTime": "遊玩時間",
+    "spending": "花費",
+    "gain": "獲得"
+  },
+  "tables": {
+    "roundID": "回合編號",
+    "eventID": "活動ID",
+    "memberID": "會員ID",
+    "vip": "VIP",
+    "spendingType": "花費類型",
+    "spendingDetails": "花費細節",
+    "spendingAmount": "花費數量",
+    "gainType": "獲得類型",
+    "gainDetails": "獲得細節",
+    "gainAmount": "獲得數量",
+    "playDateTime": "遊玩時間"
+  },
+  "awardType": {
+    "Currency": "金錢",
+    "Treasures": "道具",
+    "Token": "代幣"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "總代理商與代理商必填",
+    "connectionError": "連線錯誤"
+  },
+  "search": "查詢",
+  "datePicker": {
+    "startDate": "開始日期",
+    "dueDate": "結束日期"
+  }
+}
+

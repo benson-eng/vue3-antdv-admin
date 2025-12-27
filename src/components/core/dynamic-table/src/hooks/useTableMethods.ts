@@ -115,8 +115,14 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
       const res = await dataRequest(queryParams);
 
       const isArrayResult = Array.isArray(res);
-      const resultItems: Recordable[] = isArrayResult ? res : get(res, listField);
+      let resultItems: Recordable[] = isArrayResult ? res : get(res, listField);
       const resultTotal: number = isArrayResult ? res.length : Number(get(res, totalField));
+
+      // 確保 resultItems 始終是數組
+      if (!Array.isArray(resultItems)) {
+        warn(`表格數據格式錯誤：期望數組，但得到 ${typeof resultItems}`);
+        resultItems = [];
+      }
 
       if (enablePagination && resultTotal) {
         const { current = 1, pageSize = tableConfig.defaultPageSize } = pagination;

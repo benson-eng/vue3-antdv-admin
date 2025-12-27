@@ -22,6 +22,9 @@ export function useTableExpand(payload: UseTableExpandPayload) {
      * 目前官方树表格符合条件则会自动开启，且没有直接提供相应的关闭树状表格的 API，官方建议关闭树狀表格的方式
      * 是自己处理数据，将数据中的 children 字段设置为 null 则会关闭树状表格。
      */
+    if (!Array.isArray(tableData.value)) {
+      return false;
+    }
     return tableData.value.some((item) => {
       return Array.isArray(item[childrenColumnName]) && item[childrenColumnName].length;
     });

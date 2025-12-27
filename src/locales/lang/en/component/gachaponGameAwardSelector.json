@@ -1,0 +1,15 @@
+{
+  "labels": {
+    "type": "Type",
+    "currencyType": "Currency Type",
+    "balance": "Balance",
+    "item": "Item",
+    "token": "Token"
+  },
+  "awardType": {
+    "Currency": "Currency",
+    "Treasures": "Treasures",
+    "Token": "Token"
+  }
+}
+
