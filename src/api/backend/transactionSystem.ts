@@ -72,5 +72,91 @@ export const removeTransactionMemberSetting = (params: RemoveTransactionMemberSe
     timeout: 0,
   });
 
+export enum OrderState {
+  SUCCESS = 'Success',
+  WAIT_RECEIVER_AGREE = 'WaitReceiverAgree',
+  WAIT_REMITTER_CONFIRM = 'WaitRemitterConfirm',
+  RECOVER = 'Recover',
+  EXPIRED = 'Expired',
+  CANCEL = 'Cancel',
+  ABORTED = 'Aborted',
+}
+
+export interface QueryTransactionOrdersParams {
+  masterAgent: string;
+  remitter?: string;
+  receiver?: string;
+  searchType: 'coin' | 'item';
+}
+
+export interface TransactionOrderItem {
+  id: string;
+  remitter: string;
+  receiver: string;
+  remitterNickname?: string;
+  receiverNickname?: string;
+  remitterVip?: string;
+  receiverVip?: string;
+  remitterNicknameWhenTransaction?: string | null;
+  receiverNicknameWhenTransaction?: string | null;
+  currencyType?: string;
+  itemType?: string;
+  cardName?: string;
+  remittances: number;
+  serviceFee: number;
+  state: OrderState;
+  transferAt?: string;
+  receivedAt?: string;
+  expireTime?: string;
+  canceledAt?: string | null;
+  recoveredAt?: string | null;
+  createdAt?: string;
+  searchType?: 'coin' | 'item';
+  showType?: string;
+  showItemName?: string;
+  newCanecelAt?: string | null;
+}
+
+export interface QueryTransactionOrdersResult {
+  data: {
+    orders: TransactionOrderItem[];
+  };
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> getTransactionOrders
+ */
+export const getTransactionOrders = (params: QueryTransactionOrdersParams) =>
+  request<QueryTransactionOrdersResult>({
+    url: '/AdminSystem/api/action/queryTransactionOrders',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'queryTransactionOrders',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface AbortTransactionParams {
+  masterAgent: string;
+  orderID: string;
+  searchType: 'coin' | 'item';
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> abortTransaction
+ */
+export const abortTransaction = (params: AbortTransactionParams) =>
+  request({
+    url: '/AdminSystem/api/action/abortTransaction',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'abortTransaction',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
 
 

@@ -195,6 +195,37 @@ export const queryAccountsNickName = (params: QueryAccountsNickNameParams) =>
     timeout: 0,
   });
 
+export interface QueryAccountBaseInfoParams {
+  masterAgent: string;
+  accounts: string[];
+}
+
+export interface AccountBaseInfoItem {
+  id: string;
+  account: string;
+  nickName: string;
+  agentID: string;
+  tags?: string;
+}
+
+export interface QueryAccountBaseInfoResult {
+  data: AccountBaseInfoItem[];
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/member.ts -> queryAccountBaseInfo
+ */
+export const queryAccountBaseInfo = (params: QueryAccountBaseInfoParams) =>
+  request<QueryAccountBaseInfoResult>({
+    url: '/AdminSystem/api/action/queryAccountBaseInfo',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'queryAccountBaseInfo',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
 
 
 

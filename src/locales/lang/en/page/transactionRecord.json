@@ -1,0 +1,61 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member"
+  },
+  "column": {
+    "remitterVip": "Remitter VIP",
+    "remitterNickname": "Remitter Nickname",
+    "receiverVip": "Receiver VIP",
+    "receiverNickname": "Receiver Nickname",
+    "currencyType": "Gift Type",
+    "showItemName": "Gift Name",
+    "remittances": "Remittance Amount",
+    "serviceFee": "Service Fee",
+    "state": "State",
+    "transferAt": "Transfer Time",
+    "receivedAt": "Received Time",
+    "expireTime": "Expire Time",
+    "canceledAt": "Canceled Time",
+    "searchType": "Search Type",
+    "control": "Control"
+  },
+  "state": {
+    "Success": "Success",
+    "WaitReceiverAgree": "Wait Receiver Agree",
+    "WaitRemitterConfirm": "Wait Remitter Confirm",
+    "WaitReceiverReceive": "Wait Receiver Receive",
+    "Recover": "Recovered",
+    "Expired": "Expired",
+    "Cancel": "Canceled",
+    "Aborted": "Aborted",
+    "WaitReceive": "Waiting"
+  },
+  "searchType": {
+    "coin": "Currency",
+    "item": "Item",
+    "token": "Token"
+  },
+  "itemType": {
+    "entityItem": "Entity Item",
+    "eventItem": "Event Item",
+    "gachapon": "Gachapon",
+    "freeScratchCard": "Free Scratch Card"
+  },
+  "notify": {
+    "confirmStopTransaction": "Are you sure to abort",
+    "give": "give",
+    "stop": "Abort",
+    "confirmTitle": "Confirm",
+    "abortSuccess": "Abort Success",
+    "abortError": "Abort Failed",
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
+    "needAccount": "Member field cannot be empty",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "confirm": "Confirm",
+  "cancel": "Cancel"
+}
+
