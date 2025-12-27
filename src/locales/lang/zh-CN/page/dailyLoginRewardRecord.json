@@ -1,0 +1,18 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "member": "會員"
+  },
+  "queryFormActivityID": "期別",
+  "typeStr": "種類",
+  "userName": "會員",
+  "rewardDataStr": "獎項",
+  "signInDate": "領取時間",
+  "search": "查詢",
+  "notify": {
+    "requiredMemberID": "會員為必要數值",
+    "requiredActivityID": "期別為必要數值",
+    "connectionError": "連接錯誤"
+  }
+}
+

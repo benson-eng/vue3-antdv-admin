@@ -111,6 +111,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'dailyLoginRewardRecord-table',
+        name: 'DailyLoginRewardRecordTable',
+        component: () => import('@/views/table/dailyLoginRewardRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.dailyLoginRewardRecord'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
       // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },

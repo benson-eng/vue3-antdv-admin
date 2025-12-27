@@ -38,10 +38,78 @@ export const queryEventList = (params: { masterAgent: string; eventType?: EEvent
     timeout: 0,
   });
 
+export enum EAwardType {
+  Currency = 0,
+  ScratchCard = 1,
+  Treasures = 2,
+  Token = 3,
+}
+
+export interface DailySignInActivitySetting {
+  activityID: number;
+  masterAgent: string;
+  startDateTime: string;
+  endDateTime: string;
+  status?: string;
+  [k: string]: any;
+}
+
+export interface DailySignInRewardRecordItem {
+  id?: number;
+  startDate?: string;
+  endDate?: string;
+  rewardData: Array<{
+    type: EAwardType;
+    currencyType?: string;
+    balance?: number;
+    treasureItemID?: string;
+    tokenID?: number;
+    amount?: number;
+    [k: string]: any;
+  }>;
+  vipLevel?: number;
+  [k: string]: any;
+}
+
+export const queryDailySignInActivitySetting = (params: {
+  masterAgent: string;
+  status: string;
+}) =>
+  request<DailySignInActivitySetting[]>({
+    url: '/AdminSystem/api/action/queryDailySignInActivitySetting',
+    method: 'post',
+    data: {
+      server: 'marketingEventSystem',
+      actionName: 'queryDailySignInActivitySetting',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export const queryDailySignInRewardRecord = (params: {
+  masterAgent: string;
+  activityID: number;
+  memberID: string;
+}) =>
+  request<DailySignInRewardRecordItem[]>({
+    url: '/AdminSystem/api/action/queryDailySignInRewardRecord',
+    method: 'post',
+    data: {
+      server: 'marketingEventSystem',
+      actionName: 'queryDailySignInRewardRecord',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   EEventType,
   queryEventList,
+  EAwardType,
+  queryDailySignInActivitySetting,
+  queryDailySignInRewardRecord,
 };
+
 
 
 

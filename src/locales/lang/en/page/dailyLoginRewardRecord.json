@@ -1,0 +1,18 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "member": "Member"
+  },
+  "queryFormActivityID": "Period",
+  "typeStr": "Type",
+  "userName": "Member",
+  "rewardDataStr": "Reward",
+  "signInDate": "Claim Time",
+  "search": "Search",
+  "notify": {
+    "requiredMemberID": "Member is required",
+    "requiredActivityID": "Period is required",
+    "connectionError": "Connection Error"
+  }
+}
+

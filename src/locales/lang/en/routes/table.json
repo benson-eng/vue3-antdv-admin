@@ -10,5 +10,6 @@
   "validFrozenStatementsRecord": "Valid Frozen Statements Record",
   "externalGameRecords": "External Game Records",
   "smsRecordTable": "SMS Record",
-  "safetyBoxRecordTable": "Safety Box Record"
+  "safetyBoxRecordTable": "Safety Box Record",
+  "dailyLoginRewardRecord": "Daily Login Reward Record"
 }
