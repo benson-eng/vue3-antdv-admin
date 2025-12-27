@@ -1,0 +1,50 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "memberID": "Member ID",
+    "wagersID": "Round ID",
+    "winLose": "Win/Lose",
+    "totalWin": "Total Win",
+    "totalBet": "Total Bet",
+    "playDateTime": "Play Date Time",
+    "gameID": "Game ID",
+    "externalPlatform": "Platform",
+    "currencyType": "Currency",
+    "note": "Note",
+    "buyFeature": "Buy Feature",
+    "betType": "Bet Type",
+    "searchTime": "Search Time",
+    "platform": "Platform"
+  },
+  "betType": {
+    "NormalGame": "Normal Game",
+    "FreeGame": "Free Game",
+    "BuyFeature": "Buy Feature",
+    "BonusGame1": "Bonus Game 1",
+    "BonusGame2": "Bonus Game 2",
+    "DoubleGame": "Double Game",
+    "JackpotGame": "Jackpot Game",
+    "GameJP1": "GameJP Game 1",
+    "GameJP2": "GameJP Game 2",
+    "GameJP3": "GameJP Game 3",
+    "GameJP4": "GameJP Game 4",
+    "GameJP5": "GameJP Game 5",
+    "GameJP6": "GameJP Game 6",
+    "BonusGame": "Bonus Game",
+    "BuyGift": "Buy Gift",
+    "NGRespin": "Normal Game Respin",
+    "FGRespin": "Free Game Respin",
+    "ReSpin": "Respin",
+    "Feature": "Feature",
+    "ForceSettle": "Force Settle"
+  },
+  "notify": {
+    "emptyAgentID": "Agent ID cannot be empty",
+    "emptyDate": "Date cannot be empty",
+    "searchFinish": "Search completed"
+  },
+  "search": "Search"
+}
+

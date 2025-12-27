@@ -124,6 +124,45 @@ export interface IQueryGameAwardResponse {
   };
 }
 
+export interface IExternalGameRecordColumn {
+  id: number;
+  memberID: string;
+  externalPlatform: string;
+  agentID: string;
+  gameID: string;
+  totalBet: number;
+  totalWin: number;
+  winLose: number;
+  commissionable: number;
+  currencyType: string;
+  playDateTime: Date;
+  note: {
+    buyFeature?: string;
+    [key: string]: any;
+  };
+  wagersID?: string;
+  betType?: string;
+  buyFeature?: string;
+}
+
+export interface IQueryExternalGameRecordParams {
+  agentID?: string;
+  memberID?: string;
+  gameID?: string;
+  externalPlatform?: string;
+  currencyType?: string;
+  date?: [Date, Date];
+  page?: number;
+  limit?: number;
+}
+
+export interface IQueryExternalGameRecordResponse {
+  data: {
+    items: IExternalGameRecordColumn[];
+    total: number;
+  };
+}
+
 /**
  * 查詢遊戲紀錄
  */
@@ -184,10 +223,26 @@ export const queryGrandPrizeRecord = (params: IQueryGrandPrizeRecordParams) =>
     timeout: 0,
   });
 
+/**
+ * 查詢外部遊戲紀錄
+ */
+export const queryExternalGameRecords = (params: IQueryExternalGameRecordParams) =>
+  request<IQueryExternalGameRecordResponse>({
+    url: '/AdminSystem/api/action/queryExternalGameRecords',
+    method: 'post',
+    data: {
+      server: 'gameRecordReader',
+      actionName: 'queryExternalGameRecords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   getGameRecord,
   getPlayback,
   queryGrandPrizeRecord,
   queryGameAward,
+  queryExternalGameRecords,
 };
 
