@@ -1,0 +1,42 @@
+{
+  "label": {
+    "station": "站台",
+    "family": "家族",
+    "Purchase": "儲值",
+    "PurchaseServiceCost": "金流手續費",
+    "ServiceFee": "手續費",
+    "SMSServiceCost": "簡訊服務費",
+    "GameWinLose": "遊戲輸贏",
+    "Bonus": "紅利",
+    "areaTitle2": "分成設定",
+    "setDefault": "設為預設",
+    "shortURL": "短網址",
+    "shortURLtitle": "短網址標題",
+    "shortURLTitle": "短網址管理",
+    "clickCount": "點擊次數",
+    "addShortURL": "新增短網址",
+    "viewReport": "查看報表",
+    "status": "狀態",
+    "reportStr": "報表日期"
+  },
+  "enable": {
+    "enable": "啟用",
+    "disable": "停用"
+  },
+  "isDefault": {
+    "enable": "設為預設",
+    "disable": "取消預設"
+  },
+  "add": "新增",
+  "edit": "編輯",
+  "view": "查看",
+  "save": "儲存",
+  "update": "更新",
+  "cancel": "取消",
+  "confirm": "確認",
+  "close": "關閉",
+  "copy": "複製",
+  "search": "搜尋",
+  "required": "此欄位為必填"
+}
+

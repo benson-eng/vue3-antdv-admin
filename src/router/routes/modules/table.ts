@@ -138,6 +138,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'distAcctOperatingRecord',
+        name: 'DistAcctOperatingRecord',
+        component: () => import('@/views/distAcct/familySetting/index.vue'),
+        meta: {
+          title: '站台營運報表',
+          icon: 'ant-design:table-outlined',
+        },
+      },
       // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },

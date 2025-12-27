@@ -1,0 +1,42 @@
+{
+  "label": {
+    "station": "Station",
+    "family": "Family",
+    "Purchase": "Purchase",
+    "PurchaseServiceCost": "Purchase Service Cost",
+    "ServiceFee": "Service Fee",
+    "SMSServiceCost": "SMS Service Cost",
+    "GameWinLose": "Game Win/Lose",
+    "Bonus": "Bonus",
+    "areaTitle2": "Distribution Settings",
+    "setDefault": "Set as Default",
+    "shortURL": "Short URL",
+    "shortURLtitle": "Short URL Title",
+    "shortURLTitle": "Short URL Management",
+    "clickCount": "Click Count",
+    "addShortURL": "Add Short URL",
+    "viewReport": "View Report",
+    "status": "Status",
+    "reportStr": "Report Date"
+  },
+  "enable": {
+    "enable": "Enable",
+    "disable": "Disable"
+  },
+  "isDefault": {
+    "enable": "Set as Default",
+    "disable": "Unset Default"
+  },
+  "add": "Add",
+  "edit": "Edit",
+  "view": "View",
+  "save": "Save",
+  "update": "Update",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "close": "Close",
+  "copy": "Copy",
+  "search": "Search",
+  "required": "This field is required"
+}
+
