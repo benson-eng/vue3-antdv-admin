@@ -63,6 +63,16 @@ export const dynamicTableProps = {
     type: Object as PropType<Partial<TableColumn>>,
     default: () => ({}),
   },
+  /** 是否显示操作列 */
+  showActionColumn: {
+    type: Boolean as PropType<boolean>,
+    default: false,
+  },
+  /** 操作列属性配置 */
+  actionColumn: {
+    type: Object as PropType<Partial<TableColumn>>,
+    default: () => ({}),
+  },
   /** 是否显示表格工具栏 */
   showToolBar: {
     type: Boolean as PropType<boolean>,

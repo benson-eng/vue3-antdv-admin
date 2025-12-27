@@ -1,0 +1,55 @@
+{
+  "label": {
+    "station": "Station",
+    "control": "Control",
+    "viewTable": "View Report",
+    "dateRange": "Date Range",
+    "target": "Target",
+    "amount": "Amount",
+    "currency": "Yuan",
+    "points": "Points",
+    "Payable": "Payable",
+    "Payable2": "Payable",
+    "Receivable": "Receivable",
+    "Receivable2": "Receivable"
+  },
+  "table": {
+    "accountDetails": "Account Details",
+    "BasicFee": "Basic Fee",
+    "PaymentServiceCost": "Payment Service Cost",
+    "PurchaseServiceCost": "Purchase Service Cost",
+    "GameWinLose": "Game Win/Lose",
+    "Bonus": "Bonus",
+    "ServiceFee": "Service Fee",
+    "timeRange": "Time Range",
+    "item": "Item",
+    "detail": "Detail",
+    "fee": "Fee",
+    "commissionRate": "Commission Rate",
+    "totalDeposit": "Total Deposit",
+    "totalAmount": "Total Amount",
+    "totalBonus": "Total Bonus",
+    "total": "Total",
+    "totalPoints": "Total Points"
+  },
+  "subType": {
+    "PurchaseServiceCost": "Purchase Service Cost",
+    "SMSServiceCost": "SMS Service Cost",
+    "PlatformMonthlyFee": "Platform Monthly Fee",
+    "Purchase": "Purchase",
+    "GameWinLose": "Game Win/Lose",
+    "Bonus": "Bonus",
+    "ServiceFee": "Service Fee"
+  },
+  "dialog": {
+    "title": "Station Report Query",
+    "description": "This bill is for",
+    "description2": "account reconciliation report, please confirm the content is correct."
+  },
+  "close": "Close",
+  "print": "Print",
+  "error": {
+    "noPermission": "You do not have permission to access this page"
+  }
+}
+

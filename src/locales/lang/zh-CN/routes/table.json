@@ -11,5 +11,6 @@
   "externalGameRecords": "外部遊戲紀錄",
   "smsRecordTable": "簡訊紀錄",
   "safetyBoxRecordTable": "保險箱紀錄",
-  "dailyLoginRewardRecord": "每日登入獎勵紀錄"
+  "dailyLoginRewardRecord": "每日登入獎勵紀錄",
+  "distAcctStationRecord": "站台報表"
 }

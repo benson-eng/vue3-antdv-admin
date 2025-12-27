@@ -11,5 +11,6 @@
   "externalGameRecords": "External Game Records",
   "smsRecordTable": "SMS Record",
   "safetyBoxRecordTable": "Safety Box Record",
-  "dailyLoginRewardRecord": "Daily Login Reward Record"
+  "dailyLoginRewardRecord": "Daily Login Reward Record",
+  "distAcctStationRecord": "Station Report"
 }

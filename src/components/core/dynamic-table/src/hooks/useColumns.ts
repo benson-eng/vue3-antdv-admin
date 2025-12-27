@@ -52,6 +52,19 @@ export const useColumns = (payload: UseColumnsPayload) => {
       } as TableColumn);
     }
 
+    // 是否添加操作列
+    if (innerProps?.showActionColumn && innerProps?.actionColumn) {
+      const actionColumnConfig = innerProps.actionColumn;
+      columns.push({
+        dataIndex: ColumnKeyFlag.ACTION,
+        title: actionColumnConfig.title || '操作',
+        width: actionColumnConfig.width,
+        fixed: actionColumnConfig.fixed,
+        align: actionColumnConfig.align || 'center',
+        ...actionColumnConfig,
+      } as TableColumn);
+    }
+
     innerColumns.value = columns.map((item) => {
       const customRender = item.customRender;
 
