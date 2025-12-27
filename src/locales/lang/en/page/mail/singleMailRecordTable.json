@@ -1,0 +1,45 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "mailTitle": "Mail Title",
+    "mailContent": "Mail Content",
+    "mailSender": "Sender",
+    "arrivalTime": "Arrival Time",
+    "mailAction": "Mail Action",
+    "status": "Status",
+    "redirect": "Redirect",
+    "store": "Store",
+    "notAction": "No Action"
+  },
+  "tables": {
+    "image": "Image",
+    "mailTitle": "Mail Title",
+    "mailContent": "Mail Content",
+    "mailAction": "Mail Action",
+    "arrivalTime": "Arrival Time",
+    "mailSender": "Sender",
+    "member": "Member",
+    "status": "Status"
+  },
+  "enum": {
+    "DISABLE": "Disabled",
+    "ENABLED": "Enabled",
+    "READ": "Read (Claimed)",
+    "REMOVE": "Removed",
+    "EXPIRED": "Expired",
+    "EXCEEDED_QUOTA": "Exceeded Quota"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
+    "needAccount": "Member field cannot be empty",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "datePicker": {
+    "startDate": "Start Time",
+    "dueDate": "End Time"
+  }
+}
+

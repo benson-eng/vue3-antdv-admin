@@ -2,5 +2,6 @@
   "title": "Report System",
   "cashRecord": "Cash Record",
   "gachaponGameRecord": "Gachapon Game Record",
-  "missionRecordTable": "Mission Record"
+  "missionRecordTable": "Mission Record",
+  "singleMailRecordTable": "Mail Record"
 }

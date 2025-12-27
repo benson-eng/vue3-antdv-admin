@@ -1,0 +1,45 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "mailTitle": "信件標題",
+    "mailContent": "信件內文",
+    "mailSender": "寄信人",
+    "arrivalTime": "寄達時間",
+    "mailAction": "信件動作",
+    "status": "狀態",
+    "redirect": "導向",
+    "store": "商城",
+    "notAction": "無動作"
+  },
+  "tables": {
+    "image": "圖片",
+    "mailTitle": "郵件標題",
+    "mailContent": "郵件內容",
+    "mailAction": "郵件動作",
+    "arrivalTime": "到達時間",
+    "mailSender": "發送者",
+    "member": "會員",
+    "status": "狀態"
+  },
+  "enum": {
+    "DISABLE": "禁用",
+    "ENABLED": "啟用",
+    "READ": "已讀(已領取)",
+    "REMOVE": "刪除",
+    "EXPIRED": "過期",
+    "EXCEEDED_QUOTA": "超過配額"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "needAccount": "會員欄位不能為空",
+    "connectionError": "連接錯誤"
+  },
+  "search": "查詢",
+  "datePicker": {
+    "startDate": "開始時間",
+    "dueDate": "結束時間"
+  }
+}
+
