@@ -1,0 +1,42 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員"
+  },
+  "column": {
+    "id": "ID",
+    "memberID": "會員ID",
+    "sourcePlatform": "來源平台",
+    "frozenBalance": "凍結金額",
+    "frozenAt": "凍結時間",
+    "targetAccumulatedBet": "Spin解凍目標",
+    "unfrozenAt": "解凍時間",
+    "unfrozen": "解凍",
+    "control": "控制"
+  },
+  "PlatformType": {
+    "0": "WEB",
+    "1": "IOS",
+    "2": "ANDROID",
+    "Payment": "儲值",
+    "Mission": "任務",
+    "Mail": "信件",
+    "Event": "活動"
+  },
+  "title": {
+    "removeStatement": "解凍確認"
+  },
+  "notify": {
+    "removeStatement": "是否解凍",
+    "removeStatementSuccess": "此筆已解凍",
+    "removeStatementError": "解凍失敗",
+    "needAccount": "會員欄位不能為空",
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "connectionError": "連接錯誤"
+  },
+  "search": "查詢",
+  "confirm": "確認",
+  "cancel": "取消"
+}
+

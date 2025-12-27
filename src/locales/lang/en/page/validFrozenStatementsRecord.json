@@ -1,0 +1,42 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member"
+  },
+  "column": {
+    "id": "ID",
+    "memberID": "Member ID",
+    "sourcePlatform": "Source Platform",
+    "frozenBalance": "Frozen Balance",
+    "frozenAt": "Frozen At",
+    "targetAccumulatedBet": "Spin Unfreeze Target",
+    "unfrozenAt": "Unfrozen At",
+    "unfrozen": "Unfreeze",
+    "control": "Control"
+  },
+  "PlatformType": {
+    "0": "WEB",
+    "1": "IOS",
+    "2": "ANDROID",
+    "Payment": "Payment",
+    "Mission": "Mission",
+    "Mail": "Mail",
+    "Event": "Event"
+  },
+  "title": {
+    "removeStatement": "Unfreeze Confirmation"
+  },
+  "notify": {
+    "removeStatement": "Do you want to unfreeze?",
+    "removeStatementSuccess": "This record has been unfrozen",
+    "removeStatementError": "Unfreeze failed",
+    "needAccount": "Member field cannot be empty",
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "confirm": "Confirm",
+  "cancel": "Cancel"
+}
+

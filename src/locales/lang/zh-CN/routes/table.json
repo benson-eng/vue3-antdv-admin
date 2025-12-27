@@ -5,5 +5,6 @@
   "missionRecordTable": "任務紀錄",
   "singleMailRecordTable": "信件紀錄",
   "redemptionCodeRecord": "兌換碼紀錄",
-  "transactionRecordTable": "贈禮紀錄查詢"
+  "transactionRecordTable": "贈禮紀錄查詢",
+  "validFrozenStatementsRecord": "凍結明細表"
 }

@@ -159,4 +159,62 @@ export const abortTransaction = (params: AbortTransactionParams) =>
     timeout: 0,
   });
 
+export interface ValidFrozenStatementItem {
+  id: string;
+  memberID: string;
+  source: string;
+  frozenBalance: number;
+  frozenAt: string;
+  unfrozenAt?: string | null;
+  targetAccumulatedBet?: number | null;
+  isEnabled?: boolean;
+}
+
+export interface GetValidFrozenStatementsParams {
+  memberID: string;
+}
+
+export interface GetValidFrozenStatementsResult {
+  data: ValidFrozenStatementItem[];
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> getValidFrozenStatements
+ */
+export const getValidFrozenStatements = (params: GetValidFrozenStatementsParams) =>
+  request<GetValidFrozenStatementsResult>({
+    url: '/AdminSystem/api/action/getValidFrozenStatements',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'getValidFrozenStatements',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface RemoveValidFrozenStatementParams {
+  memberID: string;
+  statementID: string;
+}
+
+export interface RemoveValidFrozenStatementResult {
+  result: boolean;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> removeValidFrozenStatement
+ */
+export const removeValidFrozenStatement = (params: RemoveValidFrozenStatementParams) =>
+  request<RemoveValidFrozenStatementResult>({
+    url: '/AdminSystem/api/action/removeValidFrozenStatement',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'removeValidFrozenStatement',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 
