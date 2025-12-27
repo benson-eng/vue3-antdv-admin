@@ -8,5 +8,6 @@
   "transactionRecordTable": "Transaction Record",
   "tokenRecordTable": "Token Record",
   "validFrozenStatementsRecord": "Valid Frozen Statements Record",
-  "externalGameRecords": "External Game Records"
+  "externalGameRecords": "External Game Records",
+  "smsRecordTable": "SMS Record"
 }

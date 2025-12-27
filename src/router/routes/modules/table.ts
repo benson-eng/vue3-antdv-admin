@@ -93,6 +93,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'smsRecord-table',
+        name: 'SmsRecordTable',
+        component: () => import('@/views/table/smsRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.smsRecordTable'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
       // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },

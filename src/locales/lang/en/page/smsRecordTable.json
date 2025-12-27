@@ -1,0 +1,45 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "messageSendTime": "Send Time"
+  },
+  "column": {
+    "id": "ID",
+    "memberID": "Member",
+    "provider": "Provider",
+    "message": "Message",
+    "statusCode": "Status",
+    "messageSendTime": "Send Time"
+  },
+  "statusCode": {
+    "0": "Sending",
+    "1": "Arrived",
+    "2": "Incorrect Content",
+    "3": "Incorrect Phone Number",
+    "4": "SMS Service Deactivated",
+    "5": "Delivery Timed Out",
+    "6": "Phone Unexpected Error, Cannot Deliver",
+    "7": "System Unexpected Error, Cannot Deliver",
+    "8": "Other Error",
+    "9": "Phone Off/Signal Poor/SMS Function Abnormal, Cannot Deliver",
+    "10": "Network System/Base Station Abnormal, Cannot Deliver",
+    "11": "Phone Empty/Disabled, Cannot Deliver",
+    "12": "Phone Specifications Do Not Match, Cannot Deliver"
+  },
+  "Provider": {
+    "Mitake": "Mitake",
+    "BO": "BO",
+    "SmsCloudSend": "SmsCloudSend"
+  },
+  "notify": {
+    "required": "Required fields are not filled"
+  },
+  "search": "Search",
+  "datePicker": {
+    "startDate": "Start Time",
+    "dueDate": "End Time"
+  }
+}
+

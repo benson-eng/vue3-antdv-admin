@@ -8,5 +8,6 @@
   "transactionRecordTable": "贈禮紀錄查詢",
   "tokenRecordTable": "代幣紀錄",
   "validFrozenStatementsRecord": "凍結明細表",
-  "externalGameRecords": "外部遊戲紀錄"
+  "externalGameRecords": "外部遊戲紀錄",
+  "smsRecordTable": "簡訊紀錄"
 }
