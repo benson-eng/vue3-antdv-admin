@@ -1,0 +1,43 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "missionName": "Mission Name",
+    "missionCreatedTime": "Mission Created Time",
+    "missionCompletedTime": "Mission Completed Time",
+    "loyaltyBox": "Loyalty Box"
+  },
+  "tables": {
+    "settingID": "ID",
+    "memberID": "Member ID",
+    "taskId": "Task ID",
+    "missionCreatedTime": "Mission Created Time",
+    "missionCompletedTime": "Mission Completed Time",
+    "missionCompleted": "Completion Status",
+    "missionVip": "VIP",
+    "missTypeStr": "Mission Type",
+    "missionName": "Mission Name",
+    "awardItemsArr": "Award Items",
+    "control": "Action"
+  },
+  "enum": {
+    "LoyaltyPointDaily": "Daily Loyalty Point",
+    "LoyaltyPointWeekly": "Weekly Loyalty Point"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
+    "needAccount": "Member field cannot be empty",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "view": "View",
+  "datePicker": {
+    "startDate": "Start Time",
+    "dueDate": "End Time"
+  },
+  "dialog": {
+    "title": "Mission Details"
+  }
+}
+

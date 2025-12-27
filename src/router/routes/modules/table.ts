@@ -30,6 +30,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'missionRecord-table',
+        name: 'MissionRecordTable',
+        component: () => import('@/views/table/missionRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.missionRecordTable'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
       // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },
