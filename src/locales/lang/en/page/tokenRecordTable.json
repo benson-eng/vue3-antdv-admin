@@ -1,0 +1,54 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "tokenType": "Token",
+    "source": "Source",
+    "searchTime": "Search Time"
+  },
+  "column": {
+    "id": "ID",
+    "remitno": "Transaction No.",
+    "memberID": "Member",
+    "agentID": "Agent",
+    "deposit": "Deposit",
+    "withdrawal": "Withdrawal",
+    "tokenID": "Token",
+    "beforeAmount": "Before Amount",
+    "afterAmount": "After Amount",
+    "transactionTime": "Transaction Time",
+    "type": "Type",
+    "subType": "Sub Type",
+    "source": "Source",
+    "sourceStatus": "Source Status",
+    "note": "Note"
+  },
+  "type": {
+    "Promote": "Promote",
+    "Bet": "Bet",
+    "MailAttachment": "Mail Attachment",
+    "Mission": "Mission"
+  },
+  "subType": {
+    "General": "General",
+    "Award": "Award",
+    "Transaction": "Transaction",
+    "Reward": "Reward"
+  },
+  "source": {
+    "gachpon": "Gachapon",
+    "mission": "Mission System",
+    "mail": "Mail System",
+    "dailydraw": "Daily Draw",
+    "event": "Event",
+    "token": "Token System"
+  },
+  "notify": {
+    "emptyAgentID": "Agent cannot be empty",
+    "emptyDate": "Date cannot be empty",
+    "searchFinish": "Search completed"
+  },
+  "search": "Search"
+}
+

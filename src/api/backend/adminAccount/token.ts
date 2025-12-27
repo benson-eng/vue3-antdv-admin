@@ -96,12 +96,62 @@ export const removeToken = (params: { masterAgent: string; id: number }) =>
     timeout: 0,
   });
 
+export type TokenRecordItem = {
+  id: number;
+  remitno: string;
+  memberID: string;
+  agentID: string;
+  deposit: number;
+  withdrawal: number;
+  tokenID: number;
+  beforeAmount: number;
+  afterAmount: number;
+  transactionTime: string;
+  type: string;
+  subType: string;
+  source: string;
+  sourceStatus?: string;
+  note?: Record<string, any>;
+};
+
+export type QueryTokenRecordsParams = {
+  memberID?: string;
+  type?: string;
+  subType?: string;
+  source?: string;
+  tokenID?: number;
+  agentID?: string;
+  remitno?: string;
+  date?: [string, string]; // ISO date strings
+  page: number;
+  limit: number; // 筆數(最大1000)
+};
+
+export type QueryTokenRecordsResponse = {
+  records: TokenRecordItem[];
+  total?: number;
+};
+
+export const queryTokenRecords = (params: QueryTokenRecordsParams) =>
+  request<QueryTokenRecordsResponse>({
+    url: '/AdminSystem/api/action/queryTokenRecords',
+    method: 'post',
+    data: {
+      server: 'tokenServer',
+      actionName: 'queryTokenRecords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   queryTokens,
   createToken,
   updateToken,
   removeToken,
+  queryTokenRecords,
 };
+
 
 
 

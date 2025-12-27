@@ -6,6 +6,7 @@
   "singleMailRecordTable": "Mail Record",
   "redemptionCodeRecord": "Redemption Code Record",
   "transactionRecordTable": "Transaction Record",
+  "tokenRecordTable": "Token Record",
   "validFrozenStatementsRecord": "Valid Frozen Statements Record",
   "externalGameRecords": "External Game Records"
 }

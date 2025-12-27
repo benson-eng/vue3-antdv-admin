@@ -1,0 +1,54 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "tokenType": "代幣",
+    "source": "來源",
+    "searchTime": "查詢時間"
+  },
+  "column": {
+    "id": "ID",
+    "remitno": "交易編號",
+    "memberID": "會員",
+    "agentID": "代理商",
+    "deposit": "增加量",
+    "withdrawal": "減少量",
+    "tokenID": "代幣",
+    "beforeAmount": "異動前",
+    "afterAmount": "異動後",
+    "transactionTime": "異動時間",
+    "type": "交易類型",
+    "subType": "子交易類型",
+    "source": "來源",
+    "sourceStatus": "來源狀態",
+    "note": "備註"
+  },
+  "type": {
+    "Promote": "活動",
+    "Bet": "押注",
+    "MailAttachment": "信件附件",
+    "Mission": "任務"
+  },
+  "subType": {
+    "General": "一般",
+    "Award": "獎勵",
+    "Transaction": "交易",
+    "Reward": "任務獎勵"
+  },
+  "source": {
+    "gachpon": "扭蛋機",
+    "mission": "任務系統",
+    "mail": "信件系統",
+    "dailydraw": "每日贈送",
+    "event": "活動",
+    "token": "代幣系統"
+  },
+  "notify": {
+    "emptyAgentID": "代理商不可空白",
+    "emptyDate": "時間不可空白",
+    "searchFinish": "查詢完成"
+  },
+  "search": "查詢"
+}
+

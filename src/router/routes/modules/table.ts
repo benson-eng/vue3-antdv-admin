@@ -67,6 +67,15 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'tokenRecordTable-table',
+        name: 'TokenRecordTable',
+        component: () => import('@/views/table/tokenRecordTable-table/index.vue'),
+        meta: {
+          title: t('routes.table.tokenRecordTable'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
+      {
         path: 'validFrozenStatementsRecord-table',
         name: 'ValidFrozenStatementsRecordTable',
         component: () => import('@/views/table/validFrozenStatementsRecord-table/index.vue'),
