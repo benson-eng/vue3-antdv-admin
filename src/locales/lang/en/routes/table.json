@@ -12,5 +12,6 @@
   "smsRecordTable": "SMS Record",
   "safetyBoxRecordTable": "Safety Box Record",
   "dailyLoginRewardRecord": "Daily Login Reward Record",
-  "distAcctStationRecord": "Station Report"
+  "distAcctStationRecord": "Station Report",
+  "distAcctFamilyRecord": "Family Report"
 }

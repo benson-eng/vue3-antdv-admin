@@ -129,6 +129,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:table-outlined',
         },
       },
+      {
+        path: 'distAcctFamilyRecord-table',
+        name: 'DistAcctFamilyRecordTable',
+        component: () => import('@/views/table/distAcctFamilyRecord-table/index.vue'),
+        meta: {
+          title: t('routes.table.distAcctFamilyRecord'),
+          icon: 'ant-design:table-outlined',
+        },
+      },
       // 已移除：grandPrizeRecord-table, gameRecord-table, gameJpRecord-table（多轉/轉錯頁面，後續會重新轉換）
     ],
   },

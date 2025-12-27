@@ -63,3 +63,29 @@ export const queryStationMaster = (params: QueryStationMasterParams) =>
     timeout: 0,
   });
 
+export interface QueryAgentParams {
+  stationMasterName: string;
+  name: string; // agent name
+}
+
+export interface QueryAgentResponse {
+  result: boolean;
+  value?: StationMasterItem;
+}
+
+/**
+ * 查詢代理
+ * 後端：POST /AdminSystem/api/action/queryAgent
+ */
+export const queryAgent = (params: QueryAgentParams) =>
+  request<QueryAgentResponse>({
+    url: '/AdminSystem/api/action/queryAgent',
+    method: 'post',
+    data: {
+      server: 'agentHubManager',
+      actionName: 'queryAgent',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
