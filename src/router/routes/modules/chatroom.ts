@@ -1,0 +1,29 @@
+import type { RouteRecordRaw } from 'vue-router';
+import { t } from '@/hooks/useI18n';
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/chatroom',
+    name: 'Chatroom',
+    redirect: '/chatroom/rooms',
+    meta: {
+      title: t('routes.chatroom.title'),
+      icon: 'ant-design:message-outlined',
+      orderNo: 3,
+    },
+    children: [
+      {
+        path: 'rooms',
+        name: 'ChatroomRooms',
+        component: () => import('@/views/chatroom/rooms/index.vue'),
+        meta: {
+          title: t('routes.chatroom.rooms2'),
+          icon: 'ant-design:message-outlined',
+        },
+      },
+    ],
+  },
+];
+
+export default routes;
+

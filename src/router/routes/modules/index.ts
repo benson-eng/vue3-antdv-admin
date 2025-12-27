@@ -8,5 +8,6 @@ import member from './member';
 import gamesetting from './gamesetting';
 import table from './table';
 import distAcct from './distAcct';
+import chatroom from './chatroom';
 
-export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct];
+export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom];

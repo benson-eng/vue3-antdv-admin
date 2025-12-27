@@ -26,7 +26,9 @@ export interface TreasureItemListRow {
 }
 
 export interface TreasureItemListResult {
-  rows: TreasureItemListRow[];
+  data: {
+    rows: TreasureItemListRow[];
+  };
 }
 
 export const treasureItemList = (params: { masterAgent: string; itemType?: string }) =>
@@ -149,5 +151,6 @@ export const unequipItem = (params: { memberID: string; treasureItemID: string; 
     },
     timeout: 0,
   });
+
 
 
