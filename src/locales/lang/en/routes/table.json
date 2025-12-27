@@ -3,5 +3,6 @@
   "cashRecord": "Cash Record",
   "gachaponGameRecord": "Gachapon Game Record",
   "missionRecordTable": "Mission Record",
-  "singleMailRecordTable": "Mail Record"
+  "singleMailRecordTable": "Mail Record",
+  "redemptionCodeRecord": "Redemption Code Record"
 }

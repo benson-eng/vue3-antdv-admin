@@ -1,0 +1,44 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member",
+    "checkoutRedemptionCode": "Check Redemption Code",
+    "result": "Result",
+    "redeemedTime": "Redeemed Time"
+  },
+  "tables": {
+    "id": "ID",
+    "nickname": "Nickname",
+    "type": "Type",
+    "orderName": "Order Name",
+    "rewards": "Rewards",
+    "redemptionCode": "Redemption Code",
+    "redeemedTime": "Redeemed Time"
+  },
+  "column": {
+    "orderName": "Order Name",
+    "rewards": "Rewards",
+    "redemptionCode": "Redemption Code",
+    "type": "Type",
+    "Nickname": "Nickname"
+  },
+  "CodeState": {
+    "AVAILABLE": "Redemption code is available",
+    "REMOVED": "Redemption code has been removed",
+    "USED": "Redemption code has been used",
+    "UNAVAILABLE": "Redemption code is unavailable (does not exist or other reasons)"
+  },
+  "type": {
+    "1": "One-time use",
+    "2": "Multiple use"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
+    "needAccount": "Member field cannot be empty",
+    "connectionError": "Connection Error"
+  },
+  "search": "Search",
+  "cancel": "Cancel"
+}
+
