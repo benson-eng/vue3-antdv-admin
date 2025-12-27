@@ -217,4 +217,43 @@ export const removeValidFrozenStatement = (params: RemoveValidFrozenStatementPar
     timeout: 0,
   });
 
+export interface SafetyBoxOrderItem {
+  id: string;
+  nickName?: string;
+  currencyType: string;
+  remittances: number;
+  serviceFee: number;
+  state: 'Success' | 'Fail';
+  transferAt: string;
+}
+
+export interface GetSafetyBoxOrderParams {
+  memberID: string;
+  searchTime?: {
+    startTime: Date | string;
+    endTime: Date | string;
+  };
+}
+
+export interface GetSafetyBoxOrderResult {
+  data: {
+    orders: SafetyBoxOrderItem[];
+  };
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> getSafetyBoxOrder
+ */
+export const getSafetyBoxOrder = (params: GetSafetyBoxOrderParams) =>
+  request<GetSafetyBoxOrderResult>({
+    url: '/AdminSystem/api/action/getSafetyBoxOrder',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'getSafetyBoxOrder',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 

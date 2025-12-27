@@ -1,0 +1,27 @@
+{
+  "labels": {
+    "masterAgent": "Master Agent",
+    "agent": "Agent",
+    "member": "Member"
+  },
+  "label": {
+    "searchTime": "Search Time",
+    "nickName": "Member",
+    "orderType": "Order Type",
+    "currencyType": "Currency",
+    "remittances": "Deposit / Withdraw",
+    "serviceFee": "Service Fee",
+    "state": "State",
+    "transferAt": "Time"
+  },
+  "notify": {
+    "required": "Member and search time are required",
+    "connectionError": "Connection Error"
+  },
+  "state": {
+    "Success": "Success",
+    "Fail": "Fail"
+  },
+  "search": "Search"
+}
+
