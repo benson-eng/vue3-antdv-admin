@@ -209,3 +209,109 @@ export const unmuteUser = (params: MuteUserParams) =>
     timeout: 0,
   });
 
+// ============ PrivateTeam APIs ============
+
+export enum PrivateTeamSearchType {
+  ALL = 0,
+  IS_EXIST = 1,
+  IS_NOT_EXIST = 2,
+}
+
+export interface PrivateTeamInfo {
+  privateTeamID: string;
+  name: string;
+  memberID: string;
+  nickName?: string;
+  owner: string;
+  ownerName?: string;
+  ownerID?: string;
+  searchType?: PrivateTeamSearchType;
+  teamID?: string;
+  type?: number;
+}
+
+export interface PrivateTeamQueryParams {
+  memberID?: string;
+  masterAgent?: string;
+  teamName?: string;
+  searchType: PrivateTeamSearchType;
+}
+
+export interface PrivateTeamQueryResponse {
+  data: {
+    privateTeam: PrivateTeamInfo[];
+  };
+}
+
+export const privateTeamQuery = (params: PrivateTeamQueryParams) =>
+  request<PrivateTeamQueryResponse>({
+    url: '/AdminSystem/api/action/privateTeamQuery',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'privateTeamQuery',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface PrivateTeamKickParams {
+  kickerMemberID: string;
+  memberIDs: string[];
+  teamID: string;
+  platformMemberID: string;
+}
+
+export const privateTeamKick = (params: PrivateTeamKickParams) =>
+  request<{ error?: boolean }>({
+    url: '/AdminSystem/api/action/privateTeamKick',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'privateTeamKick',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface PrivateTeamHistoryMessagesParams {
+  teamID: string;
+  memberID: string;
+  searchTimes: [Date | string, Date | string];
+  limit?: number;
+}
+
+export interface PrivateTeamHistoryMessagesResponse {
+  data: TextHistoryMessage[];
+}
+
+export const privateTeamHistoryMessages = (params: PrivateTeamHistoryMessagesParams) =>
+  request<PrivateTeamHistoryMessagesResponse>({
+    url: '/AdminSystem/api/action/privateTeamHistoryMessages',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'privateTeamHistoryMessages',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface PrivateTeamDelParams {
+  teamID: string;
+  memberID: string;
+  platformMemberID: string;
+}
+
+export const privateTeamDel = (params: PrivateTeamDelParams) =>
+  request<{ error?: boolean }>({
+    url: '/AdminSystem/api/action/privateTeamDel',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'privateTeamDel',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+

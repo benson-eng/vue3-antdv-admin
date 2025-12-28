@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:message-outlined',
         },
       },
+      {
+        path: 'privateRooms',
+        name: 'ChatroomPrivateRooms',
+        component: () => import('@/views/chatroom/privateRooms/index.vue'),
+        meta: {
+          title: t('routes.chatroom.privateRooms2'),
+          icon: 'ant-design:message-outlined',
+        },
+      },
     ],
   },
 ];

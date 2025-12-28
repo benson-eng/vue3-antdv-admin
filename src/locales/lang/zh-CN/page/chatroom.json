@@ -48,7 +48,22 @@
     "wordLimit": "字數限制：{limit1}-{limit2} 字",
     "durationSecType1": "天數範圍：1-30天",
     "durationSecType2": "小時範圍：1-23小時",
-    "durationSecType3": "分鐘/秒數範圍：1-59"
-  }
+    "durationSecType3": "分鐘/秒數範圍：1-59",
+    "title": "確認",
+    "btnPrivateTeamKick": "確認是否踢出群組",
+    "btnPrivateTeamDel": "確認是否解散群組",
+    "badTime": "開始與結束時間不可一樣"
+  },
+  "privateTeamID": "群組ID",
+  "privateName": "群組名稱",
+  "SearchType": "群組狀態",
+  "PrivateTeamSearchType": {
+    "1": "運作中",
+    "2": "已解散"
+  },
+  "owner": "建立者",
+  "btnPrivateTeamKick": "踢出群組",
+  "btnPrivateTeamDel": "解散群組",
+  "messageAlert2": "訊息提醒"
 }
 
