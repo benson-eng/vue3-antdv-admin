@@ -1,0 +1,31 @@
+{
+  "template": "Template Management",
+  "OTPSmsTemplates": "OTP SMS Templates",
+  "OTPSmsTemplatesPage": {
+    "selectOTPType": "Please select OTP type",
+    "buttons": {
+      "update": "Update",
+      "refresh": "Refresh"
+    },
+    "label": {
+      "template": "Content",
+      "otp": "One-time Password",
+      "orderID": "Transaction Order ID",
+      "expireTimeMin": "OTP Expiration Time"
+    },
+    "OTPType": {
+      "BindPhone": "Bind Phone",
+      "SetTransactionPassword": "Set Transaction Password",
+      "TransactionPassword": "OTP Transaction Password",
+      "ChangePassword": "Change Password"
+    },
+    "notify": {
+      "queryFailed": "Query failed",
+      "updateSuccess": "Update success",
+      "updateFailed": "Update failed",
+      "masterAgentRequired": "Please select master agent first",
+      "otp": "Current input will send {limit3} SMS messages"
+    }
+  }
+}
+

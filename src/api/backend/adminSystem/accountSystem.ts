@@ -227,6 +227,67 @@ export const queryAccountBaseInfo = (params: QueryAccountBaseInfoParams) =>
     timeout: 0,
   });
 
+/**
+ * =========================================
+ * OTP SMS Template API (Member/Account System)
+ * 對齊 Vue2：admin-web/src/api/member.ts
+ * =========================================
+ */
+
+export enum OTPTemplateTypeMember {
+  CHANGE_PASSWORD = 'ChangePassword',
+}
+
+export interface QueryOTPSmsTemplatesMemberParams {
+  masterAgent: string;
+  type: OTPTemplateTypeMember | string;
+}
+
+export interface OTPSmsTemplateItemMember {
+  masterAgent: string;
+  type: string;
+  template: string;
+}
+
+export interface QueryOTPSmsTemplatesMemberResult {
+  data: OTPSmsTemplateItemMember[];
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/member.ts -> queryOTPSmsTemplates
+ */
+export const queryOTPSmsTemplatesMember = (params: QueryOTPSmsTemplatesMemberParams) =>
+  request<QueryOTPSmsTemplatesMemberResult>({
+    url: '/AdminSystem/api/action/queryOTPSmsTemplates',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'queryOTPSmsTemplates',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface SetOTPSmsTemplateMemberParams {
+  masterAgent: string;
+  type: OTPTemplateTypeMember | string;
+  template: string;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/member.ts -> setOTPSmsTemplate
+ */
+export const setOTPSmsTemplateMember = (params: SetOTPSmsTemplateMemberParams) =>
+  request({
+    url: '/AdminSystem/api/action/setOTPSmsTemplate',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'setOTPSmsTemplate',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
 
 
 

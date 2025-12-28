@@ -256,4 +256,68 @@ export const getSafetyBoxOrder = (params: GetSafetyBoxOrderParams) =>
     timeout: 0,
   });
 
+/**
+ * =========================================
+ * OTP SMS Template API
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts
+ * =========================================
+ */
+
+export enum OTPTemplateType {
+  BIND_PHONE = 'BindPhone',
+  SET_TRANSACTION_PASSWORD = 'SetTransactionPassword',
+  TRANSACTION_PASSWORD = 'TransactionPassword',
+}
+
+export interface QueryOTPSmsTemplatesParams {
+  masterAgent: string;
+  type: OTPTemplateType | string;
+}
+
+export interface OTPSmsTemplateItem {
+  masterAgent: string;
+  type: string;
+  template: string;
+}
+
+export interface QueryOTPSmsTemplatesResult {
+  data: OTPSmsTemplateItem[];
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> queryOTPSmsTemplates
+ */
+export const queryOTPSmsTemplates = (params: QueryOTPSmsTemplatesParams) =>
+  request<QueryOTPSmsTemplatesResult>({
+    url: '/AdminSystem/api/action/queryOTPSmsTemplates',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'queryOTPSmsTemplates',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface SetOTPSmsTemplateParams {
+  masterAgent: string;
+  type: OTPTemplateType | string;
+  template: string;
+}
+
+/**
+ * 對齊 Vue2：admin-web/src/api/transactionSystem.ts -> setOTPSmsTemplate
+ */
+export const setOTPSmsTemplate = (params: SetOTPSmsTemplateParams) =>
+  request({
+    url: '/AdminSystem/api/action/setOTPSmsTemplate',
+    method: 'post',
+    data: {
+      server: 'transactionSystem',
+      actionName: 'setOTPSmsTemplate',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 
