@@ -248,12 +248,21 @@ onMounted(() => {
   <div class="app-container">
     <div class="filter-container">
       <div class="wrap">
-        <AdminAccountSelector
+        <div
           v-if="hasPermission"
-          v-model="masterAgent"
-          value-type="account"
-          style="width: 200px; margin-right: 16px"
-        />
+          class="input_group input_group-selector"
+        >
+          <div class="txt">
+            <label>{{ t('filters.masterAgent') }}</label>
+          </div>
+          <div class="my_input">
+            <AdminAccountSelector
+              v-model="masterAgent"
+              value-type="account"
+              style="width: 200px"
+            />
+          </div>
+        </div>
         <div class="input_group">
           <Select
             v-model:value="OTPType"
@@ -332,5 +341,19 @@ onMounted(() => {
 
 .filter-container .input_group {
   margin-bottom: 0;
+}
+
+.input_group-selector {
+  display: flex;
+  align-items: center;
+  margin-right: 16px;
+}
+
+.input_group-selector .txt {
+  margin-right: 8px;
+}
+
+.input_group-selector .txt label {
+  margin: 0;
 }
 </style>

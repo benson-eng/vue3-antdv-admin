@@ -8,6 +8,9 @@
       "update": "更新",
       "refresh": "重新整理"
     },
+    "filters": {
+      "masterAgent": "站長"
+    },
     "label": {
       "template": "內文",
       "otp": "一次性密碼",
@@ -32,6 +35,9 @@
     "buttons": {
       "update": "更新",
       "refresh": "重新整理"
+    },
+    "filters": {
+      "masterAgent": "站長"
     },
     "label": {
       "template": "公告模板"

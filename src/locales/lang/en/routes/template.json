@@ -8,6 +8,9 @@
       "update": "Update",
       "refresh": "Refresh"
     },
+    "filters": {
+      "masterAgent": "Master Agent"
+    },
     "label": {
       "template": "Content",
       "otp": "One-time Password",
@@ -32,6 +35,9 @@
     "buttons": {
       "update": "Update",
       "refresh": "Refresh"
+    },
+    "filters": {
+      "masterAgent": "Master Agent"
     },
     "label": {
       "template": "Announcement Template"
