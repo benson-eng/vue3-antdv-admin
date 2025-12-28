@@ -1,6 +1,7 @@
 {
   "template": "Template Management",
   "OTPSmsTemplates": "OTP SMS Templates",
+  "PrivateTeamAnnouncementTemplate": "Private Team Announcement Template",
   "OTPSmsTemplatesPage": {
     "selectOTPType": "Please select OTP type",
     "buttons": {
@@ -25,6 +26,21 @@
       "updateFailed": "Update failed",
       "masterAgentRequired": "Please select master agent first",
       "otp": "Current input will send {limit3} SMS messages"
+    }
+  },
+  "PrivateTeamAnnouncementTemplatePage": {
+    "buttons": {
+      "update": "Update",
+      "refresh": "Refresh"
+    },
+    "label": {
+      "template": "Announcement Template"
+    },
+    "notify": {
+      "queryFailed": "Query failed",
+      "updateSuccess": "Update success",
+      "updateFailed": "Update failed",
+      "masterAgentRequired": "Please select master agent first"
     }
   }
 }

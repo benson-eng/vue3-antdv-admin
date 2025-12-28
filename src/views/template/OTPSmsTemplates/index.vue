@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, h, onMounted, ref, watch } from 'vue';
-import { Button, Form, Input, message, Select } from 'ant-design-vue';
 import { EditOutlined } from '@ant-design/icons-vue';
+import { Button, Form, Input, message, Select } from 'ant-design-vue';
+import { computed, h, onMounted, ref, watch } from 'vue';
 
-import {
-  OTPTemplateType,
-  queryOTPSmsTemplates,
-  setOTPSmsTemplate,
-} from '@/api/backend/transactionSystem';
 import {
   OTPTemplateTypeMember,
   queryOTPSmsTemplatesMember,
   setOTPSmsTemplateMember,
 } from '@/api/backend/adminSystem/accountSystem';
+import {
+  OTPTemplateType,
+  queryOTPSmsTemplates,
+  setOTPSmsTemplate,
+} from '@/api/backend/transactionSystem';
 import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
@@ -46,10 +46,12 @@ const OTPTypeList = computed(() => {
   ];
   // 過濾掉不需要顯示的類型
   const filterList = [OTPTemplateType.SET_TRANSACTION_PASSWORD, OTPTemplateTypeMember.CHANGE_PASSWORD];
-  return allTypes.filter((item) => !filterList.includes(item));
+  return allTypes.filter(item => !filterList.includes(item));
 });
 
-// 獲取模板
+/**
+ * 獲取模板
+ */
 const getTemplate = async () => {
   if (!masterAgent.value) {
     return;
@@ -75,7 +77,7 @@ const getTemplate = async () => {
     // 對齊 defaultAvatarSetting 的處理方式
     const response = res as any;
     let templateData: any[] = [];
-    
+
     if (Array.isArray(response)) {
       // 如果直接是陣列（request 返回 data.data）
       templateData = response;
@@ -104,7 +106,9 @@ const getTemplate = async () => {
   }
 };
 
-// 插入變數按鈕
+/**
+ * 插入變數按鈕
+ */
 const buttonInsert = (type: 'otp' | 'orderID' | 'expireTimeMin') => {
   const otpToInsert = `{${type}}`;
   const textarea = document.getElementById('template-textarea') as HTMLTextAreaElement;
@@ -125,7 +129,9 @@ const buttonInsert = (type: 'otp' | 'orderID' | 'expireTimeMin') => {
   inputTemplate();
 };
 
-// 更新模板
+/**
+ * 更新模板
+ */
 const onFormUpdate = async () => {
   if (!masterAgent.value) {
     message.warning(t('notify.masterAgentRequired'));
@@ -153,12 +159,16 @@ const onFormUpdate = async () => {
   }
 };
 
-// 刷新模板
+/**
+ * 刷新模板
+ */
 const onFormRefresh = async () => {
   await getTemplate();
 };
 
-// 總代理變更處理
+/**
+ * 總代理變更處理
+ */
 const onMasterAgentChanged = async () => {
   if (!masterAgent.value || masterAgent.value === '') {
     isSelectedMasterAgent.value = false;
@@ -170,10 +180,12 @@ const onMasterAgentChanged = async () => {
   await getTemplate();
 };
 
-// 檢查字串長度（中文字算 2 個字元）
+/**
+ * 檢查字串長度（中文字算 2 個字元）
+ */
 const checkStrlength2 = (value: string, limit: number) => {
   // eslint-disable-next-line no-control-regex
-  if (value.replace(/[^\x00-\xff]/g, 'xx').length <= limit) {
+  if (value.replace(/[^\x00-\xFF]/g, 'xx').length <= limit) {
     return true;
   }
   else {
@@ -181,7 +193,9 @@ const checkStrlength2 = (value: string, limit: number) => {
   }
 };
 
-// 輸入模板時檢查長度
+/**
+ * 輸入模板時檢查長度
+ */
 const inputTemplate = () => {
   let textarea = dataForm.value.template;
   let sendOtpCount = '';
@@ -195,7 +209,7 @@ const inputTemplate = () => {
   else {
     showNotify.value = true;
     // eslint-disable-next-line no-control-regex
-    sendOtpCount = Math.ceil(textarea.replace(/[^\x00-\xff]/g, 'xx').length / 140).toString();
+    sendOtpCount = Math.ceil(textarea.replace(/[^\x00-\xFF]/g, 'xx').length / 140).toString();
     messageText.value = t('notify.otp', { limit1: '70', limit2: '140', limit3: sendOtpCount });
   }
 };
@@ -270,7 +284,7 @@ onMounted(() => {
           {{ t('label.expireTimeMin') }}
         </Button>
       </div>
-      <br />
+      <br>
       <Form :model="dataForm" layout="horizontal" :label-col="{ style: { width: '100px', textAlign: 'left' } }" :wrapper-col="{ style: { width: 'auto' } }">
         <Form.Item :label="t('label.template')">
           <Input.TextArea
@@ -281,14 +295,14 @@ onMounted(() => {
             @input="inputTemplate"
           />
         </Form.Item>
-        <Form.Item v-if="showNotify" :label="''" :wrapper-col="{ offset: 0 }">
+        <Form.Item v-if="showNotify" label="" :wrapper-col="{ offset: 0 }">
           <span style="color: #FFA500">{{ messageText }}</span>
         </Form.Item>
-        <Form.Item :label="''" :wrapper-col="{ offset: 0 }">
+        <Form.Item label="" :wrapper-col="{ offset: 0 }">
           <Button type="primary" @click="onFormUpdate">
             {{ t('buttons.update') }}
           </Button>
-          <Button @click="onFormRefresh" style="margin-left: 8px">
+          <Button style="margin-left: 8px" @click="onFormRefresh">
             {{ t('buttons.refresh') }}
           </Button>
         </Form.Item>
@@ -320,4 +334,3 @@ onMounted(() => {
   margin-bottom: 0;
 }
 </style>
-

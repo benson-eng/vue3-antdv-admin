@@ -526,3 +526,51 @@ export const updateIndecentWords = (params: UpdateIndecentWordsParams) =>
     timeout: 0,
   });
 
+// ============ PrivateTeamAnnouncementTemplate APIs ============
+
+export interface QueryPrivateTeamTemplatesParams {
+  masterAgent: string;
+}
+
+export interface PrivateTeamTemplate {
+  masterAgent: string;
+  template: string;
+}
+
+export interface QueryPrivateTeamTemplatesResponse {
+  data?: PrivateTeamTemplate[];
+}
+
+export const queryPrivateTeamTemplates = (params: QueryPrivateTeamTemplatesParams) =>
+  request<QueryPrivateTeamTemplatesResponse>({
+    url: '/AdminSystem/api/action/queryPrivateTeamTemplates',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'queryPrivateTeamTemplates',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface SetPrivateTeamAnnouncementTemplateParams {
+  masterAgent: string;
+  template: string;
+}
+
+export interface SetPrivateTeamAnnouncementTemplateResponse {
+  data?: { error?: boolean };
+}
+
+export const setPrivateTeamAnnouncementTemplate = (params: SetPrivateTeamAnnouncementTemplateParams) =>
+  request<SetPrivateTeamAnnouncementTemplateResponse>({
+    url: '/AdminSystem/api/action/setPrivateTeamAnnouncementTemplate',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'setPrivateTeamAnnouncementTemplate',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+

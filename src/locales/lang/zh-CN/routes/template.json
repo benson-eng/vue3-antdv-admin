@@ -1,6 +1,7 @@
 {
   "template": "模板管理",
   "OTPSmsTemplates": "OTP簡訊模板",
+  "PrivateTeamAnnouncementTemplate": "群組公告模板",
   "OTPSmsTemplatesPage": {
     "selectOTPType": "請選擇OTP類型",
     "buttons": {
@@ -25,6 +26,21 @@
       "updateFailed": "更新失敗",
       "masterAgentRequired": "請先選擇總代理",
       "otp": "目前輸入會寄出{limit3}封簡訊"
+    }
+  },
+  "PrivateTeamAnnouncementTemplatePage": {
+    "buttons": {
+      "update": "更新",
+      "refresh": "重新整理"
+    },
+    "label": {
+      "template": "公告模板"
+    },
+    "notify": {
+      "queryFailed": "查詢失敗",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失敗",
+      "masterAgentRequired": "請先選擇總代理"
     }
   }
 }

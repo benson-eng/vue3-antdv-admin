@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:message-outlined',
         },
       },
+      {
+        path: 'PrivateTeamAnnouncementTemplate',
+        name: 'PrivateTeamAnnouncementTemplate',
+        component: () => import('@/views/template/PrivateTeamAnnouncementTemplate/index.vue'),
+        meta: {
+          title: t('routes.template.PrivateTeamAnnouncementTemplate'),
+          icon: 'ant-design:notification-outlined',
+        },
+      },
     ],
   },
 ];

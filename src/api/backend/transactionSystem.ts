@@ -319,5 +319,3 @@ export const setOTPSmsTemplate = (params: SetOTPSmsTemplateParams) =>
     },
     timeout: 0,
   });
-
-
