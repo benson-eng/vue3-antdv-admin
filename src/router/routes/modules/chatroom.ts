@@ -39,6 +39,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:message-outlined',
         },
       },
+      {
+        path: 'IndecentWords',
+        name: 'ChatroomIndecentWords',
+        component: () => import('@/views/chatroom/IndecentWords/index.vue'),
+        meta: {
+          title: t('routes.chatroom.IndecentWords'),
+          icon: 'ant-design:message-outlined',
+        },
+      },
     ],
   },
 ];

@@ -1,0 +1,40 @@
+{
+  "labels": {
+    "seq": "Sequence",
+    "setString": "Indecent Word",
+    "add": "Add",
+    "importBtn": "Import Excel",
+    "replaceAll": "Replace All",
+    "replaceAllinfo": "Check to replace all existing indecent words"
+  },
+  "title": {
+    "add": "Add Indecent Word",
+    "edit": "Edit Indecent Word",
+    "view": "View Indecent Word",
+    "excelConfirm": "Import Excel Confirmation"
+  },
+  "rule": {
+    "setString": "This indecent word already exists",
+    "setString2": "Indecent word can only contain alphanumeric characters, Chinese characters, and phonetic symbols"
+  },
+  "notify": {
+    "title": "Confirm",
+    "deleteIndecentWords": "Confirm to delete indecent word",
+    "importErrValue": "Row {index}: {str} format error",
+    "importErrRepeat": "Row {index}: {str} already exists",
+    "importErrFormat": "Excel format error"
+  },
+  "dialog": {
+    "excelerr": "Import Error",
+    "close": "Close"
+  },
+  "add": "Add",
+  "edit": "Edit",
+  "delete": "Delete",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "success": "Success",
+  "fail": "Failed",
+  "actions": "Actions"
+}
+

@@ -1,0 +1,40 @@
+{
+  "labels": {
+    "seq": "序號",
+    "setString": "不雅字",
+    "add": "新增",
+    "importBtn": "匯入 Excel",
+    "replaceAll": "是否全部替換",
+    "replaceAllinfo": "勾選後將替換所有現有不雅字"
+  },
+  "title": {
+    "add": "新增不雅字",
+    "edit": "編輯不雅字",
+    "view": "查看不雅字",
+    "excelConfirm": "匯入 Excel 確認"
+  },
+  "rule": {
+    "setString": "此不雅字已存在",
+    "setString2": "不雅字只能包含英數字、中文、注音符號"
+  },
+  "notify": {
+    "title": "確認",
+    "deleteIndecentWords": "確認是否刪除不雅字",
+    "importErrValue": "第 {index} 行：{str} 格式錯誤",
+    "importErrRepeat": "第 {index} 行：{str} 已存在",
+    "importErrFormat": "Excel 格式錯誤"
+  },
+  "dialog": {
+    "excelerr": "匯入錯誤提示",
+    "close": "關閉"
+  },
+  "add": "新增",
+  "edit": "編輯",
+  "delete": "刪除",
+  "confirm": "確認",
+  "cancel": "取消",
+  "success": "成功",
+  "fail": "失敗",
+  "actions": "操作"
+}
+

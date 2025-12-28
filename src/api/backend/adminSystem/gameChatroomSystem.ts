@@ -438,3 +438,91 @@ export const removeSticker = (params: RemoveStickerParams) =>
     timeout: 0,
   });
 
+// ============ IndecentWords APIs ============
+
+export interface QueryIndecentWordsParams {
+  masterAgent: string;
+}
+
+export interface QueryIndecentWordsResponse {
+  data?: {
+    indecentWords: string[];
+  };
+  indecentWords?: string[];
+}
+
+export const queryIndecentWords = (params: QueryIndecentWordsParams) =>
+  request<QueryIndecentWordsResponse>({
+    url: '/AdminSystem/api/action/queryIndecentWords',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'queryIndecentWords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface AddIndecentWordsParams {
+  masterAgent: string;
+  indecentWords: string[];
+}
+
+export interface AddIndecentWordsResponse {
+  data?: { error?: boolean };
+}
+
+export const addIndecentWords = (params: AddIndecentWordsParams) =>
+  request<AddIndecentWordsResponse>({
+    url: '/AdminSystem/api/action/addIndecentWords',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'addIndecentWords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface RemoveIndecentWordsParams {
+  masterAgent: string;
+  indecentWords: string[];
+}
+
+export interface RemoveIndecentWordsResponse {
+  data?: { error?: boolean };
+}
+
+export const removeIndecentWords = (params: RemoveIndecentWordsParams) =>
+  request<RemoveIndecentWordsResponse>({
+    url: '/AdminSystem/api/action/removeIndecentWords',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'removeIndecentWords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface UpdateIndecentWordsParams {
+  masterAgent: string;
+  indecentWords: string[];
+}
+
+export interface UpdateIndecentWordsResponse {
+  data?: { error?: boolean };
+}
+
+export const updateIndecentWords = (params: UpdateIndecentWordsParams) =>
+  request<UpdateIndecentWordsResponse>({
+    url: '/AdminSystem/api/action/updateIndecentWords',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'updateIndecentWords',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
