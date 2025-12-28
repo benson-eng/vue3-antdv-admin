@@ -1,0 +1,22 @@
+{
+  "labels": {
+    "stickerName": "Sticker Name",
+    "stickerIcon": "Sticker File",
+    "createSticker": "Create Sticker",
+    "updateSticker": "Update Sticker",
+    "control": "Control"
+  },
+  "add": "Add",
+  "edit": "Edit",
+  "delete": "Delete",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "success": "Success",
+  "fail": "Fail",
+  "notify": {
+    "required": "This field is required",
+    "title": "Confirm",
+    "deleteSticker": "Confirm to delete sticker"
+  }
+}
+

@@ -315,3 +315,126 @@ export const privateTeamDel = (params: PrivateTeamDelParams) =>
     timeout: 0,
   });
 
+// ============ Sticker APIs ============
+
+export interface StickerColumns {
+  id: number;
+  name: string;
+  masterAgent: string;
+  url: string;
+  md5: string;
+  size: number;
+  width: number;
+  height: number;
+  mime: string;
+  extension: string;
+}
+
+export interface AddStickerParams {
+  masterAgent: string;
+  name: string;
+  imageFile: File;
+}
+
+export interface AddStickerResponse {
+  data: StickerColumns;
+}
+
+export const addSticker = (params: AddStickerParams) => {
+  const formData = new FormData();
+  formData.append('server', 'gameChatroomSystem');
+  formData.append('actionName', 'addSticker');
+  
+  // 根據 Vue2 的 jsonToFormData 行為：
+  // jsonToFormData 會將 query 對象中的所有字段展開為 query[key] 格式
+  // 包括 File 類型的字段也會展開為 query[imageFile]
+  formData.append('query[masterAgent]', params.masterAgent);
+  formData.append('query[name]', params.name);
+  formData.append('query[imageFile]', params.imageFile);
+  
+  return request<AddStickerResponse>({
+    url: '/AdminSystem/api/upload/addSticker',
+    method: 'post',
+    data: formData,
+    timeout: 0,
+  });
+};
+
+export interface UpdateStickerParams {
+  id: number;
+  masterAgent: string;
+  name?: string;
+  imageFile?: File;
+}
+
+export interface UpdateStickerResponse {
+  data: StickerColumns;
+}
+
+export const updateSticker = (params: UpdateStickerParams) => {
+  const formData = new FormData();
+  formData.append('server', 'gameChatroomSystem');
+  formData.append('actionName', 'updateSticker');
+  formData.append('query[id]', String(params.id));
+  formData.append('query[masterAgent]', params.masterAgent);
+  
+  // 只有當 name 存在時才添加到 query
+  if (params.name !== undefined) {
+    formData.append('query[name]', params.name);
+  }
+  
+  // imageFile 作為單獨的 FormData 字段（如果存在）
+  if (params.imageFile) {
+    formData.append('imageFile', params.imageFile);
+  }
+  
+  return request<UpdateStickerResponse>({
+    url: '/AdminSystem/api/upload/updateSticker',
+    method: 'post',
+    data: formData,
+    timeout: 0,
+  });
+};
+
+export interface StickerListParams {
+  masterAgent: string;
+}
+
+export interface StickerListResponse {
+  data?: StickerColumns[];
+}
+
+// stickerList API 可能直接返回數組或 { data: [...] } 格式
+export const stickerList = (params: StickerListParams) =>
+  request<StickerListResponse | StickerColumns[]>({
+    url: '/AdminSystem/api/action/stickerList',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'stickerList',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface RemoveStickerParams {
+  id: number;
+  masterAgent: string;
+}
+
+export interface RemoveStickerResponse {
+  data: { result: boolean };
+}
+
+export const removeSticker = (params: RemoveStickerParams) =>
+  request<RemoveStickerResponse>({
+    url: '/AdminSystem/api/action/removeSticker',
+    method: 'post',
+    data: {
+      server: 'gameChatroomSystem',
+      actionName: 'removeSticker',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+

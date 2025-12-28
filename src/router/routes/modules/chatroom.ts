@@ -30,6 +30,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:message-outlined',
         },
       },
+      {
+        path: 'sticker',
+        name: 'ChatroomSticker',
+        component: () => import('@/views/chatroom/sticker/index.vue'),
+        meta: {
+          title: t('routes.chatroom.sticker'),
+          icon: 'ant-design:message-outlined',
+        },
+      },
     ],
   },
 ];

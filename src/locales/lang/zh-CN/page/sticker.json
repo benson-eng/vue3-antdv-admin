@@ -1,0 +1,22 @@
+{
+  "labels": {
+    "stickerName": "貼圖名稱",
+    "stickerIcon": "貼圖檔案",
+    "createSticker": "創建貼圖",
+    "updateSticker": "更新貼圖",
+    "control": "控制"
+  },
+  "add": "新增",
+  "edit": "編輯",
+  "delete": "刪除",
+  "confirm": "確認",
+  "cancel": "取消",
+  "success": "成功",
+  "fail": "失敗",
+  "notify": {
+    "required": "此欄位為必填",
+    "title": "確認",
+    "deleteSticker": "確認是否刪除貼圖"
+  }
+}
+
