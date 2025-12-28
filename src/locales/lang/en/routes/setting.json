@@ -1,0 +1,59 @@
+{
+  "setting": "Setting",
+  "defaultAvatarSetting": "Default Avatar Setting",
+  "defaultAvatarSettingPage": {
+    "title": "Default Avatar Setting",
+    "buttons": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "create": "Create",
+      "selectImage": "Select Image",
+      "remove": "Remove"
+    },
+    "filters": {
+      "masterAgent": "Master Agent",
+      "masterAgentPlaceholder": "Please select master agent"
+    },
+    "columns": {
+      "id": "Avatar ID",
+      "profileUrl": "Image",
+      "ebableStatus": "Enable Status",
+      "createDateTime": "Create Date",
+      "isEnabled": "Hide/Disable",
+      "actions": "Actions"
+    },
+    "form": {
+      "image": "Avatar Image",
+      "isEnabled": "Enable"
+    },
+    "labels": {
+      "enable": "Enable",
+      "disable": "Disable"
+    },
+    "rules": {
+      "image": "Please upload image"
+    },
+    "notify": {
+      "queryFailed": "Query failed",
+      "masterAgentRequired": "Please select master agent first",
+      "createSuccess": "Create success",
+      "createFailed": "Create failed",
+      "updateSuccess": "Update success",
+      "updateFailed": "Update failed",
+      "deleteSuccess": "Delete success",
+      "deleteFailed": "Delete failed",
+      "deleteConfirm": "Confirm delete",
+      "uploadFailed": "Upload failed",
+      "imageFormatError": "Avatar image can only be JPG or PNG format",
+      "imageSizeError": "Image too large"
+    },
+    "noPermission": {
+      "title": "No Permission",
+      "subTitle": "This feature is only available for specific level accounts"
+    }
+  }
+}
+
