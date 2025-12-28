@@ -1,0 +1,48 @@
+{
+  "title": "Mail Image Management",
+  "labels": {
+    "name": "Name",
+    "type": "Type",
+    "image": "Image",
+    "limitMinWidth": "Width: ",
+    "limitMinHeight": "Height: ",
+    "actions": "Actions"
+  },
+  "rules": {
+    "name": "Name is required",
+    "image": "Image is required"
+  },
+  "type": {
+    "mail": "Mail",
+    "ad": "Ad",
+    "mission": "Mission",
+    "dailyDraw": "Daily Draw",
+    "gachpon": "Gachapon",
+    "event": "Event",
+    "payment": "Payment",
+    "game": "Game"
+  },
+  "buttons": {
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create",
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "notify": {
+    "queryFailed": "Query failed",
+    "createSuccess": "Create success",
+    "createFailed": "Create failed",
+    "deleteSuccess": "Delete success",
+    "deleteFailed": "Delete failed",
+    "deleteConfirm": "Are you sure to delete this image",
+    "deleteTitle": "Confirm Delete",
+    "updateNotImplemented": "Update feature not implemented"
+  },
+  "noPermission": {
+    "title": "No Permission",
+    "subTitle": "This feature is only available for specific account levels"
+  }
+}
+

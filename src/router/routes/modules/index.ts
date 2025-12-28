@@ -9,5 +9,6 @@ import gamesetting from './gamesetting';
 import table from './table';
 import distAcct from './distAcct';
 import chatroom from './chatroom';
+import image from './image';
 
-export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom];
+export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom, ...image];
