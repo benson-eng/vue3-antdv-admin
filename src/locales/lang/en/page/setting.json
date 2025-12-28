@@ -1,0 +1,24 @@
+{
+  "labels": {
+    "oldPassword": "Old Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "wrongPassword": "Wrong Password",
+    "passwordDescription": "Password must be at least 6 characters",
+    "oldPasswordWrong": "Old Password Wrong"
+  },
+  "notify": {
+    "passwordNotMatch": "Passwords do not match",
+    "shortPassword": "Password is too short",
+    "emptyPassword": "Please fill in password",
+    "oldPasswordAndNewPasswordIsSame": "Old password and new password are the same",
+    "success": "Password changed successfully",
+    "relog": "Please login again",
+    "error": "Error",
+    "oldPasswordFormatInvalid": "Old password format is invalid"
+  },
+  "actions": {
+    "changePassword": "Change Password"
+  }
+}
+

@@ -95,7 +95,7 @@ export const createDefaultAvatar = (params: CreateDefaultAvatarParams) => {
   const formData = new FormData();
   formData.append('server', 'profileSystem');
   formData.append('actionName', 'createDefaultAvatar');
-  
+
   // 對齊 Vue2 的 jsonToFormData 行為：
   // jsonToFormData 會將 query 對象中的所有字段展開為 query[key] 格式
   // 包括 File 類型的字段也會展開為 query[profilePictureFile]
@@ -129,7 +129,7 @@ export const updateDefaultAvatar = (params: UpdateDefaultAvatarParams) => {
   const formData = new FormData();
   formData.append('server', 'profileSystem');
   formData.append('actionName', 'updateDefaultAvatar');
-  
+
   // 對齊 Vue2 的 jsonToFormData 行為：
   // jsonToFormData 會將 query 對象中的所有字段展開為 query[key] 格式
   formData.append('query[masterAgent]', params.masterAgent);
@@ -155,5 +155,3 @@ export const updateDefaultAvatar = (params: UpdateDefaultAvatarParams) => {
     timeout: 0,
   });
 };
-
-

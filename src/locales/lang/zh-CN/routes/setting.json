@@ -1,5 +1,6 @@
 {
   "setting": "設定",
+  "passwordSetting": "密碼設定",
   "defaultAvatarSetting": "預設頭像管理",
   "defaultAvatarSettingPage": {
     "title": "預設頭像管理",
@@ -56,4 +57,3 @@
     }
   }
 }
-

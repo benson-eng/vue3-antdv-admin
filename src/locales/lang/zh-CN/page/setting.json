@@ -1,0 +1,24 @@
+{
+  "labels": {
+    "oldPassword": "舊的密碼",
+    "newPassword": "新的密碼",
+    "confirmPassword": "再次輸入新密碼",
+    "wrongPassword": "密碼錯誤",
+    "passwordDescription": "密碼長度需大於六個字符",
+    "oldPasswordWrong": "舊密碼錯誤"
+  },
+  "notify": {
+    "passwordNotMatch": "密碼不一致",
+    "shortPassword": "密碼長度不足",
+    "emptyPassword": "請填入密碼",
+    "oldPasswordAndNewPasswordIsSame": "舊密碼與新密碼一致",
+    "success": "密碼修改成功",
+    "relog": "請重新登入",
+    "error": "錯誤",
+    "oldPasswordFormatInvalid": "舊密碼格式錯誤"
+  },
+  "actions": {
+    "changePassword": "修改密碼"
+  }
+}
+

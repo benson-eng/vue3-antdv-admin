@@ -1,5 +1,6 @@
 {
   "setting": "Setting",
+  "passwordSetting": "Password Setting",
   "defaultAvatarSetting": "Default Avatar Setting",
   "defaultAvatarSettingPage": {
     "title": "Default Avatar Setting",
@@ -56,4 +57,3 @@
     }
   }
 }
-
