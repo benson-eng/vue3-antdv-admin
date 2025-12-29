@@ -126,7 +126,6 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
         next({ path: defaultRoutePath });
       }
       else {
-        const hasRoute = router.hasRoute(to.name!);
         if (userStore.menus.length === 0) {
           // 从后台获取菜单
           const [err] = await _to(userStore.afterLogin());
@@ -135,20 +134,30 @@ export function createRouterGuards(router: Router, whiteNameList: WhiteNameList)
             Modal.destroyAll();
             return next({ name: LOGIN_NAME });
           }
+          // 路由載入完成後，再次檢查路由是否存在
+          const hasRoute = router.hasRoute(to.name!);
           // 解决警告：No match found for location with path "XXXXXXX"
           if (to.name === PAGE_NOT_FOUND_NAME) {
             next({ path: to.fullPath, query: to.query, replace: true });
           }
-          // 如果该路由不存在，可能是动态注册的路由，它还没准备好，需要再重定向一次到该路由
+          // 如果该路由不存在，導向首頁
           else if (!hasRoute) {
-            next({ ...to, replace: true });
+            console.warn(`路由 ${to.fullPath} 不存在，導向首頁`);
+            next({ path: defaultRoutePath, replace: true });
           }
           else {
             next();
           }
         }
         else {
-          next();
+          // 如果路由已經載入，檢查路由是否存在
+          const hasRoute = router.hasRoute(to.name!);
+          if (!hasRoute && to.name !== PAGE_NOT_FOUND_NAME) {
+            console.warn(`路由 ${to.fullPath} 不存在，導向首頁`);
+            next({ path: defaultRoutePath, replace: true });
+          } else {
+            next();
+          }
         }
       }
     }

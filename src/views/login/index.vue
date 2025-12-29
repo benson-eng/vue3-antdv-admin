@@ -203,10 +203,23 @@
             updateCaptcha();
           }
         } else {
-          // 登入成功後獲取使用者資訊
-          await userStore.GetUserInfo();
-          message.success('登入成功！');
-          setTimeout(() => router.replace((route.query.redirect as string) || '/'));
+          try {
+            // 登入成功後載入路由（afterLogin 內部會調用 GetUserInfo）
+            await userStore.afterLogin();
+            message.success('登入成功！');
+            // 導向首頁
+            router.replace('/home').catch((err) => {
+              console.error('導航失敗:', err);
+              // 如果導航失敗，嘗試使用路由名稱
+              router.replace({ name: 'Home' }).catch(() => {
+                // 最後嘗試使用路徑
+                window.location.href = '/home';
+              });
+            });
+          } catch (error) {
+            console.error('登入後處理失敗:', error);
+            message.error('登入成功，但載入路由失敗，請重新整理頁面');
+          }
         }
       } else {
         // 使用新的 Login 方法（支援雙因素驗證檢測）
@@ -220,10 +233,23 @@
             updateCaptcha();
           }
         } else {
-          // 登入成功後獲取使用者資訊
-          await userStore.GetUserInfo();
-          message.success('登入成功！');
-          setTimeout(() => router.replace((route.query.redirect as string) || '/'));
+          try {
+            // 登入成功後載入路由（afterLogin 內部會調用 GetUserInfo）
+            await userStore.afterLogin();
+            message.success('登入成功！');
+            // 導向首頁
+            router.replace('/home').catch((err) => {
+              console.error('導航失敗:', err);
+              // 如果導航失敗，嘗試使用路由名稱
+              router.replace({ name: 'Home' }).catch(() => {
+                // 最後嘗試使用路徑
+                window.location.href = '/home';
+              });
+            });
+          } catch (error) {
+            console.error('登入後處理失敗:', error);
+            message.error('登入成功，但載入路由失敗，請重新整理頁面');
+          }
         }
       }
     } catch (error: any) {

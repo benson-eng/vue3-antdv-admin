@@ -59,15 +59,18 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { message, Modal } from 'ant-design-vue';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { useTabsViewStore } from '@/store/modules/tabsView';
 import { changeAdminAccountPassword } from '@/api/backend/adminAccount/admin';
 
 const { t } = useI18n();
 const router = useRouter();
+const route = useRoute();
 const userStore = useUserStore();
+const tabsViewStore = useTabsViewStore();
 
 const loading = ref(false);
 
@@ -141,9 +144,15 @@ const handleSubmit = async () => {
       title: t('page.setting.notify.success'),
       content: t('page.setting.notify.relog'),
       onOk: async () => {
-        // 登出並重新導向到登入頁
+        // 先關閉當前的密碼設定 tab
+        try {
+          tabsViewStore.closeCurrentTab(route);
+        } catch (error) {
+          console.warn('關閉 tab 失敗:', error);
+        }
+        // 登出並重新導向到登入頁（不帶 redirect 參數，登入後會導向首頁）
         await userStore.LogOut();
-        router.push(`/login?redirect=${router.currentRoute.value.fullPath}`);
+        router.push('/login');
       },
     });
   } catch (error: any) {
