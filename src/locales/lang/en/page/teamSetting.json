@@ -1,0 +1,59 @@
+{
+  "title": "Team Setting",
+  "add": "Add",
+  "edit": "Edit",
+  "cancel": "Cancel",
+  "submit": "Submit",
+  "masterAgent": "Master Agent",
+  "selectMasterAgent": "Please select master agent",
+  "noPermission": "You do not have permission to access this page",
+  "loadFailed": "Load failed",
+  "createSuccess": "Create success",
+  "createFailed": "Create failed",
+  "updateSuccess": "Update success",
+  "updateFailed": "Update failed",
+  "saveFailed": "Save failed",
+  "enable": "Enable",
+  "disable": "Disable",
+  "tagCreateSuccess": "Tag created successfully",
+  "tagCreateFailed": "Tag creation failed",
+  "table": {
+    "id": "ID",
+    "type": "Type",
+    "tagID": "Tag ID",
+    "itemName": "Item Name",
+    "teamIcon": "Team Icon",
+    "iconFile": "Icon File",
+    "enabled": "Enabled",
+    "creationDate": "Creation Date",
+    "updatedOn": "Updated On",
+    "control": "Control"
+  },
+  "form": {
+    "itemName": "Item Name",
+    "itemNamePlaceholder": "Please enter item name",
+    "itemNameRequired": "Item name cannot be empty",
+    "tagID": "Tag ID",
+    "tagIDPlaceholder": "Please select tag",
+    "teamIcon": "Team Icon",
+    "iconFile": "Icon File",
+    "upload": "Upload",
+    "remove": "Remove",
+    "createTag": "Create Tag",
+    "imageRequired": "Please upload image"
+  },
+  "formTitle": {
+    "create": "Create Team Badge",
+    "edit": "Edit Team Badge"
+  },
+  "tagDialog": {
+    "title": "Create Badge Tag",
+    "tag": "Tag",
+    "tagPlaceholder": "Please enter tag name",
+    "tagRequired": "Tag name cannot be empty"
+  },
+  "itemType": {
+    "teamBadge": "Team Badge"
+  }
+}
+

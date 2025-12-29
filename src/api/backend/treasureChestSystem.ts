@@ -386,5 +386,184 @@ export const bulkUpdateItemTagOrder = (params: {
     timeout: 0,
   });
 
+/**
+ * =========================
+ * 隊伍徽章管理（TeamBadge）
+ * 對齊 Vue2：admin-web/src/api/treasureChestSystem.ts
+ * =========================
+ */
+
+export interface TeamBadgeItem extends TreasureItem {
+  itemType: 'teamBadge';
+  teamName: string;
+  teamIcon: string;
+  tag?: string | null;
+}
+
+/**
+ * 新增隊伍徽章
+ * - Vue2：addTeamBadge -> /AdminSystem/api/upload/addTeamBadge
+ */
+export const addTeamBadge = (params: {
+  itemName: string;
+  itemType: string;
+  masterAgent: string;
+  iconFile?: File;
+  tagID?: number | null;
+  teamName: string;
+  teamIcon?: File;
+}) => {
+  const formData = new FormData();
+  formData.append('server', 'treasureChestSystem');
+  formData.append('actionName', 'addTeamBadge');
+  
+  // 對齊 Vue2 的 jsonToFormData 行為
+  formData.append('query[itemName]', params.itemName);
+  formData.append('query[itemType]', params.itemType);
+  formData.append('query[masterAgent]', params.masterAgent);
+  formData.append('query[teamName]', params.teamName);
+  
+  if (params.tagID !== null && params.tagID !== undefined) {
+    formData.append('query[tagID]', params.tagID.toString());
+  }
+  
+  if (params.iconFile) {
+    formData.append('query[iconFile]', params.iconFile);
+  }
+  
+  if (params.teamIcon) {
+    formData.append('query[teamIcon]', params.teamIcon);
+  }
+
+  return request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/upload/addTeamBadge',
+    method: 'post',
+    data: formData,
+    timeout: 0,
+  });
+};
+
+/**
+ * 更新隊伍徽章
+ * - Vue2：updateTeamBadge -> /AdminSystem/api/upload/updateTeamBadge
+ */
+export const updateTeamBadge = (params: {
+  treasureItemID?: string;
+  itemName: string;
+  itemType: string;
+  masterAgent: string;
+  iconFile?: File;
+  tagID: number | null;
+  teamName: string;
+  teamIcon?: File;
+}) => {
+  const formData = new FormData();
+  formData.append('server', 'treasureChestSystem');
+  formData.append('actionName', 'updateTeamBadge');
+  
+  // 對齊 Vue2 的 jsonToFormData 行為（includeNullValues: true）
+  if (params.treasureItemID) {
+    formData.append('query[treasureItemID]', params.treasureItemID);
+  }
+  formData.append('query[itemName]', params.itemName);
+  formData.append('query[itemType]', params.itemType);
+  formData.append('query[masterAgent]', params.masterAgent);
+  formData.append('query[teamName]', params.teamName);
+  
+  // 對齊 Vue2：tagID 為 null 時也要包含（includeNullValues: true）
+  if (params.tagID === null || params.tagID === undefined) {
+    formData.append('query[tagID]', '');
+  } else {
+    formData.append('query[tagID]', params.tagID.toString());
+  }
+  
+  if (params.iconFile) {
+    formData.append('query[iconFile]', params.iconFile);
+  }
+  
+  if (params.teamIcon) {
+    formData.append('query[teamIcon]', params.teamIcon);
+  }
+
+  return request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/upload/updateTeamBadge',
+    method: 'post',
+    data: formData,
+    timeout: 0,
+  });
+};
+
+/**
+ * 禁用道具
+ * - Vue2：disableTreasureItem -> /AdminSystem/api/action/disableTreasureItem
+ */
+export const disableTreasureItem = (params: {
+  treasureItemID: string;
+  masterAgent: string;
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/disableTreasureItem',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'disableTreasureItem',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 更新道具（通用）
+ * - Vue2：updateTreasureItem -> /AdminSystem/api/upload/updateTreasureItem
+ */
+export const updateTreasureItem = (params: {
+  treasureItemID: string;
+  masterAgent: string;
+  itemName?: string;
+  description?: string;
+  enabled?: boolean;
+  iconFile?: File;
+  activeTimeSec?: number;
+  tagID?: number;
+  isShow?: boolean;
+}) => {
+  const formData = new FormData();
+  formData.append('server', 'treasureChestSystem');
+  formData.append('actionName', 'updateTreasureItem');
+  
+  formData.append('query[treasureItemID]', params.treasureItemID);
+  formData.append('query[masterAgent]', params.masterAgent);
+  
+  if (params.itemName !== undefined) {
+    formData.append('query[itemName]', params.itemName);
+  }
+  if (params.description !== undefined) {
+    formData.append('query[description]', params.description);
+  }
+  if (params.enabled !== undefined) {
+    formData.append('query[enabled]', params.enabled.toString());
+  }
+  if (params.activeTimeSec !== undefined) {
+    formData.append('query[activeTimeSec]', params.activeTimeSec.toString());
+  }
+  if (params.tagID !== undefined) {
+    formData.append('query[tagID]', params.tagID.toString());
+  }
+  if (params.isShow !== undefined) {
+    formData.append('query[isShow]', params.isShow.toString());
+  }
+  
+  if (params.iconFile) {
+    formData.append('query[iconFile]', params.iconFile);
+  }
+
+  return request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/upload/updateTreasureItem',
+    method: 'post',
+    data: formData,
+    timeout: 0,
+  });
+};
+
 
 

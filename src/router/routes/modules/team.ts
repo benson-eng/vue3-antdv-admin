@@ -21,6 +21,15 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:tags-outlined',
         },
       },
+      {
+        path: 'teamSetting',
+        name: 'TeamSetting',
+        component: () => import('@/views/treasureChest/teamSetting/index.vue'),
+        meta: {
+          title: t('routes.team.teamSetting'),
+          icon: 'ant-design:setting-outlined',
+        },
+      },
     ],
   },
 ];
