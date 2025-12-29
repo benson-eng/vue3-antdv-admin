@@ -6,6 +6,7 @@ import demos from './demos';
 import distAcct from './distAcct';
 import externaLink from './externa-link';
 import gamesetting from './gamesetting';
+import guild from './guild';
 import home from './home';
 import image from './image';
 import member from './member';
@@ -14,4 +15,4 @@ import table from './table';
 import team from './team';
 import template from './template';
 
-export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom, ...image, ...setting, ...team, ...template];
+export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom, ...image, ...setting, ...team, ...template, ...guild];

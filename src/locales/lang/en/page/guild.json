@@ -1,0 +1,86 @@
+{
+  "title": "Guild Setting",
+  "add": "Add",
+  "edit": "Edit",
+  "view": "View",
+  "save": "Save",
+  "cancel": "Cancel",
+  "update": "Update",
+  "refresh2": "Refresh",
+  "search": "Search",
+  "confirm": "Confirm",
+  "label": {
+    "createNeedCostCoins": "Coins Required to Create Guild",
+    "preUser": "Default User",
+    "guildLevelsSetting": "Guild Level Settings",
+    "level": "Level",
+    "levelName": "Level Name",
+    "maxCounts": "Max Counts",
+    "guildAccumulationFund": "Guild Accumulation Fund",
+    "betFee": "Bet Fee",
+    "topUpFee": "Top Up Fee",
+    "gameWinLoseFee": "Game Win/Lose Fee"
+  },
+  "notify": {
+    "maxCounts": "Max counts cannot exceed 200"
+  },
+  "table": {
+    "id": "ID",
+    "level": "Level",
+    "levelName": "Level Name",
+    "maxCounts": "Max Counts",
+    "guildAccumulationFund": "Guild Accumulation Fund",
+    "betFee": "Bet Fee",
+    "topUpFee": "Top Up Fee",
+    "gameWinLoseFee": "Game Win/Lose Fee",
+    "control": "Control"
+  },
+  "form": {
+    "level": "Level",
+    "levelName": "Level Name",
+    "maxCounts": "Max Counts",
+    "guildAccumulationFund": "Guild Accumulation Fund",
+    "betFee": "Bet Fee",
+    "topUpFee": "Top Up Fee",
+    "gameWinLoseFee": "Game Win/Lose Fee"
+  },
+  "formTitle": {
+    "add": "Add Level",
+    "edit": "Edit Level",
+    "view": "View Level"
+  },
+  "masterAgent": "Master Agent",
+  "selectMasterAgent": "Please select master agent",
+  "noPermission": "You do not have permission to access this page",
+  "loadFailed": "Load failed",
+  "createSuccess": "Create success",
+  "updateSuccess": "Update success",
+  "saveFailed": "Save failed",
+  "delete": "Delete",
+  "deleteSuccess": "Delete success",
+  "deleteFailed": "Delete failed",
+  "deleteConfirm": "Are you sure to delete",
+  "form": {
+    "level": "Level",
+    "levelName": "Level Name",
+    "maxCounts": "Max Counts",
+    "guildAccumulationFund": "Guild Accumulation Fund",
+    "betFee": "Bet Fee",
+    "topUpFee": "Top Up Fee",
+    "gameWinLoseFee": "Game Win/Lose Fee",
+    "createNeedCostCoinsRequired": "Coins required to create guild cannot be empty",
+    "createNeedCostCoinsInvalid": "Coins required to create guild cannot be negative",
+    "levelRequired": "Level cannot be empty",
+    "levelInvalid": "Level cannot be negative",
+    "levelMustBeInteger": "Level must be an integer",
+    "levelDuplicate": "Level already exists",
+    "levelNameRequired": "Level name cannot be empty",
+    "maxCountsRequired": "Max counts cannot be empty",
+    "maxCountsInvalid": "Max counts must be a positive integer",
+    "guildAccumulationFundInvalid": "Guild accumulation fund must be positive",
+    "betFeeInvalid": "Bet fee must be positive",
+    "topUpFeeInvalid": "Top up fee cannot be negative",
+    "gameWinLoseFeeInvalid": "Game win/lose fee cannot be negative"
+  }
+}
+
