@@ -1,0 +1,47 @@
+{
+  "title": "Team Item Tags",
+  "add": "Add",
+  "edit": "Edit",
+  "delete": "Delete",
+  "masterAgent": "Master Agent",
+  "selectMasterAgent": "Please select master agent",
+  "noPermission": "You do not have permission to access this page",
+  "loadFailed": "Failed to load",
+  "createSuccess": "Created successfully",
+  "createFailed": "Failed to create",
+  "updateSuccess": "Updated successfully",
+  "updateFailed": "Failed to update",
+  "deleteSuccess": "Deleted successfully",
+  "deleteFailed": "Failed to delete",
+  "orderUpdateSuccess": "Order updated successfully",
+  "orderUpdateFailed": "Failed to update order",
+  "btn": {
+    "submitOrder": "Submit Order"
+  },
+  "table": {
+    "tagID": "Tag ID",
+    "tag": "Tag Name",
+    "order": "Order",
+    "control": "Control",
+    "itemType": "Item Type",
+    "enabled": "Enabled"
+  },
+  "form": {
+    "tag": "Tag",
+    "itemType": "Item Type",
+    "tagPlaceholder": "Please enter tag name",
+    "tagRequired": "Tag name cannot be empty"
+  },
+  "formTitle": {
+    "create": "Add Tag",
+    "edit": "Edit Tag"
+  },
+  "removeTagPopMessageBox": {
+    "title": "Confirm Delete",
+    "content": "Are you sure you want to delete this tag?"
+  },
+  "itemType": {
+    "teamBadge": "Team Badge"
+  }
+}
+

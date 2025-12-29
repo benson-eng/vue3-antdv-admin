@@ -254,5 +254,137 @@ export const removeIcon = (params: { masterAgent: string; id: number[] }) =>
     timeout: 0,
   });
 
+/**
+ * =========================
+ * 道具標籤管理（ItemTag）
+ * 對齊 Vue2：admin-web/src/api/treasureChestSystem.ts
+ * =========================
+ */
+
+export type ItemTypes =
+  | 'renameCard'
+  | 'badge'
+  | 'mount'
+  | 'freeScratchCard'
+  | 'eventItem'
+  | 'entityItem'
+  | 'personalFrame'
+  | 'treasureChest'
+  | 'gift'
+  | 'monthlyCard'
+  | 'gachapon'
+  | 'teamBadge'
+  | 'certificate'
+  | 'coupon'
+  | 'dailyRewardPass';
+
+export interface ItemTag {
+  id: number;
+  tag: string;
+  masterAgent: string;
+  order: number;
+  itemType: ItemTypes;
+  enabled: boolean;
+}
+
+/**
+ * 查詢道具標籤列表
+ * - Vue2：itemTagList -> /AdminSystem/api/action/itemTagList
+ * - 實際回傳格式：直接回傳 ItemTag[] 陣列，但 Vue2 的 request 會包裝為 { data: ItemTag[] }
+ * - Vue3 的 request 對於 AdminSystem API 返回 response，所以需要從 response.data 獲取
+ */
+export const itemTagList = (params: { masterAgent: string }) =>
+  request<ItemTag[]>({
+    url: '/AdminSystem/api/action/itemTagList',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'itemTagList',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 新增道具標籤
+ * - Vue2：addItemTag -> /AdminSystem/api/action/addItemTag
+ */
+export const addItemTag = (params: {
+  masterAgent: string;
+  tag: string;
+  order?: number;
+  itemType: string;
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/addItemTag',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'addItemTag',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 更新道具標籤
+ * - Vue2：updateItemTag -> /AdminSystem/api/action/updateItemTag
+ */
+export const updateItemTag = (params: {
+  tagID: number;
+  masterAgent: string;
+  tag?: string;
+  order?: number;
+  itemType?: string;
+  enabled?: boolean;
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/updateItemTag',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'updateItemTag',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 刪除道具標籤
+ * - Vue2：removeItemTag -> /AdminSystem/api/action/removeItemTag
+ */
+export const removeItemTag = (params: {
+  tagID: number;
+  masterAgent: string;
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/removeItemTag',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'removeItemTag',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 批量更新道具標籤順序
+ * - Vue2：bulkUpdateItemTagOrder -> /AdminSystem/api/action/bulkUpdateItemTagOrder
+ */
+export const bulkUpdateItemTagOrder = (params: {
+  updateTags: { tagID: number; masterAgent: string; order: number }[];
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/bulkUpdateItemTagOrder',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'bulkUpdateItemTagOrder',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 
 

@@ -11,6 +11,7 @@ import image from './image';
 import member from './member';
 import setting from './setting';
 import table from './table';
+import team from './team';
 import template from './template';
 
-export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom, ...image, ...setting, ...template];
+export default [...home, ...dashboard, ...demos, ...externaLink, ...account, ...adminAccount, ...member, ...gamesetting, ...table, ...distAcct, ...chatroom, ...image, ...setting, ...team, ...template];
