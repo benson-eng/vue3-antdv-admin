@@ -2,63 +2,68 @@
   <a-form
     ref="formRef"
     :model="formModel"
-    layout="vertical"
+    layout="horizontal"
+    :label-col="{ style: { width: '200px' } }"
+    :wrapper-col="{ style: { flex: 1 } }"
   >
     <!-- reCAPTCHA 金鑰設定 -->
-    <a-divider orientation="left">reCAPTCHA 金鑰設定</a-divider>
+    <a-divider orientation="left">{{ t('recaptcha.keySettings') }}</a-divider>
 
-    <a-form-item label="reCAPTCHA Secret Key" name="reCaptcha_secretKey">
+    <a-form-item :label="t('recaptcha.secretKey')" name="reCaptcha_secretKey">
       <a-input
         v-model:value="formModel.reCaptcha_secretKey"
-        placeholder="請輸入 reCAPTCHA Secret Key"
+        :placeholder="t('recaptcha.secretKeyPlaceholder')"
+        @input="handleKeyFieldChange"
         @blur="handleKeyFieldBlur"
       />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">當所有金鑰資訊填寫完成後，才可啟用人機驗證</span>
-      </template>
     </a-form-item>
 
-    <a-form-item label="reCAPTCHA Site Key" name="reCaptcha_siteKey">
+    <a-form-item :label="t('recaptcha.siteKey')" name="reCaptcha_siteKey">
       <a-input
         v-model:value="formModel.reCaptcha_siteKey"
-        placeholder="請輸入 reCAPTCHA Site Key"
+        :placeholder="t('recaptcha.siteKeyPlaceholder')"
+        @input="handleKeyFieldChange"
         @blur="handleKeyFieldBlur"
       />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">當所有金鑰資訊填寫完成後，才可啟用人機驗證</span>
-      </template>
     </a-form-item>
 
-    <a-form-item label="reCAPTCHA 名稱" name="reCaptcha_name">
+    <a-form-item :label="t('recaptcha.name')" name="reCaptcha_name">
       <a-input
         v-model:value="formModel.reCaptcha_name"
-        placeholder="請輸入 reCAPTCHA 名稱"
+        :placeholder="t('recaptcha.namePlaceholder')"
+        @input="handleKeyFieldChange"
         @blur="handleKeyFieldBlur"
       />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">當所有金鑰資訊填寫完成後，才可啟用人機驗證</span>
-      </template>
     </a-form-item>
 
-    <!-- 啟用設定（條件顯示） -->
-    <template v-if="canEnableRecaptcha">
-      <a-divider orientation="left">啟用設定</a-divider>
+    <!-- 啟用設定（一直顯示） -->
+    <a-divider orientation="left">{{ t('recaptcha.enableSettings') }}</a-divider>
 
-      <a-form-item label="啟用 reCAPTCHA" name="reCaptcha_enabled">
-        <a-switch v-model:checked="formModel.reCaptcha_enabled" />
-        <template #extra>
-          <span style="color: #999; font-size: 12px">當所有金鑰資訊填寫完成後，才可啟用人機驗證</span>
-        </template>
-      </a-form-item>
-    </template>
+    <a-form-item :label="t('recaptcha.enabled')" name="reCaptcha_enabled">
+      <a-switch
+        v-model:checked="formModel.reCaptcha_enabled"
+        :disabled="!canEnableRecaptcha"
+      />
+      <template #extra>
+        <span style="color: #999; font-size: 12px">{{ t('recaptcha.extraHint') }}</span>
+      </template>
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+/* eslint-disable vue/no-mutating-props */
+// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
+// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
+import { computed, ref, watch } from 'vue';
+import { useI18n } from '@/hooks/useI18n';
 
 defineOptions({ name: 'Step11Recaptcha' });
+
+// 多語系
+const pageI18n = useI18n('page.adminAccount');
+const t = pageI18n.t;
 
 interface Props {
   formModel: {
@@ -75,7 +80,7 @@ const formRef = ref<FormInstance>();
 
 /**
  * 計算是否可以啟用 reCAPTCHA
- * 只有當 secretKey、name、siteKey 都有值時，才顯示啟用開關
+ * 只有當 secretKey、name、siteKey 都有值時，才能啟用開關
  */
 const canEnableRecaptcha = computed(() => {
   return (
@@ -86,13 +91,28 @@ const canEnableRecaptcha = computed(() => {
 });
 
 /**
+ * 檢查並自動關閉啟用開關（如果設定不完全）
+ */
+const checkAndDisableIfIncomplete = () => {
+  if (!canEnableRecaptcha.value && props.formModel.reCaptcha_enabled) {
+    props.formModel.reCaptcha_enabled = false;
+  }
+};
+
+/**
+ * 處理金鑰欄位輸入事件
+ * 即時檢查設定是否完全，如果不完全則自動關閉
+ */
+const handleKeyFieldChange = () => {
+  checkAndDisableIfIncomplete();
+};
+
+/**
  * 處理金鑰欄位失焦事件
  * 如果任一欄位被清空，自動將 enabled 設為 false
  */
 const handleKeyFieldBlur = () => {
-  if (!canEnableRecaptcha.value) {
-    props.formModel.reCaptcha_enabled = false;
-  }
+  checkAndDisableIfIncomplete();
 };
 
 /**

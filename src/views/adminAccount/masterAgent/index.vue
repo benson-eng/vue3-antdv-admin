@@ -1,79 +1,28 @@
-<template>
-  <DynamicTable
-    row-key="id"
-    header-title="總代理管理"
-    :data-request="loadTableData"
-    :columns="columns"
-    :form-props="{ schemas: [] }"
-  >
-    <template #form-formHeader>
-      <a-col :span="24">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="6">
-            <a-form-item label="帳號" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-input v-model:value="searchAccount" placeholder="請輸入帳號" />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="6">
-            <a-form-item label="啟用" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-select v-model:value="searchIsEnabled" :options="statusOptions" allow-clear placeholder="全部" />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="12">
-            <a-form-item label="建立時間" class="mb-0" :label-col="{ span: 5 }" :wrapper-col="{ span: 19 }">
-              <a-range-picker
-                v-model:value="searchDateRange"
-                style="width: 100%"
-                :allow-clear="true"
-                format="YYYY-MM-DD"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-col>
-    </template>
-
-    <template #toolbar>
-      <a-space>
-        <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
-          新增
-        </a-button>
-        <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
-          導引式建立
-        </a-button>
-      </a-space>
-    </template>
-  </DynamicTable>
-
-  <CreateWizardDialog
-    :visible="wizardVisible"
-    :account-type="isMasterAgentX ? 'masterAgentX' : 'masterAgent'"
-    @update:visible="handleWizardClose"
-    @success="handleWizardSuccess"
-  />
-</template>
-
 <script setup lang="tsx">
-import { computed, ref } from 'vue';
-import { message, Modal, Tag, Switch } from 'ant-design-vue';
 import type { Dayjs } from 'dayjs';
-import { useRoute, useRouter } from 'vue-router';
-import { useTable } from '@/components/core/dynamic-table';
+import type { TableColumnItem, TableListItem } from './columns';
+import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal } from 'ant-design-vue';
+import { computed, ref } from 'vue';
+import { useRoute } from 'vue-router';
+import Api from '@/api/backend/adminAccount/masterAgent';
+import { useTable } from '@/components/core/dynamic-table';
+import { useI18n } from '@/hooks/useI18n';
 import { useFormModal } from '@/hooks/useModal';
 import { useUserStore } from '@/store/modules/user';
-import Api, { type MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
-import { baseColumns, type TableColumnItem, type TableListItem } from './columns';
-import { getMasterAgentSchemas, passwordSchemas } from './formSchemas';
 import CreateWizardDialog from '../components/CreateWizardDialog.vue';
+import { getBaseColumns } from './columns';
+import { getMasterAgentSchemas, passwordSchemas } from './formSchemas';
 
 defineOptions({ name: 'AdminAccountMasterAgent' });
 
+const routeI18n = useI18n('routes.adminAccount');
+const pageI18n = useI18n('page.adminAccount');
+const t = routeI18n.t;
+const pt = pageI18n.t;
 const userStore = useUserStore();
 const canCreate = computed(() => userStore.level === 2);
-const router = useRouter();
 const route = useRoute();
 const isMasterAgentX = computed(() => route.name === 'AdminAccountMasterAgentX' || String(route.path).endsWith('/masterAgentX'));
 
@@ -83,7 +32,9 @@ const [DynamicTable, tableInstance] = useTable({
 const [showModal] = useFormModal();
 
 const wizardVisible = ref<boolean>(false);
-
+const editWizardVisible = ref<boolean>(false);
+const editWizardRecord = ref<Partial<TableListItem> | null>(null);
+const rawListCache = ref<any[] | null>(null);
 const goCreateWizard = () => {
   wizardVisible.value = true;
 };
@@ -98,19 +49,66 @@ const handleWizardSuccess = () => {
   tableInstance?.reload();
 };
 
-const searchAccount = ref<string>('');
-const searchIsEnabled = ref<'true' | 'false' | undefined>(undefined);
-const searchDateRange = ref<[Dayjs, Dayjs] | undefined>(undefined);
+const openEditWizard = async (record: Partial<TableListItem>) => {
+  editWizardRecord.value = record;
+  editWizardVisible.value = true;
+};
 
-const statusOptions = [
-  { label: '啟用', value: 'true' },
-  { label: '停用', value: 'false' },
-];
+const handleEditWizardClose = () => {
+  editWizardVisible.value = false;
+  editWizardRecord.value = null;
+};
 
-type TableListResponse = {
+const handleEditWizardSuccess = () => {
+  editWizardVisible.value = false;
+  editWizardRecord.value = null;
+  // 重新載入表格資料
+  tableInstance?.reload();
+};
+
+// Vue2 行為對齊：當 filter 條件變更時，自動觸發資料重新載入
+// 監聽表單值的變化來實現自動篩選
+// let isInitialized = false;
+// let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
+// watch(
+//   () => {
+//     const searchFormRef = tableInstance?.getSearchFormRef();
+//     if (!searchFormRef) {
+//       return null;
+//     }
+//     // 獲取表單當前值
+//     return searchFormRef.getFieldsValue?.();
+//   },
+//   (newVal, oldVal) => {
+//     // 跳過初始觸發（oldVal 為 undefined）
+//     if (oldVal === undefined) {
+//       isInitialized = true;
+//       return;
+//     }
+//     // 確保已經初始化後才觸發篩選
+//     if (!isInitialized) {
+//       isInitialized = true;
+//       return;
+//     }
+//     // 使用 debounce 避免頻繁觸發篩選（特別是輸入框）
+//     if (reloadTimer) {
+//       clearTimeout(reloadTimer);
+//     }
+//     reloadTimer = setTimeout(() => {
+//       // 條件變更時，重置分頁至第一頁並重新載入資料
+//       nextTick(() => {
+//         tableInstance?.reload(true);
+//       });
+//     }, 300); // 300ms 防抖延遲
+//   },
+//   { deep: true },
+// );
+
+interface TableListResponse {
   items: TableListItem[];
   meta: { totalItems: number };
-};
+}
 
 const toBase32 = (bytes: Uint8Array) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -135,7 +133,10 @@ const toBase32 = (bytes: Uint8Array) => {
 };
 
 const generateSecret = () => {
-  const bytes = window.crypto.getRandomValues(new Uint8Array(20)); // 160-bit
+  /**
+   * 160-bit
+   */
+  const bytes = window.crypto.getRandomValues(new Uint8Array(20));
   return toBase32(bytes);
 };
 
@@ -147,27 +148,34 @@ const generateHashKey = () => {
 const safeJsonStringify = (obj: any) => {
   try {
     return JSON.stringify(obj);
-  } catch {
+  }
+  catch {
     return '';
   }
 };
 
 const safeJsonParse = (raw?: string) => {
-  if (!raw || !raw.trim()) return undefined;
+  if (!raw || !raw.trim()) {
+    return undefined;
+  }
   try {
     return JSON.parse(raw);
-  } catch {
+  }
+  catch {
     return undefined;
   }
 };
 
 const normalizeFirebaseConfigApiKey = (raw: any) => {
   // Vue2：internalSettings.firebaseAPIKey 取自 firebaseConfig.apiKey
-  if (!raw) return '';
+  if (!raw) {
+    return '';
+  }
   try {
     const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
     return String(obj?.apiKey ?? '');
-  } catch {
+  }
+  catch {
     return '';
   }
 };
@@ -192,31 +200,45 @@ const buildInternalSettings = (account: string, values: any) => {
       }
     : undefined;
 
+  // MyCard 設定（從扁平化欄位轉換為嵌套結構）
+  const myCard = {
+    facServiceID: String(values.myCard_facServiceID ?? ''),
+    secretKey: String(values.myCard_secretKey ?? ''),
+    allowIPs: String(values.myCard_allowIPs ?? ''),
+    topUpSecretKeyA: String(values.myCard_topUpSecretKeyA ?? ''),
+    topUpSecretKeyB: String(values.myCard_topUpSecretKeyB ?? ''),
+    topUpFacId: String(values.myCard_topUpFacId ?? ''),
+  };
+
+  // 交易設定
+  const transactionSettings: any = {
+    masterAgent: account,
+  };
+  if (values.transactionSetting) {
+    transactionSettings.minTransactionBalance = Number(values.minTransactionBalance ?? 0);
+    transactionSettings.sendSmsOTPIntervals = {
+      unit: 'minutes',
+      value: Number(values.sendSmsOTPIntervals ?? 2),
+    };
+    transactionSettings.authExpireTime = {
+      unit: 'minutes',
+      value: Number(values.authExpireTime ?? 30),
+    };
+    transactionSettings.spinUnfreezeRatio = Number(values.spinUnfreezeRatio ?? 0);
+  }
+
   const internalSettings = {
     firebaseAPIKey: normalizeFirebaseConfigApiKey(values.firebaseConfig),
     paymentSettings: {
       masterAgent: account,
-      paymentMode: values.paymentMode ?? 'Real',
-      topUpRate: Number(values.topUpRate ?? 100),
-      // 對齊 Vue2 結構：保留物件（未展開 provider 細節）
-      myCard: {},
-      soNet: {},
-      nganLuong: {},
-      moPay: {},
-      btPay: {},
+      myCard,
     },
     smsSettings: {
       masterAgent: account,
-      smsAccount: String(values.smsAccount ?? ''),
-      smsPassWord: String(values.smsPassWord ?? ''),
       boSmsAccount: String(values.boSmsAccount ?? ''),
       boSmsPassWord: String(values.boSmsPassWord ?? ''),
-      cloudSmsAccount: String(values.cloudSmsAccount ?? ''),
-      cloudSmsPassWord: String(values.cloudSmsPassWord ?? ''),
     },
-    transactionSettings: {
-      masterAgent: account,
-    },
+    transactionSettings,
     accountSettings: {
       masterAgent: account,
       onePhoneNumberToAccountCounts: Number(values.onePhoneNumberToAccountCounts ?? 1),
@@ -226,11 +248,6 @@ const buildInternalSettings = (account: string, values: any) => {
         clientID: String(values.lineClientID ?? ''),
         clientSecret: String(values.lineClientSecret ?? ''),
       },
-    },
-    slotGameSettings: {
-      waitingSettleTime: Number(values.slot_waitingSettleTime ?? 30),
-      oneTimeToken: Boolean(values.slot_oneTimeToken),
-      prizeDecimalPlaces: Number(values.slot_prizeDecimalPlaces ?? 2),
     },
     ...(reCaptchaV2Settings ? { reCaptchaV2Settings } : {}),
   };
@@ -324,49 +341,80 @@ const buildUpdatePayload = (record: Partial<MasterAgentItem>, overrides: Record<
   };
 };
 
-const loadTableData = async (params: LoadDataParams): Promise<TableListResponse> => {
-  const list = await Api.getMasterAgentAccountList({});
+const loadTableData = async (params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  console.log('[loadTableData params]', params);
+  if (!rawListCache.value) {
+    const list = await Api.getMasterAgentAccountList({});
+    rawListCache.value = Array.isArray(list) ? list : [];
+  }
 
-  const keyword = searchAccount.value.trim().toLowerCase();
-  const range = searchDateRange.value;
-  const start = range?.[0]?.startOf?.('day')?.valueOf?.();
-  const end = range?.[1]?.endOf?.('day')?.valueOf?.();
+  const list = rawListCache.value;
+  // Vue2：只顯示「啟用」或「非維護」的總代
+  const baseFiltered = (Array.isArray(list) ? list : []).filter(
+    (i: any) => Boolean(i?.isEnabled) || !i?.isMaintained,
+  );
 
-  const filtered = (Array.isArray(list) ? list : [])
-    // Vue2：只顯示「啟用」或「非維護」的總代
-    .filter((i: any) => Boolean(i?.isEnabled) || !Boolean(i?.isMaintained))
-    .filter((i: any) => {
-      if (keyword && !String(i?.account ?? '').toLowerCase().includes(keyword)) return false;
-      if (
-        searchIsEnabled.value !== undefined &&
-        Boolean(i?.isEnabled) !== (searchIsEnabled.value === 'true')
-      )
-        return false;
+  // 從 params 中讀取篩選條件（篩選值會通過 handleFormValues 合併到 params 中）
+  const searchParams = params as Record<string, any>;
+  const filterAccount = searchParams.account ? String(searchParams.account).trim() : '';
+  const filterIsEnabled = searchParams.isEnabled !== undefined ? Boolean(searchParams.isEnabled) : undefined;
+  const filterDateRange = searchParams.createDatetime as [Dayjs, Dayjs] | undefined;
 
-      if (start != null && end != null) {
-        const ts = i?.createDatetime ? new Date(i.createDatetime).getTime() : NaN;
-        if (Number.isFinite(ts)) {
-          if (ts < start || ts > end) return false;
+  // Vue2 filterList 邏輯對齊
+  const filtered = baseFiltered.filter((data: any) => {
+    // 帳號篩選：Vue2 同時比對 account 和 name（不區分大小寫）
+    let rtValue = true;
+    if (filterAccount) {
+      const keyword = filterAccount.toLowerCase();
+      rtValue
+        = String(data?.account ?? '').toLowerCase().includes(keyword)
+          || String(data?.name ?? '').toLowerCase().includes(keyword);
+    }
+
+    // 啟用狀態過濾：Vue2 使用 === 嚴格比對
+    if (filterIsEnabled !== undefined) {
+      rtValue = rtValue && Boolean(data?.isEnabled) === filterIsEnabled;
+    }
+
+    // 日期過濾：Vue2 使用 Date.parse 進行數值比較
+    if (filterDateRange && filterDateRange.length === 2) {
+      const startDate = filterDateRange[0];
+      const dueDate = filterDateRange[1];
+      if (startDate && dueDate) {
+        // Vue2：Date.parse(data.createDatetime).valueOf() >= Date.parse(startDate).valueOf()
+        const dataTimestamp = data?.createDatetime ? Date.parse(String(data.createDatetime)) : Number.NaN;
+        const startTimestamp = Date.parse(`${startDate.format('YYYY-MM-DD')} 00:00:00`);
+        const dueTimestamp = Date.parse(`${dueDate.format('YYYY-MM-DD')} 23:59:59`);
+
+        if (Number.isFinite(dataTimestamp)) {
+          if (dataTimestamp < startTimestamp || dataTimestamp > dueTimestamp) {
+            rtValue = false;
+          }
         }
       }
-      return true;
-    })
-    .map((i: any) => ({
-      ...i,
-      id: Number(i.id),
-      account: String(i.account ?? ''),
-      name: String(i.name ?? ''),
-      isEnabled: Boolean(i.isEnabled),
-      isMaintained: Boolean(i.isMaintained),
-      roles: Array.isArray(i.roles) ? i.roles : [],
-    }));
+    }
 
+    return rtValue;
+  });
+
+  // 資料格式化
+  const formatted = filtered.map((i: any) => ({
+    ...i,
+    id: Number(i.id),
+    account: String(i.account ?? ''),
+    name: String(i.name ?? ''),
+    isEnabled: Boolean(i.isEnabled),
+    isMaintained: Boolean(i.isMaintained),
+    roles: Array.isArray(i.roles) ? i.roles : [],
+  }));
+
+  // 分頁處理
   const page = Number(params.page ?? 1);
-  const limit = Number(params.limit ?? 20);
-  const totalItems = filtered.length;
-  const startIdx = (page - 1) * limit;
-  const endIdx = startIdx + limit;
-  const items = filtered.slice(startIdx, endIdx);
+  const pageSize = Number(params.pageSize ?? 10);
+  const totalItems = formatted.length;
+  const startIdx = (page - 1) * pageSize;
+  const endIdx = startIdx + pageSize;
+  const items = formatted.slice(startIdx, endIdx);
 
   return {
     items,
@@ -381,11 +429,13 @@ const toggleEnabled = async (record: TableListItem, checked: boolean) => {
         isEnabled: checked,
       }),
     );
-    message.success('更新成功');
+    const status = checked ? pt('labels.enable') : pt('labels.disable');
+    message.success(pt('message.enableBackendSuccess', { status, account: record.account }));
     tableInstance?.reload();
-  } catch (e) {
+  }
+  catch (e) {
     console.error(e);
-    message.error('更新失敗');
+    message.error(pt('message.updateFailed'));
     tableInstance?.reload();
   }
 };
@@ -397,31 +447,35 @@ const toggleMaintained = async (record: TableListItem, checked: boolean) => {
         isMaintained: checked,
       }),
     );
-    message.success('更新成功');
+    const status = checked ? pt('labels.disable') : pt('labels.enable');
+    message.success(pt('message.enableFrontendSuccess', { status, account: record.account }));
     tableInstance?.reload();
-  } catch (e) {
+  }
+  catch (e) {
     console.error(e);
-    message.error('更新失敗');
+    message.error(pt('message.updateFailed'));
     tableInstance?.reload();
   }
 };
 
 const openPasswordModal = async (record: Partial<TableListItem>) => {
-  if (!record.account) return;
+  if (!record.account) {
+    return;
+  }
   await showModal({
     modalProps: {
-      title: `變更密碼：${record.account}`,
+      title: pt('dialog.changePassword', { account: record.account }),
       width: 520,
       async onFinish(values) {
         await Api.updateMasterAgentAccountPassword({
           account: String(record.account),
           newPassword: String(values.newPassword),
         });
-        message.success('變更成功');
+        message.success(pt('message.changePasswordSuccess'));
       },
     },
     formProps: {
-      labelWidth: 120,
+      labelWidth: 200,
       schemas: passwordSchemas,
     },
   });
@@ -432,7 +486,7 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
 
   const [formRef] = await showModal({
     modalProps: {
-      title: isEdit ? '編輯總代理' : '新增總代理',
+      title: isEdit ? pt('dialog.editMasterAgent') : pt('dialog.createMasterAgent'),
       width: 860,
       async onFinish(values) {
         const roleIds = Array.isArray(values.roles)
@@ -443,160 +497,205 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
         const account = String(values.account ?? '');
         const websiteToUse = isMasterAgentX.value ? (values.website || account) : values.website;
 
-        const activityFormula =
-          !isMasterAgentX.value && values.activityFormulaRatio
-            ? {
-                name: 'default',
-                formula: 'defaultFormula',
-                params: { ratio: Number(values.activityFormulaRatio) },
-              }
-            : undefined;
-
         const internalSettings = buildInternalSettings(account, values);
         const remoteConfigURLs = buildRemoteConfigURLs(values);
 
         const payloadBase = {
-          ...values,
           account,
-          name: String(values.name ?? ''),
           roles: roleIds,
           website: websiteToUse,
-          activityFormula,
+          isRanking: Boolean(values.isRanking),
+          apiDomain: values.apiDomain,
+          firebaseAdminSdkConfig: values.firebaseAdminSdkConfig,
+          firebaseConfig: values.firebaseConfig,
+          serviceEmail: values.serviceEmail,
+          lineOfficialAccount: values.lineOfficialAccount,
+          liffID: values.liffID,
+          lineClientID: values.lineClientID,
+          lineClientSecret: values.lineClientSecret,
+          facebookID: values.facebookID,
           internalSettings,
           remoteConfigURLs,
-          // slotGameSettings 走 internalSettings，但後端仍可能接受獨立欄位，保留送出
-          slotGameSettings: {
-            waitingSettleTime: Number(values.slot_waitingSettleTime ?? 30),
-            oneTimeToken: Boolean(values.slot_oneTimeToken),
-            prizeDecimalPlaces: Number(values.slot_prizeDecimalPlaces ?? 2),
-          },
         };
 
         if (isEdit && record?.id) {
-          await Api.updateMasterAgentAccount({
-            ...buildUpdatePayload(record),
-            ...payloadBase,
-            id: Number(record.id),
-          });
+          // Vue2 對齊：從表單 values 構建完整 payload，保留 record 中的必要欄位
+          // 構建 reCaptchaV2Settings（Vue2 對齊：作為獨立欄位傳遞）
+          const reCaptchaHasValue = Boolean(
+            values.reCaptcha_secretKey || values.reCaptcha_name || values.reCaptcha_siteKey,
+          );
+          const reCaptchaV2Settings = reCaptchaHasValue
+            ? {
+                masterAgent: account,
+                secretKey: String(values.reCaptcha_secretKey ?? ''),
+                name: String(values.reCaptcha_name ?? ''),
+                siteKey: String(values.reCaptcha_siteKey ?? ''),
+                enabled: Boolean(values.reCaptcha_enabled),
+                platform: 'web',
+              }
+            : undefined;
 
-          // 股東歸屬（對齊 Vue2：updateMasterAgentShareholder/removeMasterAgentFromShareholder）
-          if (!isMasterAgentX.value) {
-            const newShareholderAccount = String(values.shareholderAccount ?? '').trim();
-            const oldShareholderAccount = String((record as any)?.shareholder?.account ?? '').trim();
-            if (newShareholderAccount && newShareholderAccount !== oldShareholderAccount) {
-              await Api.updateMasterAgentShareholder({
-                masterAgentAccount: account,
-                shareholderAccount: newShareholderAccount,
-              });
-            }
-            if (!newShareholderAccount && oldShareholderAccount) {
-              await Api.removeMasterAgentFromShareholder({ masterAgentAccount: account });
-            }
-          }
-          message.success('編輯成功');
-        } else {
+          const updatePayload = {
+            id: Number(record.id),
+            account,
+            name: String(values.name ?? record.name ?? ''),
+            prefix: values.prefix ?? record.prefix,
+            isEnabled: Boolean(record.isEnabled), // 保持原有狀態
+            isMaintained: Boolean(record.isMaintained), // 保持原有狀態
+            roles: roleIds,
+            website: websiteToUse,
+            hashKey: record.hashKey, // 保留原有 hashKey
+            currencyCode: values.currencyCode ?? record.currencyCode,
+            apiDomain: values.apiDomain ?? record.apiDomain,
+            whiteIPList: values.whiteIPList ?? record.whiteIPList ?? '',
+            cdnList: values.cdnList ?? record.cdnList ?? '',
+            proxyList: values.proxyList ?? record.proxyList ?? '',
+            currencies: record.currencies ?? [], // 保留原有 currencies
+            isSingleWallet: values.isSingleWallet !== undefined ? Boolean(values.isSingleWallet) : record.isSingleWallet,
+            singleWallerVersion: values.singleWallerVersion !== undefined ? Number(values.singleWallerVersion) : record.singleWallerVersion,
+            vipDowngradeFormula: values.vipDowngradeFormula !== undefined ? Number(values.vipDowngradeFormula) : record.vipDowngradeFormula,
+            isRanking: Boolean(values.isRanking),
+            levelFormula: values.levelFormula !== undefined ? Number(values.levelFormula) : record.levelFormula,
+            activityFormula: values.activityFormula ?? record.activityFormula,
+            levelUpNeedPoint: values.levelUpNeedPoint !== undefined ? values.levelUpNeedPoint : record.levelUpNeedPoint,
+            gaKey: values.gaKey ?? record.gaKey ?? '',
+            firebaseSdkConfig: values.firebaseSdkConfig ?? record.firebaseSdkConfig ?? '',
+            firebaseAdminSdkConfig: values.firebaseAdminSdkConfig ?? record.firebaseAdminSdkConfig,
+            firebaseConfig: values.firebaseConfig ?? record.firebaseConfig,
+            iosPaymentKey: values.iosPaymentKey ?? record.iosPaymentKey ?? '',
+            androidPaymentKey: values.androidPaymentKey ?? record.androidPaymentKey ?? '',
+            ecPaymentKey: values.ecPaymentKey ?? record.ecPaymentKey ?? '',
+            gcpKey: values.gcpKey ?? record.gcpKey ?? '',
+            androidBundleID: values.androidBundleID ?? record.androidBundleID,
+            iosBundleID: values.iosBundleID ?? record.iosBundleID,
+            serviceEmail: values.serviceEmail ?? record.serviceEmail,
+            facebookID: values.facebookID ?? record.facebookID,
+            backendKey: record.backendKey, // 保留原有 backendKey
+            agentBackendKey: record.agentBackendKey, // 保留原有 agentBackendKey
+            isAllowMemberNicknameDuplicate: values.isAllowMemberNicknameDuplicate !== undefined
+              ? Boolean(values.isAllowMemberNicknameDuplicate)
+              : record.isAllowMemberNicknameDuplicate,
+            internalSettings,
+            remoteConfigURLs,
+            reCaptchaV2Settings, // Vue2 對齊：作為獨立欄位
+          };
+
+          await Api.updateMasterAgentAccount(updatePayload);
+
+          message.success(pt('message.editSuccess'));
+        }
+        else {
           await Api.createMasterAgentAccount({
             ...payloadBase,
+            name: String(values.name ?? ''),
+            prefix: values.prefix ?? undefined,
             password: '123456',
             currencyIndex: 1,
+            currencyCode: values.currencyCode,
+            currencyName: values.currencyCode,
             backendKey: generateSecret(),
             agentBackendKey: generateSecret(),
-            hashKey: String(values.hashKey || generateHashKey()),
+            hashKey: generateHashKey(),
+            isEnabled: true,
+            isSingleWallet: Boolean(values.isSingleWallet ?? false),
+            singleWallerVersion: Number(values.singleWallerVersion ?? 1),
+            vipDowngradeFormula: Number(values.vipDowngradeFormula ?? 1),
+            levelFormula: Number(values.levelFormula ?? 0),
+            isAllowMemberNicknameDuplicate: Boolean(values.isAllowMemberNicknameDuplicate ?? false),
+            whiteIPList: values.whiteIPList ?? '',
+            cdnList: values.cdnList ?? '',
+            proxyList: values.proxyList ?? '',
+            activityFormula: values.activityFormula,
+            gaKey: values.gaKey ?? '',
+            firebaseSdkConfig: values.firebaseSdkConfig ?? '',
+            iosPaymentKey: values.iosPaymentKey ?? '',
+            androidPaymentKey: values.androidPaymentKey ?? '',
+            ecPaymentKey: values.ecPaymentKey ?? '',
+            gcpKey: values.gcpKey ?? '',
+            levelUpNeedPoint: values.levelUpNeedPoint ?? undefined,
           });
-
-          if (!isMasterAgentX.value) {
-            const shareholderAccount = String(values.shareholderAccount ?? '').trim();
-            if (shareholderAccount) {
-              await Api.updateMasterAgentShareholder({
-                masterAgentAccount: account,
-                shareholderAccount,
-              });
-            }
-          }
-          message.success('新增成功');
+          message.success(pt('message.createSuccess'));
+          rawListCache.value = null;
+          tableInstance?.reload();
         }
 
-        tableInstance?.reload();
+        // tableInstance?.reload();
       },
     },
     formProps: {
-      labelWidth: 140,
-      schemas: getMasterAgentSchemas({ isMasterAgentX: isMasterAgentX.value, authLevel: userStore.level }),
+      labelWidth: 200,
+      schemas: getMasterAgentSchemas({
+        isMasterAgentX: isMasterAgentX.value,
+        authLevel: userStore.level,
+        t: pageI18n.t,
+      }),
     },
   });
 
   if (isEdit && record) {
-    const roleIds = (record.roles || []).map((r: any) => Number(r.id)).filter((n) => Number.isFinite(n));
+    const roleIds = (record.roles || []).map((r: any) => Number(r.id)).filter(n => Number.isFinite(n));
     const internalObj: any = safeJsonParse(record.internalSettings) ?? {};
     const paymentSettings = internalObj?.paymentSettings ?? {};
     const smsSettings = internalObj?.smsSettings ?? {};
     const accountSettings = internalObj?.accountSettings ?? {};
-    const slotGameSettings = internalObj?.slotGameSettings ?? {};
+    const transactionSettings = internalObj?.transactionSettings ?? {};
 
     const remoteObj: any = safeJsonParse(record.remoteConfigURLs) ?? {};
-    const lingLoginConfig = remoteObj?.lingLoginConfig ?? accountSettings?.lingLoginConfig ?? {};
+
+    // 對齊 vue2：先從 internalSettings.accountSettings.lingLoginConfig 讀取，然後如果 remoteConfigURLs.lingLoginConfig 存在則覆蓋
+    const lingLoginConfigBase = accountSettings?.lingLoginConfig ?? {};
+    const lingLoginConfigRemote = remoteObj?.lingLoginConfig ?? {};
+    const lingLoginConfig = {
+      ...lingLoginConfigBase,
+      ...lingLoginConfigRemote,
+    };
+
+    const myCard = paymentSettings?.myCard ?? {};
 
     formRef?.setFieldsValue({
       account: record.account,
-      name: record.name,
       website: record.website,
-      roles: roleIds,
-      hashKey: record.hashKey,
-      currencyCode: (record as any).currencyCode,
-      shareholderAccount: (record as any)?.shareholder?.account ?? '',
       apiDomain: record.apiDomain,
-      whiteIPList: record.whiteIPList,
-      cdnList: record.cdnList,
-      proxyList: record.proxyList,
-      isSingleWallet: Boolean(record.isSingleWallet),
-      singleWallerVersion: record.singleWallerVersion ?? 1,
-      vipDowngradeFormula: record.vipDowngradeFormula ?? 1,
       isRanking: Boolean(record.isRanking),
-      levelFormula: record.levelFormula ?? 0,
-      activityFormulaRatio: (record as any)?.activityFormula?.params?.ratio ?? 1,
-      levelUpNeedPoint: record.levelUpNeedPoint,
-      isAllowMemberNicknameDuplicate: Boolean(record.isAllowMemberNicknameDuplicate),
+      roles: roleIds,
 
-      // 進階欄位
-      gaKey: (record as any)?.gaKey,
-      firebaseSdkConfig: (record as any)?.firebaseSdkConfig,
+      // Firebase 設定
       firebaseAdminSdkConfig: (record as any)?.firebaseAdminSdkConfig,
       firebaseConfig: (record as any)?.firebaseConfig,
-      iosPaymentKey: (record as any)?.iosPaymentKey,
-      androidPaymentKey: (record as any)?.androidPaymentKey,
-      ecPaymentKey: (record as any)?.ecPaymentKey,
-      gcpKey: (record as any)?.gcpKey,
-      androidBundleID: (record as any)?.androidBundleID,
-      iosBundleID: (record as any)?.iosBundleID,
+
+      // 客服/Line/Facebook（對齊 vue2：優先使用 remoteConfigURLs，如果沒有則使用 internalSettings）
       serviceEmail: remoteObj?.serviceEmail ?? (record as any)?.serviceEmail,
-      facebookID: remoteObj?.facebookID ?? (record as any)?.facebookID,
-
-      // 金流/簡訊/slot（來源：internalSettings）
-      myCardShowType: Boolean((record as any)?.myCardShowType),
-      soNetShowType: Boolean((record as any)?.soNetShowType),
-      nganLuongShowType: Boolean((record as any)?.nganLuongShowType),
-      moPayShowType: Boolean((record as any)?.moPayShowType),
-      btPayShowType: Boolean((record as any)?.btPayShowType),
-      paymentMode: paymentSettings?.paymentMode ?? 'Real',
-      topUpRate: paymentSettings?.topUpRate ?? 100,
-
-      smsAccount: smsSettings?.smsAccount ?? '',
-      smsPassWord: smsSettings?.smsPassWord ?? '',
-      boSmsAccount: smsSettings?.boSmsAccount ?? '',
-      boSmsPassWord: smsSettings?.boSmsPassWord ?? '',
-      cloudSmsAccount: smsSettings?.cloudSmsAccount ?? '',
-      cloudSmsPassWord: smsSettings?.cloudSmsPassWord ?? '',
-      onePhoneNumberToAccountCounts: accountSettings?.onePhoneNumberToAccountCounts ?? 1,
-
-      slot_waitingSettleTime: slotGameSettings?.waitingSettleTime ?? 30,
-      slot_oneTimeToken: Boolean(slotGameSettings?.oneTimeToken),
-      slot_prizeDecimalPlaces: slotGameSettings?.prizeDecimalPlaces ?? 2,
-
-      // Line（remoteConfigURLs 優先）
       lineOfficialAccount: lingLoginConfig?.lineOfficialAccount ?? '',
       liffID: lingLoginConfig?.liffID ?? '',
       lineClientID: lingLoginConfig?.clientID ?? '',
       lineClientSecret: lingLoginConfig?.clientSecret ?? '',
+      facebookID: remoteObj?.facebookID ?? (record as any)?.facebookID,
+
+      // MyCard 設定
+      myCard_facServiceID: myCard?.facServiceID ?? '',
+      myCard_secretKey: myCard?.secretKey ?? '',
+      myCard_allowIPs: myCard?.allowIPs ?? '',
+      myCard_topUpSecretKeyA: myCard?.topUpSecretKeyA ?? '',
+      myCard_topUpSecretKeyB: myCard?.topUpSecretKeyB ?? '',
+      myCard_topUpFacId: myCard?.topUpFacId ?? '',
+
+      // 簡訊設定
+      boSmsAccount: smsSettings?.boSmsAccount ?? '',
+      boSmsPassWord: smsSettings?.boSmsPassWord ?? '',
+
+      // 交易設定（從 internalSettings.transactionSettings 讀取，對齊 vue2）
+      transactionSetting: Boolean(transactionSettings?.minTransactionBalance !== undefined),
+      minTransactionBalance: transactionSettings?.minTransactionBalance ?? 0,
+      sendSmsOTPIntervals: transactionSettings?.sendSmsOTPIntervals?.value ?? 2,
+      authExpireTime: transactionSettings?.authExpireTime?.value ?? 30,
+      spinUnfreezeRatio: transactionSettings?.spinUnfreezeRatio ?? 0,
+      onePhoneNumberToAccountCounts: accountSettings?.onePhoneNumberToAccountCounts ?? 1,
+
+      // 人機驗證
+      reCaptcha_secretKey: (remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.secretKey ?? '',
+      reCaptcha_name: (remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.name ?? '',
+      reCaptcha_siteKey: (remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.siteKey ?? '',
+      reCaptcha_enabled: Boolean((remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.enabled),
 
       // raw json（僅管理員顯示）
       internalSettings: record.internalSettings,
@@ -604,106 +703,95 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
     });
 
     formRef?.updateSchema([{ field: 'account', componentProps: { disabled: true } }]);
-  } else {
+  }
+  else {
     formRef?.setFieldsValue({
-      hashKey: generateHashKey(),
-      activityFormulaRatio: 1,
-      slot_waitingSettleTime: 30,
-      slot_prizeDecimalPlaces: 2,
-      slot_oneTimeToken: false,
+      isRanking: true,
+      transactionSetting: false,
+      onePhoneNumberToAccountCounts: 1,
+      minTransactionBalance: 0,
+      sendSmsOTPIntervals: 2,
+      authExpireTime: 30,
+      spinUnfreezeRatio: 0,
+      reCaptcha_enabled: false,
     });
     formRef?.updateSchema([{ field: 'account', componentProps: { disabled: false } }]);
   }
 };
 
+/**
+ * 計算表格總寬度：所有欄位寬度總和
+ * 基礎欄位：account(160) + name(160) + isMaintained(100) + roles(220) + website(160) + currencies(100) = 900
+ * 管理員額外欄位：isSingleWallet(120) + apiDomain(140) + whiteIPList(140) + cdnList(140) = 540
+ * 共用欄位：createDatetime(180) + adminMaintained(100) = 280
+ * 操作欄：ACTION(250)
+ * 管理員總和：900 + 540 + 280 + 250 = 1970
+ * 非管理員總和：900 + 280 + 250 = 1430
+ */
+const calculateTableScrollX = () => {
+  /** account + name + isMaintained + roles + website + currencies */
+  const baseColumnsWidth = 900;
+  /** isSingleWallet + apiDomain + whiteIPList + cdnList */
+  const adminOnlyColumnsWidth = 540;
+  /** createDatetime + adminMaintained */
+  const commonColumnsWidth = 280;
+  /** ACTION */
+  const actionColumnWidth = 250;
+  const totalWidth = userStore.level === 1
+    ? baseColumnsWidth + adminOnlyColumnsWidth + commonColumnsWidth + actionColumnWidth
+    : baseColumnsWidth + commonColumnsWidth + actionColumnWidth;
+  /** 加上一些緩衝空間，確保不會出現跑版 */
+  return totalWidth + 50;
+};
+
 const columns = ref<TableColumnItem[]>([
-  ...baseColumns,
+  ...getBaseColumns(pt, userStore.level),
   {
-    title: '啟用',
-    dataIndex: 'isEnabled',
-    width: 120,
-    hideInSearch: true,
-    customRender: ({ record }) => (
-      <Switch
-        checked={Boolean(record.isEnabled)}
-        checkedChildren="啟用"
-        unCheckedChildren="停用"
-        onChange={(checked) => toggleEnabled(record, Boolean(checked))}
-      />
-    ),
-  },
-  {
-    title: '維護',
-    dataIndex: 'isMaintained',
-    width: 120,
-    hideInSearch: true,
-    customRender: ({ record }) => (
-      <Switch
-        checked={Boolean(record.isMaintained)}
-        checkedChildren="維護"
-        unCheckedChildren="運行"
-        onChange={(checked) => toggleMaintained(record, Boolean(checked))}
-      />
-    ),
-  },
-  {
-    title: '狀態',
-    dataIndex: 'statusTag',
-    width: 120,
-    hideInSearch: true,
-    customRender: ({ record }) => (
-      <Tag color={record.isEnabled ? 'green' : 'red'}>{record.isEnabled ? '啟用' : '停用'}</Tag>
-    ),
-  },
-  {
-    title: '操作',
+    title: pt('action.operation'),
     dataIndex: 'ACTION',
-    width: 220,
+    width: 250,
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
     actions: ({ record }) => [
       {
-        label: '編輯',
+        label: pt('action.edit'),
         type: 'link',
         onClick: () => openFormModal(record),
       },
       {
-        label: '改密碼',
+        label: '編輯2',
+        type: 'link',
+        onClick: () => openEditWizard(record),
+      },
+      {
+        label: pt('action.changePassword'),
         type: 'link',
         onClick: () => openPasswordModal(record),
       },
       {
-        label: '更多',
+        label: record.isMaintained ? pt('action.enableMaintained') : pt('action.disableMaintained'),
         type: 'link',
         popConfirm: {
-          title: '將會顯示更多進階設定（後續補齊）',
-          okText: '知道了',
-          cancelButtonProps: { style: { display: 'none' } },
-          onConfirm: () => {},
-        },
-      },
-      {
-        label: '停用/啟用',
-        type: 'link',
-        popConfirm: {
-          title: `確認要${record.isEnabled ? '停用' : '啟用'} ${record.account}？`,
+          title: pt('confirm.enableMaintained', {
+            action: record.isMaintained ? pt('labels.enable') : pt('labels.disable'),
+            account: record.account,
+          }),
           onConfirm: async () => {
-            await Api.updateMasterAgentAccount(buildUpdatePayload(record, { isEnabled: !record.isEnabled }));
-            message.success('更新成功');
-            tableInstance?.reload();
+            await toggleMaintained(record, !record.isMaintained);
           },
         },
       },
       {
-        label: '維護切換',
+        label: record.isEnabled ? pt('action.disableAccount') : pt('action.enableAccount'),
         type: 'link',
         popConfirm: {
-          title: `確認要${record.isMaintained ? '取消維護' : '設為維護'} ${record.account}？`,
+          title: pt('confirm.enableAccount', {
+            action: record.isEnabled ? pt('labels.disable') : pt('labels.enable'),
+            account: record.account,
+          }),
           onConfirm: async () => {
-            await Api.updateMasterAgentAccount(buildUpdatePayload(record, { isMaintained: !record.isMaintained }));
-            message.success('更新成功');
-            tableInstance?.reload();
+            await toggleEnabled(record, !record.isEnabled);
           },
         },
       },
@@ -715,6 +803,48 @@ const columns = ref<TableColumnItem[]>([
 void Modal;
 </script>
 
+<template>
+  <div class="master-agent-page">
+    <DynamicTable
+      row-key="id"
+      :header-title="t('masterAgent')"
+      :data-request="loadTableData"
+      :columns="columns"
+      :scroll="{ x: calculateTableScrollX() }"
+      :form-props="{
+        showSubmitButton: true,
+        showResetButton: true,
+        showAdvancedButton: true,
+        submitOnReset: true,
+        submitButtonOptions: {
+          text: pt('queryText'),
+        },
+      }"
+    >
+      <template #toolbar>
+        <a-space>
+          <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
+            {{ pt('button.add') }}
+          </a-button>
+          <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
+            {{ pt('button.createWizard') }}
+          </a-button>
+        </a-space>
+      </template>
+    </DynamicTable>
 
-
-
+    <CreateWizardDialog
+      :visible="wizardVisible"
+      :account-type="isMasterAgentX ? 'masterAgentX' : 'masterAgent'"
+      @update:visible="handleWizardClose"
+      @success="handleWizardSuccess"
+    />
+    <CreateWizardDialog
+      :visible="editWizardVisible"
+      :account-type="isMasterAgentX ? 'masterAgentX' : 'masterAgent'"
+      :edit-record="editWizardRecord"
+      @update:visible="handleEditWizardClose"
+      @success="handleEditWizardSuccess"
+    />
+  </div>
+</template>

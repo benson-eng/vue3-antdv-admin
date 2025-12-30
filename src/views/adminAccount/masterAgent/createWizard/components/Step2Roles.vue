@@ -1,35 +1,14 @@
-<template>
-  <a-form
-    ref="formRef"
-    :model="formModel"
-    :label-col="{ span: 6 }"
-    :wrapper-col="{ span: 14 }"
-  >
-    <a-form-item
-      label="角色"
-      name="roles"
-      :rules="[
-        { required: true, message: '請至少選擇一個角色' },
-        { type: 'array', min: 1, message: '請至少選擇一個角色' },
-      ]"
-    >
-      <a-select
-        v-model:value="formModel.roles"
-        :options="roleOptions"
-        mode="multiple"
-        placeholder="請選擇角色"
-        :loading="loadingRoles"
-      />
-    </a-form-item>
-  </a-form>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
 import type { FormInstance } from 'ant-design-vue';
+import { computed, onMounted, ref } from 'vue';
 import RolesApi from '@/api/backend/adminAccount/roles';
 
 defineOptions({ name: 'Step2Roles' });
+
+const props = defineProps<Props>();
+const emit = defineEmits<{
+  'update:roles': [value: number[]];
+}>();
 
 interface Props {
   formModel: {
@@ -37,7 +16,13 @@ interface Props {
   };
 }
 
-defineProps<Props>();
+// 使用 computed 的 getter/setter，通過 emit 更新父組件
+const rolesValue = computed({
+  get: () => props.formModel.roles,
+  set: (value: number[]) => {
+    emit('update:roles', value);
+  },
+});
 
 const formRef = ref<FormInstance>();
 const roleOptions = ref<Array<{ label: string; value: number }>>([]);
@@ -49,14 +34,17 @@ defineExpose({
     try {
       await formRef.value?.validate();
       return true;
-    } catch {
+    }
+    catch {
       return false;
     }
   },
   formRef,
 });
 
-// 載入角色列表
+/**
+ * 載入角色列表
+ */
 const loadRoles = async () => {
   try {
     loadingRoles.value = true;
@@ -66,9 +54,11 @@ const loadRoles = async () => {
       label: r.name,
       value: r.id,
     }));
-  } catch (error) {
+  }
+  catch (error) {
     console.error('載入角色列表失敗:', error);
-  } finally {
+  }
+  finally {
     loadingRoles.value = false;
   }
 };
@@ -78,4 +68,28 @@ onMounted(() => {
 });
 </script>
 
-
+<template>
+  <a-form
+    ref="formRef"
+    :model="formModel"
+    layout="horizontal"
+    :label-col="{ style: { width: '200px' } }"
+    :wrapper-col="{ style: { flex: 1 } }"
+  >
+    <a-form-item
+      label="角色"
+      name="roles"
+      :rules="[
+        { required: true, type: 'array', min: 1, message: '請至少選擇一個角色' },
+      ]"
+    >
+      <a-select
+        v-model:value="rolesValue"
+        :options="roleOptions"
+        mode="multiple"
+        placeholder="請選擇角色"
+        :loading="loadingRoles"
+      />
+    </a-form-item>
+  </a-form>
+</template>

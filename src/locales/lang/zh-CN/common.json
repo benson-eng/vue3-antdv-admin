@@ -1,22 +1,22 @@
 {
   "back": "返回",
   "cancelText": "取消",
-  "chooseText": "请选择",
-  "closeText": "关闭",
-  "dark": "黑暗主题",
-  "delText": "删除",
-  "inputText": "请输入",
-  "light": "亮色主题",
-  "loadingText": "加载中...",
-  "okText": "确认",
-  "queryText": "查询",
-  "redo": "刷新",
+  "chooseText": "請選擇",
+  "closeText": "關閉",
+  "dark": "深色主題",
+  "delText": "刪除",
+  "inputText": "請輸入",
+  "light": "亮色主題",
+  "loadingText": "載入中...",
+  "okText": "確認",
+  "queryText": "查詢",
+  "redo": "重新整理",
   "resetText": "重置",
   "routes": {
     "account": {
       "settings": ""
     }
   },
-  "saveText": "保存",
-  "searchText": "搜索"
+  "saveText": "儲存",
+  "searchText": "搜尋"
 }

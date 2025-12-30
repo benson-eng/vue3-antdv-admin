@@ -167,7 +167,9 @@ const delRowConfirm = async (record: TableListItem) => {
 /** ✅ 批量刪除：逐筆刪 */
 const delRowsConfirm = () => {
   const rows = rowSelection.value.selectedRows;
-  if (!rows.length) { return; }
+  if (!rows.length) {
+    return;
+  }
   Modal.confirm({
     title: '確認刪除',
     content: `將逐筆刪除 ${rows.length} 筆，是否繼續？`,
@@ -251,6 +253,3 @@ const columns = ref<TableColumnItem[]>([
     </template>
   </DynamicTable>
 </template>
-
-
-

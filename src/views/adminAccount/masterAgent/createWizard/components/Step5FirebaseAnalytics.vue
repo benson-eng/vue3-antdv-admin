@@ -93,15 +93,15 @@ defineExpose({
     :model="formModel"
     layout="vertical"
   >
-    <a-form-item label="GA 金鑰" name="gaKey">
+    <!-- <a-form-item label="GA 金鑰" name="gaKey">
       <a-textarea
         v-model:value="formModel.gaKey"
         :rows="2"
         placeholder="請輸入 Google Analytics 金鑰（可稍後補）"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item label="Firebase SDK 配置" name="firebaseSdkConfig">
+    <!-- <a-form-item label="Firebase SDK 配置" name="firebaseSdkConfig">
       <template #extra>
         <a-button
           size="small"
@@ -117,7 +117,7 @@ defineExpose({
         :rows="6"
         placeholder="請輸入 Firebase SDK 配置（JSON 格式或文字）&#10;例如：{&#10;  &quot;apiKey&quot;: &quot;...&quot;,&#10;  &quot;authDomain&quot;: &quot;...&quot;&#10;}"
       />
-    </a-form-item>
+    </a-form-item> -->
 
     <a-form-item label="Firebase 管理員 SDK 配置" name="firebaseAdminSdkConfig">
       <template #extra>

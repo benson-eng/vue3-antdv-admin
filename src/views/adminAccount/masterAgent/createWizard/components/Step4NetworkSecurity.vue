@@ -1,70 +1,11 @@
-<template>
-  <a-form
-    ref="formRef"
-    :model="localFormModel"
-    :label-col="{ span: 6 }"
-    :wrapper-col="{ span: 14 }"
-  >
-    <!-- 網路設定 -->
-    <a-divider orientation="left">網路設定</a-divider>
-
-    <a-form-item label="API Domain" name="apiDomain">
-      <a-textarea
-        v-model:value="localFormModel.apiDomainText"
-        :rows="3"
-        placeholder="一行一筆，例如：&#10;api.example.com&#10;api2.example.com"
-      />
-    </a-form-item>
-
-    <a-form-item label="白名單" name="whiteIPList">
-      <a-textarea
-        v-model:value="localFormModel.whiteIPListText"
-        :rows="4"
-        placeholder="一行一筆 IP 位址，例如：&#10;192.168.1.1&#10;10.0.0.1"
-      />
-    </a-form-item>
-
-    <a-form-item label="CDN 名單" name="cdnList">
-      <a-textarea
-        v-model:value="localFormModel.cdnListText"
-        :rows="3"
-        placeholder="一行一筆 CDN 網址"
-      />
-    </a-form-item>
-
-    <a-form-item label="代理伺服器名單" name="proxyList">
-      <a-textarea
-        v-model:value="localFormModel.proxyListText"
-        :rows="3"
-        placeholder="一行一筆代理伺服器網址"
-      />
-    </a-form-item>
-
-    <!-- 安全設定 -->
-    <a-divider orientation="left">安全設定</a-divider>
-
-    <a-form-item label="金鑰" name="hashKey">
-      <a-input-group compact>
-        <a-input
-          v-model:value="localFormModel.hashKey"
-          :readonly="true"
-          style="width: calc(100% - 100px)"
-          placeholder="自動產生"
-        />
-        <a-button type="default" style="width: 100px" @click="regenerateHashKey">
-          重新產生
-        </a-button>
-      </a-input-group>
-    </a-form-item>
-  </a-form>
-</template>
-
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
 import type { FormInstance } from 'ant-design-vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { generateHashKey } from '../utils';
 
 defineOptions({ name: 'Step4NetworkSecurity' });
+
+const props = defineProps<Props>();
 
 interface Props {
   formModel: {
@@ -80,8 +21,6 @@ interface Props {
     };
   };
 }
-
-const props = defineProps<Props>();
 
 const formRef = ref<FormInstance>();
 
@@ -106,18 +45,18 @@ const localFormModel = ref<{
  * 處理 Textarea 字串轉陣列
  */
 const processTextareaToArray = (text: string): string[] => {
-  if (!text || !text.trim()) return [];
+  if (!text || !text.trim()) { return []; }
   return text
     .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
 };
 
 /**
  * 處理陣列轉 Textarea 字串
  */
 const processArrayToTextarea = (arr: string[]): string => {
-  if (!Array.isArray(arr) || arr.length === 0) return '';
+  if (!Array.isArray(arr) || arr.length === 0) { return ''; }
   return arr.join('\n');
 };
 
@@ -128,7 +67,8 @@ const initializeData = () => {
   // 初始化 hashKey（進入 Step 4 時自動產生，如果已經有值則使用現有值）
   if (!props.formModel.securitySettings?.hashKey || !props.formModel.securitySettings.hashKey.trim()) {
     localFormModel.value.hashKey = generateHashKey();
-  } else {
+  }
+  else {
     localFormModel.value.hashKey = props.formModel.securitySettings.hashKey;
   }
 
@@ -199,3 +139,66 @@ defineExpose({
 });
 </script>
 
+<template>
+  <a-form
+    ref="formRef"
+    :model="localFormModel"
+    layout="horizontal"
+    :label-col="{ style: { width: '200px' } }"
+    :wrapper-col="{ style: { flex: 1 } }"
+  >
+    <!-- 網路設定 -->
+    <a-divider orientation="left">
+      網路設定
+    </a-divider>
+
+    <a-form-item label="API Domain" name="apiDomain">
+      <a-textarea
+        v-model:value="localFormModel.apiDomainText"
+        :rows="3"
+        placeholder="一行一筆，例如：&#10;api.example.com&#10;api2.example.com"
+      />
+    </a-form-item>
+
+    <a-form-item label="白名單" name="whiteIPList">
+      <a-textarea
+        v-model:value="localFormModel.whiteIPListText"
+        :rows="4"
+        placeholder="一行一筆 IP 位址，例如：&#10;192.168.1.1&#10;10.0.0.1"
+      />
+    </a-form-item>
+
+    <a-form-item label="CDN 名單" name="cdnList">
+      <a-textarea
+        v-model:value="localFormModel.cdnListText"
+        :rows="3"
+        placeholder="一行一筆 CDN 網址"
+      />
+    </a-form-item>
+
+    <a-form-item label="代理伺服器名單" name="proxyList">
+      <a-textarea
+        v-model:value="localFormModel.proxyListText"
+        :rows="3"
+        placeholder="一行一筆代理伺服器網址"
+      />
+    </a-form-item>
+
+    <!-- 安全設定 -->
+    <!-- <a-divider orientation="left">安全設定</a-divider>
+
+    <a-form-item label="金鑰" name="hashKey">
+      <a-input-group compact>
+        <a-input
+          v-model:value="localFormModel.hashKey"
+          :readonly="true"
+          style="width: calc(100% - 100px)"
+          placeholder="自動產生"
+        />
+        <a-button type="default" style="width: 100px" @click="regenerateHashKey">
+          重新產生
+        </a-button>
+      </a-input-group>
+    </a-form-item> -->
+  </a-form>
+</template>

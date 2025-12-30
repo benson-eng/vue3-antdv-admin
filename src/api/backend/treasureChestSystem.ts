@@ -565,5 +565,93 @@ export const updateTreasureItem = (params: {
   });
 };
 
+/**
+ * =========================
+ * 成就任務條件類型
+ * 對齊 Vue2：admin-web/src/api/treasureChestSystem.ts
+ * =========================
+ */
+export enum AchievementTaskCondType {
+  GameTotalBet = 'GameTotalBet',
+  GameTotalWin = 'GameTotalWin',
+  GameWinOdds = 'GameWinOdds',
+  RegisterDays = 'RegisterDays',
+}
+
+export interface AchievementTaskCond {
+  type: AchievementTaskCondType;
+  value: number;
+}
+
+/**
+ * 新增寶箱道具
+ * - Vue2：addTreasureItem -> /AdminSystem/api/upload/addTreasureItem
+ */
+export const addTreasureItem = (params: {
+  itemName: string;
+  itemType: string;
+  masterAgent: string;
+  iconFile: File;
+  price?: number;
+  description?: string;
+  tagID?: number;
+  activeTimeSec?: number;
+  currencyType: string;
+  uniqueness: number;
+}) => {
+  const formData = new FormData();
+  formData.append('server', 'treasureChestSystem');
+  formData.append('actionName', 'addTreasureItem');
+
+  formData.append('query[itemName]', params.itemName);
+  formData.append('query[itemType]', params.itemType);
+  formData.append('query[masterAgent]', params.masterAgent);
+  formData.append('query[iconFile]', params.iconFile);
+  formData.append('query[currencyType]', params.currencyType);
+  formData.append('query[uniqueness]', params.uniqueness.toString());
+
+  if (params.price !== undefined) {
+    formData.append('query[price]', params.price.toString());
+  }
+  if (params.description !== undefined) {
+    formData.append('query[description]', params.description);
+  }
+  if (params.tagID !== undefined) {
+    formData.append('query[tagID]', params.tagID.toString());
+  }
+  if (params.activeTimeSec !== undefined) {
+    formData.append('query[activeTimeSec]', params.activeTimeSec.toString());
+  }
+
+  return request<{ data: { result: boolean; treasureItemID?: string } }>({
+    url: '/AdminSystem/api/upload/addTreasureItem',
+    method: 'post',
+    data: formData,
+    requestType: 'form',
+    timeout: 0,
+  });
+};
+
+/**
+ * 新增任務項目
+ * - Vue2：addTaskItem -> /AdminSystem/api/action/addTaskItem
+ */
+export const addTaskItem = (params: {
+  masterAgent: string;
+  treasureItemID: string;
+  condition: AchievementTaskCond;
+  odds?: number;
+}) =>
+  request<{ data: { result: boolean } }>({
+    url: '/AdminSystem/api/action/addTaskItem',
+    method: 'post',
+    data: {
+      server: 'treasureChestSystem',
+      actionName: 'addTaskItem',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 
 

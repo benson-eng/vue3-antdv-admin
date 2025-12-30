@@ -50,20 +50,6 @@
       </template>
     </a-form-item>
 
-    <!-- 使用限制 -->
-    <a-divider orientation="left">使用限制</a-divider>
-
-    <a-form-item label="單一手機號碼可綁定帳號數" name="onePhoneNumberToAccountCounts">
-      <a-input-number
-        v-model:value="formModel.onePhoneNumberToAccountCounts"
-        :min="1"
-        :precision="0"
-        style="width: 100%"
-      />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">未填寫時，系統將使用預設簡訊設定</span>
-      </template>
-    </a-form-item>
   </a-form>
 </template>
 
@@ -79,7 +65,6 @@ interface Props {
     smsPassWord: string;
     boSmsAccount: string;
     boSmsPassWord: string;
-    onePhoneNumberToAccountCounts: number;
   };
 }
 

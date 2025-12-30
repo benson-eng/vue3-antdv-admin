@@ -2,117 +2,80 @@
   <a-form
     ref="formRef"
     :model="formModel"
-    layout="vertical"
+    layout="horizontal"
+    :label-col="{ style: { width: '200px' } }"
+    :wrapper-col="{ style: { flex: 1 } }"
   >
-    <!-- 金流開關 -->
-    <a-divider orientation="left">金流開關</a-divider>
+    <!-- MyCard 設定 -->
+    <a-divider orientation="left">MyCard</a-divider>
 
-    <a-form-item label="MyCard" name="myCardShowType">
-      <a-switch v-model:checked="formModel.myCardShowType" />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-      </template>
+    <a-form-item label="MyCard FacServiceID" name="myCard_facServiceID">
+      <a-input
+        v-model:value="formModel.myCard_facServiceID"
+        placeholder="請輸入 MyCard FacServiceID"
+      />
     </a-form-item>
 
-    <a-form-item label="SoNet" name="soNetShowType">
-      <a-switch v-model:checked="formModel.soNetShowType" />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-      </template>
+    <a-form-item label="MyCard 廠商Key" name="myCard_secretKey">
+      <a-input
+        v-model:value="formModel.myCard_secretKey"
+        placeholder="請輸入 MyCard 廠商Key"
+      />
     </a-form-item>
 
-    <a-form-item label="NganLuong" name="nganLuongShowType">
-      <a-switch v-model:checked="formModel.nganLuongShowType" />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-      </template>
+    <a-form-item label="MyCard 正式環境 IP 提供" name="myCard_allowIPs">
+      <a-input
+        v-model:value="formModel.myCard_allowIPs"
+        placeholder="請輸入 MyCard 正式環境 IP 提供"
+      />
     </a-form-item>
 
-    <a-form-item label="MoPay" name="moPayShowType">
-      <a-switch v-model:checked="formModel.moPayShowType" />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-      </template>
+    <a-form-item label="MyCard Key1" name="myCard_topUpSecretKeyA">
+      <a-input
+        v-model:value="formModel.myCard_topUpSecretKeyA"
+        placeholder="請輸入 MyCard Key1"
+      />
     </a-form-item>
 
-    <a-form-item label="BtPay" name="btPayShowType">
-      <a-switch v-model:checked="formModel.btPayShowType" />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-      </template>
+    <a-form-item label="MyCard Key2" name="myCard_topUpSecretKeyB">
+      <a-input
+        v-model:value="formModel.myCard_topUpSecretKeyB"
+        placeholder="請輸入 MyCard Key2"
+      />
     </a-form-item>
 
-    <!-- 金流設定（條件顯示） -->
-    <template v-if="anyPaymentEnabled">
-      <a-divider orientation="left">金流設定</a-divider>
-
-      <a-form-item label="金流模式" name="paymentMode">
-        <a-select
-          v-model:value="formModel.paymentMode"
-          :options="paymentModeOptions"
-        />
-        <template #extra>
-          <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-        </template>
-      </a-form-item>
-
-      <a-form-item label="金流倍率" name="topUpRate">
-        <a-input-number
-          v-model:value="formModel.topUpRate"
-          :min="0"
-          :precision="0"
-          style="width: 100%"
-        />
-        <template #extra>
-          <span style="color: #999; font-size: 12px">此設定可於後續補齊，不影響帳戶建立</span>
-        </template>
-      </a-form-item>
-    </template>
+    <a-form-item label="MyCard FatoryId" name="myCard_topUpFacId">
+      <a-input
+        v-model:value="formModel.myCard_topUpFacId"
+        placeholder="請輸入 MyCard FatoryId"
+      />
+    </a-form-item>
   </a-form>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+/* eslint-disable vue/no-mutating-props */
+// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
+// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
+import { ref } from 'vue';
 
 defineOptions({ name: 'Step8PaymentSettings' });
 
 interface Props {
   formModel: {
-    myCardShowType: boolean;
-    soNetShowType: boolean;
-    nganLuongShowType: boolean;
-    moPayShowType: boolean;
-    btPayShowType: boolean;
-    paymentMode: string;
-    topUpRate: number;
+    myCard_facServiceID: string;
+    myCard_secretKey: string;
+    myCard_allowIPs: string;
+    myCard_topUpSecretKeyA: string;
+    myCard_topUpSecretKeyB: string;
+    myCard_topUpFacId: string;
   };
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const formRef = ref<FormInstance>();
-
-/**
- * 計算是否有任何金流開啟
- */
-const anyPaymentEnabled = computed(() => {
-  return (
-    props.formModel.myCardShowType
-    || props.formModel.soNetShowType
-    || props.formModel.nganLuongShowType
-    || props.formModel.moPayShowType
-    || props.formModel.btPayShowType
-  );
-});
-
-/**
- * 金流模式選項
- */
-const paymentModeOptions = [
-  { label: 'Real', value: 'Real' },
-  { label: 'Fake', value: 'Fake' },
-];
 
 // 暴露方法給父元件
 defineExpose({
