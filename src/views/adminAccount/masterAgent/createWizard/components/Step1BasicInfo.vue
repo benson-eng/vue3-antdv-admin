@@ -3,11 +3,15 @@
 // 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
 // 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
+import RolesApi from '@/api/backend/adminAccount/roles';
 
 defineOptions({ name: 'Step1BasicInfo' });
 
 const props = defineProps<Props>();
+const emit = defineEmits<{
+  'update:roles': [value: number[]];
+}>();
 
 // [DEBUG] 印出接收到的 props（特別是 formModel）
 console.log('[Step1BasicInfo][DEBUG] 接收到的 props:', props);
@@ -24,13 +28,25 @@ interface Props {
     onePhoneNumberToAccountCounts: number;
     boSmsAccount: string;
     boSmsPassWord: string;
-    accountPointsWarningValue?: number;
+    roles: number[];
   };
   isEdit?: boolean;
   level?: number;
+  /** 編輯模式下的完整角色對象數組（用於檢查不在清單中的角色） */
+  editRecordRoles?: Array<{ id: number; name: string; [key: string]: any }>;
 }
 
 const formRef = ref<FormInstance>();
+const roleOptions = ref<Array<{ label: string; value: number }>>([]);
+const loadingRoles = ref(false);
+
+// 使用 computed 的 getter/setter，通過 emit 更新父組件
+const rolesValue = computed({
+  get: () => props.formModel.roles,
+  set: (value: number[]) => {
+    emit('update:roles', value);
+  },
+});
 
 // 暴露驗證方法給父元件
 defineExpose({
@@ -46,6 +62,44 @@ defineExpose({
   formRef,
 });
 
+/**
+ * 載入角色列表
+ */
+const loadRoles = async () => {
+  try {
+    loadingRoles.value = true;
+    // 先清空角色選項，避免上次編輯的角色殘留
+    roleOptions.value = [];
+
+    const res = await RolesApi.getlocalRoles({});
+    const roles = res?.roles ?? [];
+    roleOptions.value = roles.map((r: any) => ({
+      label: `${r.name} (${r.id})`,
+      value: r.id,
+    }));
+
+    // Vue2 對齊：檢查已設定的角色是否在角色清單中，如果不在則加入
+    if (props.editRecordRoles && props.editRecordRoles.length > 0) {
+      const rolesIDList = roleOptions.value.map(role => role.value);
+      props.editRecordRoles.forEach((role: any) => {
+        if (role.id && !rolesIDList.includes(role.id)) {
+          // 如果角色不在清單中，將其加入到選項列表中
+          roleOptions.value.push({
+            label: `${role.name || `角色 ${role.id}`} (${role.id})`,
+            value: role.id,
+          });
+        }
+      });
+    }
+  }
+  catch (error) {
+    console.error('載入角色列表失敗:', error);
+  }
+  finally {
+    loadingRoles.value = false;
+  }
+};
+
 // 當 accountType 變更為 masterAgentX 時，清空 website
 watch(
   () => props.formModel.accountType,
@@ -56,9 +110,19 @@ watch(
   },
 );
 
+// 監聽 editRecordRoles 變化，當編輯記錄改變時重新載入角色列表
+watch(
+  () => props.editRecordRoles,
+  () => {
+    loadRoles();
+  },
+  { deep: true },
+);
+
 onMounted(() => {
   // [DEBUG] 確認元件是否有被掛載
   console.log('[Step1BasicInfo][DEBUG] 元件已掛載，formModel 當前值:', props.formModel);
+  loadRoles();
 });
 </script>
 
@@ -112,7 +176,7 @@ onMounted(() => {
     </a-form-item>
 
     <a-form-item
-      v-if="formModel.accountType === 'masterAgent' && !props.isEdit"
+      v-if="formModel.accountType === 'masterAgent'"
       label="網站名稱"
       name="website"
       :rules="[{ required: formModel.accountType === 'masterAgent', message: '請輸入網站名稱' }]"
@@ -120,6 +184,23 @@ onMounted(() => {
       <a-input
         v-model:value="formModel.website"
         placeholder="例如：example.com（不要包含 http/https）"
+        :readonly="props.isEdit"
+      />
+    </a-form-item>
+
+    <a-form-item
+      label="角色"
+      name="roles"
+      :rules="[
+        { required: true, type: 'array', min: 1, message: '請至少選擇一個角色' },
+      ]"
+    >
+      <a-select
+        v-model:value="rolesValue"
+        :options="roleOptions"
+        mode="multiple"
+        placeholder="請選擇角色"
+        :loading="loadingRoles"
       />
     </a-form-item>
 
@@ -159,20 +240,6 @@ onMounted(() => {
       <a-input-password
         v-model:value="formModel.boSmsPassWord"
         placeholder="請輸入三竹簡訊商密碼"
-      />
-    </a-form-item>
-
-    <a-form-item
-      v-if="props.level === 1"
-      label="簡訊帳號點數不足告警水位"
-      name="accountPointsWarningValue"
-    >
-      <a-input-number
-        v-model:value="formModel.accountPointsWarningValue"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入簡訊帳號點數不足告警水位"
       />
     </a-form-item>
   </a-form>

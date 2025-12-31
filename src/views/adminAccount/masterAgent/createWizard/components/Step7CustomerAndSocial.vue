@@ -56,17 +56,17 @@ defineExpose({
       />
     </a-form-item>
 
-    <a-form-item label="Line 登入 Client ID" name="lineClientID">
+    <a-form-item label="Line登入ID" name="lineClientID">
       <a-input
         v-model:value="formModel.lineClientID"
-        placeholder="請輸入 Line 登入 Client ID"
+        placeholder="請輸入 Line 登入 ID"
       />
     </a-form-item>
 
-    <a-form-item label="Line 登入 Client Secret" name="lineClientSecret">
+    <a-form-item label="line登入密鑰" name="lineClientSecret">
       <a-input
         v-model:value="formModel.lineClientSecret"
-        placeholder="請輸入 Line 登入 Client Secret"
+        placeholder="請輸入 Line 登入 密鑰"
       />
     </a-form-item>
 

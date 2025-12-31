@@ -1,105 +1,14 @@
-<template>
-  <div class="app-container">
-    <a-button type="primary" :disabled="!canCreateRole" @click="handleCreateRole">
-      新增角色
-    </a-button>
-
-    <a-table
-      class="roles-table"
-      :data-source="rolesList"
-      :columns="columns"
-      :loading="loading"
-      :row-key="(record) => record.key || record.id"
-      bordered
-      :pagination="false"
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'operations'">
-          <a-space>
-            <a-button
-              type="primary"
-              size="small"
-              :disabled="userAccount !== record.creatorAccount"
-              @click="onEditClick(record)"
-            >
-              編輯
-            </a-button>
-            <a-button
-              danger
-              size="small"
-              :disabled="record.id <= 2 || userAccount !== record.creatorAccount"
-              @click="onDeleteClick(record)"
-            >
-              刪除
-            </a-button>
-          </a-space>
-        </template>
-      </template>
-    </a-table>
-
-    <a-modal
-      v-model:open="dialogVisible"
-      :title="dialogType === 'edit' ? '編輯角色' : '新增角色'"
-      :mask-closable="false"
-      :destroy-on-close="true"
-      width="860px"
-      @ok="confirmRole"
-    >
-    <a-form
-      ref="formRef"
-      :model="tempRoleData"
-      :rules="rules"
-      :initial-values="{ serviceRoutes: [] }"
-      layout="vertical"
-    >
-        <a-form-item label="角色名稱" name="name">
-          <a-input v-model:value="tempRoleData.name" />
-        </a-form-item>
-
-        <a-form-item label="描述" name="description">
-          <a-textarea v-model:value="tempRoleData.description" :auto-size="{ minRows: 2, maxRows: 4 }" />
-        </a-form-item>
-
-        <a-form-item label="選單/頁面權限" name="serviceRoutes">
-          <!--
-            ✅ 關鍵：讓 antd Form 有「受控的欄位元件」承接 v-model
-            否則 a-tree 不屬於表單元件，Form 內部的 value 可能維持舊值（例如 [""]）
-            使用 tags 模式可接受任何字串值（不需 options）
-          -->
-          <a-select v-model:value="tempRoleData.serviceRoutes" mode="tags" :open="false" style="display: none" />
-          <a-tree
-            class="permission-tree"
-            checkable
-            block-node
-            :check-strictly="checkStrictly"
-            :tree-data="routesTreeData"
-            :checked-keys="antdCheckedKeys"
-            @check="handleTreeCheck"
-          />
-        </a-form-item>
-      </a-form>
-
-      <template #footer>
-        <a-space>
-          <a-button danger @click="dialogVisible = false">取消</a-button>
-          <a-button type="primary" @click="confirmRole">確認</a-button>
-        </a-space>
-      </template>
-    </a-modal>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
-import { Modal, message, notification } from 'ant-design-vue';
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import type { AlignType } from 'ant-design-vue/es/vc-table/interface';
+import { message, Modal, notification } from 'ant-design-vue';
 import { cloneDeep } from 'lodash-es';
-import routeModules from '@/router/routes/modules';
-import { uniqueSlash } from '@/utils/urlUtils';
-import { transformI18n } from '@/hooks/useI18n';
-import { useUserStore } from '@/store/modules/user';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import RolesApi from '@/api/backend/adminAccount/roles';
+import { transformI18n } from '@/hooks/useI18n';
+import routeModules from '@/router/routes/modules';
+import { useUserStore } from '@/store/modules/user';
+import { uniqueSlash } from '@/utils/urlUtils';
 
 defineOptions({ name: 'AdminAccountRoles' });
 
@@ -108,31 +17,33 @@ defineOptions({ name: 'AdminAccountRoles' });
  * Types（貼近 admin-web/src/views/adminAccount/roles.vue）
  * =========================================
  */
-type AppRoute = {
+interface AppRoute {
   path: string;
   meta?: Record<string, any> & { roles?: string[] };
   children?: AppRoute[];
-};
+}
 
-type RoleItem = {
+interface RoleItem {
   id: number;
   key: string;
   name: string;
   description: string;
   creatorAccount?: string;
   routes?: AppRoute[];
-};
+}
 
 type RoleForm = RoleItem & {
-  // 僅供 a-form 驗證欄位占位（真實選擇以 checkedKeys 為準）
+  /**
+   * 僅供 a-form 驗證欄位占位（真實選擇以 checkedKeys 為準）
+   */
   serviceRoutes?: string[];
 };
 
-type TreeNode = {
+interface TreeNode {
   title: string;
   key: string;
   children?: TreeNode[];
-};
+}
 
 const SUPER_ROLE_KEY = '5478c9d5-1078-4607-9624-4a6dbcae92e7';
 
@@ -198,12 +109,12 @@ const columns = computed(() => [
     align: 'center' as AlignType,
   },
   // Vue2 原檔案有重複的 ID 欄位（156–171 對應頁面保留行為）
-  {
-    title: 'ID',
-    dataIndex: 'id',
-    width: 150,
-    align: 'center' as AlignType,
-  },
+  // {
+  //   title: 'ID',
+  //   dataIndex: 'id',
+  //   width: 150,
+  //   align: 'center' as AlignType,
+  // },
   {
     title: '描述',
     dataIndex: 'description',
@@ -227,7 +138,9 @@ const rules: Record<string, Rule[]> = {
   // 這裡的 name 是給 a-form-item 用（對齊 Vue2 的 prop="serviceRoutes"）
   serviceRoutes: [
     {
-      // ✅ 只能依賴 value（禁止再讀 checkedKeys）
+      /**
+       * ✅ 只能依賴 value（禁止再讀 checkedKeys）
+       */
       validator: async (_rule, value: string[] | undefined) => {
         console.log('[Roles][validator] serviceRoutes raw value =', value);
         console.log('[Roles][validator] tempRoleData.serviceRoutes =', tempRoleData.value.serviceRoutes);
@@ -235,8 +148,8 @@ const rules: Record<string, Rule[]> = {
 
         const keys = Array.isArray(value)
           ? value
-              .filter((v) => typeof v === 'string')
-              .map((v) => v.trim())
+              .filter(v => typeof v === 'string')
+              .map(v => v.trim())
               .filter(Boolean)
           : [];
 
@@ -285,7 +198,7 @@ const handleTreeCheck = (keys: any) => {
    * ✅ Tree UI 狀態：不要過濾（包含 ''），否則使用者點勾選會被你立刻「受控回寫」成未勾選，造成「無法勾選」
    * 只做字串化，確保 :checked-keys 的型別一致
    */
-  const uiKeys = (rawKeys as any[]).map((k) => (k == null ? '' : String(k)));
+  const uiKeys = (rawKeys as any[]).map(k => (k == null ? '' : String(k)));
   checkedKeys.value = uiKeys;
   console.log('[Roles][tree] uiKeys(checkedKeys) =', uiKeys);
 
@@ -293,15 +206,14 @@ const handleTreeCheck = (keys: any) => {
    * ✅ Form 值：必須是有效 route path string[]（去掉空字串/空白）
    * validator 會只依賴 value，所以這裡要保證寫進去的是乾淨的值
    */
-  const formKeys = uiKeys.map((v) => v.trim()).filter(Boolean);
+  const formKeys = uiKeys.map(v => v.trim()).filter(Boolean);
   tempRoleData.value.serviceRoutes = formKeys;
   console.log('[Roles][tree] formKeys(tempRoleData.serviceRoutes) =', formKeys);
 
   // Vue2：delRulesPage = oriRulesPage 中被移除的 keys（用「有效 formKeys」來算）
-  delRulesPage.value = oriRulesPage.value.filter((k) => !formKeys.includes(k));
+  delRulesPage.value = oriRulesPage.value.filter(k => !formKeys.includes(k));
   console.log('[Roles][tree] delRulesPage =', delRulesPage.value);
 };
-
 
 /**
  * =========================================
@@ -311,8 +223,8 @@ const handleTreeCheck = (keys: any) => {
 const hasPermission = (roles: string[], route: AppRoute) => {
   const metaRoles: string[] | undefined = route.meta?.roles;
   if (metaRoles) {
-    if (route.path === '*') return true;
-    return roles.some((role) => metaRoles.includes(role));
+    if (route.path === '*') { return true; }
+    return roles.some(role => metaRoles.includes(role));
   }
   return true;
 };
@@ -380,9 +292,11 @@ const isHidden = (route: AppRoute) => {
   return Boolean(route.meta?.hidden || route.meta?.hideInMenu || route.meta?.show === 0);
 };
 
-// NOTE: Roles 權限樹不使用 sidebar 的折疊策略，保留但避免 lint 告警
+/**
+ * NOTE: Roles 權限樹不使用 sidebar 的折疊策略，保留但避免 lint 告警
+ */
 const onlyOneShowingChild = (children: AppRoute[] = [], parent: AppRoute) => {
-  const showingChildren = children.filter((item) => !isHidden(item));
+  const showingChildren = children.filter(item => !isHidden(item));
   if (showingChildren.length === 1) {
     return showingChildren[0];
   }
@@ -400,7 +314,7 @@ void onlyOneShowingChild;
 const reshapeRoutes = (routes: AppRoute[], basePath = '/', insert?: boolean) => {
   const rtReshapedRoutes: AppRoute[] = [];
   for (let route of routes) {
-    if (isHidden(route)) continue;
+    if (isHidden(route)) { continue; }
 
     if (insert) {
       rtReshapedRoutes.push({ path: route.path, meta: route.meta });
@@ -430,7 +344,7 @@ const flattenRoutes = (routes: AppRoute[]) => {
     data.push(route);
     if (route.children?.length) {
       const temp = flattenRoutes(route.children);
-      if (temp.length) data = [...data, ...temp];
+      if (temp.length) { data = [...data, ...temp]; }
     }
   });
   return data;
@@ -463,7 +377,8 @@ const generateTreeData = (routes: AppRoute[]): TreeNode[] => {
 
       if (route.children?.length) {
         node.children = walk(route.children, key);
-      } else {
+      }
+      else {
         delete node.children;
       }
       out.push(node);
@@ -495,7 +410,7 @@ const checkRoutesPathUnique = (routes: AppRoute[]) => {
         throw new Error(`Duplicate route path: ${r.path}`);
       }
       allPaths.push(r.path);
-      if (r.children?.length) walk(r.children);
+      if (r.children?.length) { walk(r.children); }
     });
   };
   walk(routes);
@@ -537,9 +452,9 @@ const updateView = async () => {
       const flatNormalized = flattenRoutes(cloneDeep(normalized));
       const flatReshaped = flattenRoutes(cloneDeep(reshapedRoutes.value));
 
-      const hasCurrency = flatNormalized.some((r) => r.path === '/adminAccount/currency');
-      const hasRoles = flatNormalized.some((r) => r.path === '/adminAccount/roles');
-      const adminAccountNode = reshapedRoutes.value.find((r) => r.path === '/adminAccount');
+      const hasCurrency = flatNormalized.some(r => r.path === '/adminAccount/currency');
+      const hasRoles = flatNormalized.some(r => r.path === '/adminAccount/roles');
+      const adminAccountNode = reshapedRoutes.value.find(r => r.path === '/adminAccount');
 
       console.log('================ [Roles][tree-data debug once] ================');
       console.log('[Roles][tree-data] normalized has /adminAccount/currency =', hasCurrency);
@@ -551,7 +466,7 @@ const updateView = async () => {
       );
       console.log(
         '[Roles][tree-data] reshaped flat paths (head 30) =',
-        flatReshaped.map((r) => r.path).slice(0, 30),
+        flatReshaped.map(r => r.path).slice(0, 30),
       );
     }
 
@@ -560,7 +475,7 @@ const updateView = async () => {
     const rolesData = rolesResp?.roles;
     if (!Array.isArray(rolesData)) {
       // ⚠️ 需補資料：後端 rolesList 回傳格式不符
-      throw new Error('需補資料：/AdminSystem/api/rolesList 回傳缺少 roles(Array)');
+      throw new TypeError('需補資料：/AdminSystem/api/rolesList 回傳缺少 roles(Array)');
     }
 
     const dynamicRoutesClone = cloneDeep(serviceRoutes.value);
@@ -568,7 +483,8 @@ const updateView = async () => {
       role.routes = filterAsyncRoutes(cloneDeep(dynamicRoutesClone), [role.key]);
     }
     rolesList.value = rolesData;
-  } finally {
+  }
+  finally {
     loading.value = false;
   }
 };
@@ -603,7 +519,7 @@ const handleEdit = (record: RoleItem) => {
     formRef.value?.resetFields?.();
 
     const selectedRoutes = reshapeRoutes(cloneDeep(tempRoleData.value.routes || []));
-    const flatKeys = Array.from(new Set(flattenRoutes(selectedRoutes).map((r) => r.path)));
+    const flatKeys = Array.from(new Set(flattenRoutes(selectedRoutes).map(r => r.path)));
 
     checkedKeys.value = flatKeys;
     oriRulesPage.value = [...flatKeys];
@@ -625,16 +541,19 @@ const handleDelete = (record: RoleItem) => {
       const resp = await RolesApi.deletelocalRoles({ key: record.key });
       const status = resp?.status;
       if (status) {
-        rolesList.value = rolesList.value.filter((r) => r.key !== record.key);
+        rolesList.value = rolesList.value.filter(r => r.key !== record.key);
         message.success('刪除成功');
-      } else {
+      }
+      else {
         throw new Error('刪除失敗（需補資料：請確認 /AdminSystem/api/deleteRole 回傳 status）');
       }
     },
   });
 };
 
-// template slot 的 record 推導為 Record<string, any>，這裡做一次薄包裝轉型
+/**
+ * template slot 的 record 推導為 Record<string, any>，這裡做一次薄包裝轉型
+ */
 const onEditClick = (record: any) => handleEdit(record as RoleItem);
 const onDeleteClick = (record: any) => handleDelete(record as RoleItem);
 
@@ -650,13 +569,14 @@ const confirmRole = async () => {
 
   try {
     await formRef.value?.validate();
-  } catch {
+  }
+  catch {
     console.log('[Roles][confirmRole] validate failed. form.getFieldsError() =', formRef.value?.getFieldsError?.());
     return;
   }
 
   const isEdit = dialogType.value === 'edit';
-  const selectedKeys = (tempRoleData.value.serviceRoutes || []).map((v) => v.trim()).filter(Boolean);
+  const selectedKeys = (tempRoleData.value.serviceRoutes || []).map(v => v.trim()).filter(Boolean);
   console.log('[Roles][confirmRole] selectedKeys =', selectedKeys);
 
   // 1) 產生 routes 結構（對齊 Vue2：generateTree）
@@ -665,14 +585,14 @@ const confirmRole = async () => {
 
   // 2) rolePath：對齊 Vue2 的 treeDataKeys（用 flatten 後的 path 列表）
   const reshapedSelected = reshapeRoutes(cloneDeep(tempRoleData.value.routes), '/', true);
-  const rolePath = Array.from(new Set(flattenRoutes(reshapedSelected).map((r) => r.path)));
+  const rolePath = Array.from(new Set(flattenRoutes(reshapedSelected).map(r => r.path)));
   console.log('[Roles][confirmRole] rolePath =', rolePath);
 
   if (isEdit) {
     // Vue2：deleteRolePath 計算（用 delRulesPage 反推）
     const removedRoutesTree = generateTree(cloneDeep(serviceRoutes.value), '/', delRulesPage.value);
-    const removedFlat = flattenRoutes(removedRoutesTree).map((r) => r.path);
-    const deleteRolePath = removedFlat.filter((p) => !rolePath.includes(p));
+    const removedFlat = flattenRoutes(removedRoutesTree).map(r => r.path);
+    const deleteRolePath = removedFlat.filter(p => !rolePath.includes(p));
 
     const payload = {
       key: tempRoleData.value.key,
@@ -684,7 +604,8 @@ const confirmRole = async () => {
     console.log('[Roles][confirmRole] updatelocalRole payload =', payload);
     await RolesApi.updatelocalRole(payload);
     await updateView();
-  } else {
+  }
+  else {
     const payload = {
       role: tempRoleData.value,
       rolePath,
@@ -708,6 +629,101 @@ onMounted(async () => {
 });
 </script>
 
+<template>
+  <div class="app-container">
+    <a-button type="primary" :disabled="!canCreateRole" @click="handleCreateRole">
+      新增角色
+    </a-button>
+
+    <a-table
+      class="roles-table"
+      :data-source="rolesList"
+      :columns="columns"
+      :loading="loading"
+      :row-key="(record) => record.key || record.id"
+      bordered
+      :pagination="false"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'operations'">
+          <a-space>
+            <a-button
+              type="primary"
+              size="small"
+              :disabled="userAccount !== record.creatorAccount"
+              @click="onEditClick(record)"
+            >
+              編輯
+            </a-button>
+            <a-button
+              danger
+              size="small"
+              :disabled="record.id <= 2 || userAccount !== record.creatorAccount"
+              @click="onDeleteClick(record)"
+            >
+              刪除
+            </a-button>
+          </a-space>
+        </template>
+      </template>
+    </a-table>
+
+    <a-modal
+      v-model:open="dialogVisible"
+      :title="dialogType === 'edit' ? '編輯角色' : '新增角色'"
+      :mask-closable="false"
+      :destroy-on-close="true"
+      width="860px"
+      @ok="confirmRole"
+    >
+      <a-form
+        ref="formRef"
+        :model="tempRoleData"
+        :rules="rules"
+        :initial-values="{ serviceRoutes: [] }"
+        layout="vertical"
+      >
+        <a-form-item label="角色名稱" name="name">
+          <a-input v-model:value="tempRoleData.name" />
+        </a-form-item>
+
+        <a-form-item label="描述" name="description">
+          <a-textarea v-model:value="tempRoleData.description" :auto-size="{ minRows: 2, maxRows: 4 }" />
+        </a-form-item>
+
+        <a-form-item label="選單/頁面權限" name="serviceRoutes">
+          <!--
+            ✅ 關鍵：讓 antd Form 有「受控的欄位元件」承接 v-model
+            否則 a-tree 不屬於表單元件，Form 內部的 value 可能維持舊值（例如 [""]）
+            使用 tags 模式可接受任何字串值（不需 options）
+          -->
+          <a-select v-model:value="tempRoleData.serviceRoutes" mode="tags" :open="false" style="display: none" />
+          <a-tree
+            class="permission-tree"
+            checkable
+            block-node
+            :check-strictly="checkStrictly"
+            :tree-data="routesTreeData"
+            :checked-keys="antdCheckedKeys"
+            @check="handleTreeCheck"
+          />
+        </a-form-item>
+      </a-form>
+
+      <template #footer>
+        <a-space>
+          <a-button danger @click="dialogVisible = false">
+            取消
+          </a-button>
+          <a-button type="primary" @click="confirmRole">
+            確認
+          </a-button>
+        </a-space>
+      </template>
+    </a-modal>
+  </div>
+</template>
+
 <style scoped>
 .roles-table {
   margin-top: 30px;
@@ -722,8 +738,3 @@ onMounted(async () => {
   border-radius: 6px;
 }
 </style>
-
-
-
-
-

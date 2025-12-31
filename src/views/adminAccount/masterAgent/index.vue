@@ -45,6 +45,8 @@ const handleWizardClose = () => {
 
 const handleWizardSuccess = () => {
   wizardVisible.value = false;
+  // 清空緩存，確保重新載入時獲取最新資料
+  rawListCache.value = null;
   // 重新載入表格資料
   tableInstance?.reload();
 };
@@ -62,6 +64,8 @@ const handleEditWizardClose = () => {
 const handleEditWizardSuccess = () => {
   editWizardVisible.value = false;
   editWizardRecord.value = null;
+  // 清空緩存，確保重新載入時獲取最新資料
+  rawListCache.value = null;
   // 重新載入表格資料
   tableInstance?.reload();
 };
@@ -397,16 +401,42 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
     return rtValue;
   });
 
+  /**
+   * 標記子行的輔助函數
+   * 為 children 中的項目添加 __isChild 標識
+   */
+  const markChildRows = (data: any[]): any[] => {
+    return data.map((item: any) => {
+      const result = {
+        ...item,
+        id: Number(item.id),
+        account: String(item.account ?? ''),
+        name: String(item.name ?? ''),
+        isEnabled: Boolean(item.isEnabled),
+        isMaintained: Boolean(item.isMaintained),
+        roles: Array.isArray(item.roles) ? item.roles : [],
+      };
+
+      // 如果有 children，遞歸處理並標記為子行
+      if (Array.isArray(item.children) && item.children.length > 0) {
+        result.children = item.children.map((child: any) => ({
+          ...child,
+          id: Number(child.id),
+          account: String(child.account ?? ''),
+          name: String(child.name ?? ''),
+          isEnabled: Boolean(child.isEnabled),
+          isMaintained: Boolean(child.isMaintained),
+          roles: Array.isArray(child.roles) ? child.roles : [],
+          __isChild: true, // 標記為子行
+        }));
+      }
+
+      return result;
+    });
+  };
+
   // 資料格式化
-  const formatted = filtered.map((i: any) => ({
-    ...i,
-    id: Number(i.id),
-    account: String(i.account ?? ''),
-    name: String(i.name ?? ''),
-    isEnabled: Boolean(i.isEnabled),
-    isMaintained: Boolean(i.isMaintained),
-    roles: Array.isArray(i.roles) ? i.roles : [],
-  }));
+  const formatted = markChildRows(filtered);
 
   // 分頁處理
   const page = Number(params.page ?? 1);
@@ -431,11 +461,15 @@ const toggleEnabled = async (record: TableListItem, checked: boolean) => {
     );
     const status = checked ? pt('labels.enable') : pt('labels.disable');
     message.success(pt('message.enableBackendSuccess', { status, account: record.account }));
+    // 清空緩存，確保重新載入時獲取最新資料
+    rawListCache.value = null;
     tableInstance?.reload();
   }
   catch (e) {
     console.error(e);
     message.error(pt('message.updateFailed'));
+    // 清空緩存，確保重新載入時獲取最新資料
+    rawListCache.value = null;
     tableInstance?.reload();
   }
 };
@@ -449,11 +483,15 @@ const toggleMaintained = async (record: TableListItem, checked: boolean) => {
     );
     const status = checked ? pt('labels.disable') : pt('labels.enable');
     message.success(pt('message.enableFrontendSuccess', { status, account: record.account }));
+    // 清空緩存，確保重新載入時獲取最新資料
+    rawListCache.value = null;
     tableInstance?.reload();
   }
   catch (e) {
     console.error(e);
     message.error(pt('message.updateFailed'));
+    // 清空緩存，確保重新載入時獲取最新資料
+    rawListCache.value = null;
     tableInstance?.reload();
   }
 };
@@ -583,6 +621,9 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
           await Api.updateMasterAgentAccount(updatePayload);
 
           message.success(pt('message.editSuccess'));
+          // 清空緩存，確保重新載入時獲取最新資料
+          rawListCache.value = null;
+          tableInstance?.reload();
         }
         else {
           await Api.createMasterAgentAccount({
@@ -753,49 +794,113 @@ const columns = ref<TableColumnItem[]>([
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
-    actions: ({ record }) => [
-      {
-        label: pt('action.edit'),
-        type: 'link',
-        onClick: () => openFormModal(record),
-      },
-      {
-        label: '編輯2',
-        type: 'link',
-        onClick: () => openEditWizard(record),
-      },
-      {
-        label: pt('action.changePassword'),
-        type: 'link',
-        onClick: () => openPasswordModal(record),
-      },
-      {
-        label: record.isMaintained ? pt('action.enableMaintained') : pt('action.disableMaintained'),
-        type: 'link',
-        popConfirm: {
-          title: pt('confirm.enableMaintained', {
-            action: record.isMaintained ? pt('labels.enable') : pt('labels.disable'),
-            account: record.account,
-          }),
-          onConfirm: async () => {
-            await toggleMaintained(record, !record.isMaintained);
+    actions: ({ record }) => {
+      // 判斷是否為子行（展開的帳號）
+      // 方法1: 檢查 record 是否有 __isChild 標識
+      let isChildRow = Boolean((record as any).__isChild);
+
+      /**
+       * 方法2: 如果還沒有判斷出是子行，嘗試通過檢查表格數據結構來判斷
+       * 檢查當前記錄是否在原始數據的頂層，如果不在頂層，則可能是子行
+       */
+      if (!isChildRow) {
+        try {
+          // 檢查原始緩存數據
+          if (rawListCache.value && Array.isArray(rawListCache.value)) {
+            // 檢查當前記錄是否在頂層數據中
+            const isTopLevel = rawListCache.value.some((item: any) => {
+              return item.id === record.id || item.account === record.account;
+            });
+
+            // 如果不在頂層，則可能是子行
+            if (!isTopLevel) {
+              isChildRow = true;
+            }
+            else {
+              // 如果在頂層，再檢查表格數據結構，看是否在任何父級的 children 中
+              if (tableInstance) {
+                const tableData = (tableInstance as any).tableData?.value || [];
+                /**
+                 * 遞歸檢查當前記錄是否在任何父級的 children 中
+                 */
+                const checkIfChild = (data: any[]): boolean => {
+                  for (const item of data) {
+                    if (Array.isArray(item.children) && item.children.length > 0) {
+                      // 檢查當前記錄是否在這個父級的 children 中
+                      const found = item.children.some((child: any) => {
+                        return child.id === record.id || child.account === record.account;
+                      });
+                      if (found) {
+                        return true;
+                      }
+                      // 遞歸檢查更深層的 children
+                      if (checkIfChild(item.children)) {
+                        return true;
+                      }
+                    }
+                  }
+                  return false;
+                };
+                isChildRow = checkIfChild(tableData);
+              }
+            }
+          }
+        }
+        catch (e) {
+          // 如果無法訪問表格數據，忽略錯誤
+          console.warn('無法檢查表格數據結構:', e);
+        }
+      }
+
+      // 如果是子行，不顯示操作按鈕
+      if (isChildRow) {
+        return [];
+      }
+
+      return [
+        {
+          label: pt('action.edit'),
+          type: 'link',
+          onClick: () => openFormModal(record),
+        },
+        {
+          label: '編輯2',
+          type: 'link',
+          onClick: () => openEditWizard(record),
+        },
+        {
+          label: pt('action.changePassword'),
+          type: 'link',
+          onClick: () => openPasswordModal(record),
+        },
+        {
+          label: record.isMaintained ? pt('action.enableMaintained') : pt('action.disableMaintained'),
+          type: 'link',
+          popConfirm: {
+            title: pt('confirm.enableMaintained', {
+              action: record.isMaintained ? pt('labels.enable') : pt('labels.disable'),
+              account: record.account,
+            }),
+            onConfirm: async () => {
+              await toggleMaintained(record, !record.isMaintained);
+            },
           },
         },
-      },
-      {
-        label: record.isEnabled ? pt('action.disableAccount') : pt('action.enableAccount'),
-        type: 'link',
-        popConfirm: {
-          title: pt('confirm.enableAccount', {
-            action: record.isEnabled ? pt('labels.disable') : pt('labels.enable'),
-            account: record.account,
-          }),
-          onConfirm: async () => {
-            await toggleEnabled(record, !record.isEnabled);
+        {
+          label: record.isEnabled ? pt('action.disableAccount') : pt('action.enableAccount'),
+          type: 'link',
+          popConfirm: {
+            title: pt('confirm.enableAccount', {
+              action: record.isEnabled ? pt('labels.disable') : pt('labels.enable'),
+              account: record.account,
+            }),
+            onConfirm: async () => {
+              await toggleEnabled(record, !record.isEnabled);
+            },
           },
         },
-      },
-    ],
+      ];
+    },
   },
 ]);
 

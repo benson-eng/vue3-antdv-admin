@@ -14,6 +14,10 @@ const props = defineProps<Props>();
 
 interface Props {
   formModel: {
+    freezeDuration?: number;
+    orderExpireTime?: number;
+    otpMode?: string;
+    accountPointsWarningValue?: number;
     paymentMode?: string;
     topUpRate?: number;
     myCardWebsite?: string;
@@ -25,6 +29,7 @@ interface Props {
     remoteConfigURLs: string;
     [key: string]: any;
   };
+  level?: number;
 }
 
 // 多語系
@@ -91,6 +96,58 @@ defineExpose({
         <span>此區塊為進階設定，僅限系統管理員使用。錯誤設定可能導致系統異常。</span>
       </template>
     </a-alert>
+
+    <!-- 交易設定 -->
+    <a-divider
+      v-if="props.level === 1"
+      orientation="left"
+    >
+      交易設定
+    </a-divider>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="凍結週期(天)"
+      name="freezeDuration"
+    >
+      <a-input-number
+        v-model:value="formModel.freezeDuration"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="贈禮交易過期時間(天)"
+      name="orderExpireTime"
+    >
+      <a-input-number
+        v-model:value="formModel.orderExpireTime"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="OTP 模式"
+      name="otpMode"
+    >
+      <a-select
+        v-model:value="formModel.otpMode"
+        style="width: 100%"
+      >
+        <a-select-option value="Real">
+          Real
+        </a-select-option>
+        <a-select-option value="Fake">
+          Fake
+        </a-select-option>
+      </a-select>
+    </a-form-item>
 
     <!-- 金流設定 -->
     <a-divider orientation="left">
@@ -278,7 +335,7 @@ defineExpose({
       />
     </a-form-item>
 
-    <a-form-item label="活動公式比例" name="activityFormula">
+    <a-form-item label="活躍值公式" name="activityFormula">
       <a-select
         v-model:value="(formModel as any).activityFormula"
         style="width: 100%"
@@ -369,6 +426,20 @@ defineExpose({
       其他設定
     </a-divider>
 
+    <a-form-item
+      v-if="props.level === 1"
+      label="簡訊帳號點數不足告警水位"
+      name="accountPointsWarningValue"
+    >
+      <a-input-number
+        v-model:value="formModel.accountPointsWarningValue"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+        placeholder="請輸入簡訊帳號點數不足告警水位"
+      />
+    </a-form-item>
+
     <a-form-item label="允許會員暱稱重複" name="isAllowMemberNicknameDuplicate">
       <a-checkbox v-model:checked="(formModel as any).isAllowMemberNicknameDuplicate" />
     </a-form-item>
@@ -378,18 +449,20 @@ defineExpose({
       JSON 設定
     </a-divider>
 
-    <a-form-item label="系統內部設定（internalSettings）" name="internalSettings">
+    <a-form-item label="系統內部設定(internalSettings)" name="internalSettings">
       <a-textarea
         v-model:value="formModel.internalSettings"
         :rows="10"
+        :disabled="true"
         placeholder="請輸入 JSON 格式，例如：{&quot;key&quot;: &quot;value&quot;}"
       />
     </a-form-item>
 
-    <a-form-item label="遠端設定檔 URL（remoteConfigURLs）" name="remoteConfigURLs">
+    <a-form-item label="遠端設定檔(remoteConfigURLs)" name="remoteConfigURLs">
       <a-textarea
         v-model:value="formModel.remoteConfigURLs"
         :rows="8"
+        :disabled="true"
         placeholder="請輸入 JSON 格式，例如：{&quot;key&quot;: &quot;value&quot;}"
       />
     </a-form-item>

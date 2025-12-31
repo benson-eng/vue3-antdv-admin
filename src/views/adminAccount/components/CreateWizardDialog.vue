@@ -5,7 +5,6 @@ import Api from '@/api/backend/adminAccount/masterAgent';
 import { useUserStore } from '@/store/modules/user';
 import { setNewMasterAgentDefaultData } from '@/utils/setDefaultData';
 import Step1BasicInfo from '../masterAgent/createWizard/components/Step1BasicInfo.vue';
-import Step2Roles from '../masterAgent/createWizard/components/Step2Roles.vue';
 import Step3WalletAndFormula from '../masterAgent/createWizard/components/Step3WalletAndFormula.vue';
 import Step5FirebaseAnalytics from '../masterAgent/createWizard/components/Step5FirebaseAnalytics.vue';
 import Step7CustomerAndSocial from '../masterAgent/createWizard/components/Step7CustomerAndSocial.vue';
@@ -48,7 +47,7 @@ const createdAccountId = ref<number | null>(null);
  */
 const isWizardCompleted = ref<boolean>(false);
 /**
- * 編輯模式下的完整角色對象數組（用於 Step2 檢查不在清單中的角色）
+ * 編輯模式下的完整角色對象數組（用於 Step1 檢查不在清單中的角色）
  */
 const editRecordRoles = ref<Array<{ id: number; name: string; [key: string]: any }>>([]);
 
@@ -56,7 +55,6 @@ const editRecordRoles = ref<Array<{ id: number; name: string; [key: string]: any
 const stepStates = reactive<Record<number, StepStatus>>({});
 
 const step1Ref = ref<InstanceType<typeof Step1BasicInfo> | null>(null);
-const step2Ref = ref<InstanceType<typeof Step2Roles> | null>(null);
 const step5Ref = ref<InstanceType<typeof Step5FirebaseAnalytics> | null>(null);
 const step7Ref = ref<InstanceType<typeof Step7CustomerAndSocial> | null>(null);
 const step8Ref = ref<InstanceType<typeof Step8PaymentSettings> | null>(null);
@@ -250,7 +248,7 @@ const safeJsonParse = (raw?: string) => {
  * 載入編輯資料
  */
 const loadEditData = (record: Partial<any>) => {
-  // 保存完整的角色對象（用於 Step2 檢查不在清單中的角色）
+  // 保存完整的角色對象（用於 Step1 檢查不在清單中的角色）
   editRecordRoles.value = (record.roles || []).map((r: any) => ({
     id: Number(r.id),
     name: r.name || `角色 ${r.id}`,
@@ -399,8 +397,8 @@ const initializeWizard = () => {
   if (props.editRecord) {
     loadEditData(props.editRecord);
     // 編輯模式下，將所有 step 標記為已觸碰和已驗證（因為資料已經存在，通過了建立流程）
-    // 注意：TOTAL_STEPS 在後面定義，這裡使用 8（固定值）
-    for (let i = 0; i < 8; i++) {
+    // 注意：TOTAL_STEPS 在後面定義，這裡使用 7（固定值，已移除 Step 2）
+    for (let i = 0; i < 7; i++) {
       stepStates[i] = {
         touched: true, // 編輯模式下所有 step 都可以點擊
         valid: true, // 默認已驗證，因為已經是通過建立的程序流程了
@@ -414,9 +412,9 @@ const initializeWizard = () => {
 };
 
 /**
- * Steps 總數（固定為 8，涵蓋所有可能的 steps）
+ * Steps 總數（固定為 7，涵蓋所有可能的 steps，已移除 Step 2）
  */
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 7;
 
 /**
  * 初始化 Step 狀態
@@ -448,21 +446,18 @@ const validateCurrentStep = async (): Promise<boolean> => {
   // 根據當前 step 調用對應的驗證方法
   let isValid = true;
   switch (step) {
-    case 0: // Step 1: 基本資訊
+    case 0: // Step 1: 基本資訊（包含角色）
       isValid = await step1Ref.value?.validate() ?? false;
       break;
-    case 1: // Step 2: 角色
-      isValid = await step2Ref.value?.validate() ?? false;
-      break;
-    case 2: // Step 3: 錢包與公式（不需要驗證）
-    case 3: // Step 4: Firebase Analytics（不需要驗證）
-    case 4: // Step 5: 社群登入（不需要驗證）
-    case 5: // Step 6: 金流設定（不需要驗證）
-    case 6: // Step 7: 人機驗證（不需要驗證）
+    case 1: // Step 2: 錢包與公式（不需要驗證，原 Step 3）
+    case 2: // Step 3: Firebase Analytics（不需要驗證，原 Step 4）
+    case 3: // Step 4: 社群登入（不需要驗證，原 Step 5）
+    case 4: // Step 5: 金流設定（不需要驗證，原 Step 6）
+    case 5: // Step 6: 人機驗證（不需要驗證，原 Step 7）
       // 這些 step 不需要驗證，直接返回 true
       isValid = true;
       break;
-    case 7: // Step 8: 進階設定（需要驗證金鑰）
+    case 6: // Step 7: 進階設定（需要驗證金鑰，原 Step 8）
       isValid = await step12Ref.value?.validate() ?? false;
       break;
     default:
@@ -537,7 +532,7 @@ const onStepClick = async (targetStep: number) => {
  * 注意：此函數定義在 onNext 之後，但使用函數聲明以支持提升
  */
 async function nextOriginal() {
-  /** Step 1 驗證 */
+  /** Step 1 驗證（包含角色） */
   if (currentStep.value === 0) {
     const isValid = await step1Ref.value?.validate();
     if (!isValid) {
@@ -551,48 +546,56 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 2 驗證 */
+  /** Step 2 處理（僅整理資料，不呼叫 API，原 Step 3） */
   if (currentStep.value === 1) {
-    const isValid = await step2Ref.value?.validate();
-    if (!isValid) {
-      return;
-    }
+    // Step 3 不需要額外處理，資料已經在 formModel 中
 
+    // Phase 3 過渡：輸出當前 Step 和 formModel
     console.log('=== Wizard Step 2 完成 ===');
-    currentStep.value = 2;
+    console.log('Current Step Index:', currentStep.value);
+    console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
+
+    // 進入 Step 3（僅 masterAgent 顯示，原 Step 4）
+    if (formModel.accountType === 'masterAgent') {
+      currentStep.value = 2;
+    }
+    else {
+      // masterAgentX 跳過 Step 3-6，直接完成
+      message.info('設定已完成（待後續 API 整合）');
+    }
     return;
   }
 
-  /** Step 3 處理（僅整理資料，不呼叫 API） */
+  /** Step 3 處理（僅整理資料，不呼叫 API，原 Step 4） */
   if (currentStep.value === 2) {
-    // Step 3 不需要額外處理，資料已經在 formModel 中
+    // Step 4 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
     console.log('=== Wizard Step 3 完成 ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
 
-    // 進入 Step 4（僅 masterAgent 顯示）
+    // 進入 Step 4（僅 masterAgent，原 Step 5）
     if (formModel.accountType === 'masterAgent') {
       currentStep.value = 3;
     }
     else {
-      // masterAgentX 跳過 Step 4-7，直接完成
+      // masterAgentX 跳過 Step 3 和 Step 4，直接完成（待實作後續步驟）
       message.info('設定已完成（待後續 API 整合）');
     }
     return;
   }
 
-  /** Step 4 處理（僅整理資料，不呼叫 API） */
+  /** Step 4 處理（僅整理資料，不呼叫 API，原 Step 5） */
   if (currentStep.value === 3) {
-    // Step 4 不需要額外處理，資料已經在 formModel 中
+    // Step 5 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
     console.log('=== Wizard Step 4 完成 ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
 
-    // 進入 Step 5（僅 masterAgent）
+    // 進入 Step 5（僅 masterAgent，原 Step 6）
     if (formModel.accountType === 'masterAgent') {
       currentStep.value = 4;
     }
@@ -603,16 +606,16 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 5 處理（僅整理資料，不呼叫 API） */
+  /** Step 5 處理（僅整理資料，不呼叫 API，原 Step 6） */
   if (currentStep.value === 4) {
-    // Step 5 不需要額外處理，資料已經在 formModel 中
+    // Step 6 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
     console.log('=== Wizard Step 5 完成 ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
 
-    // 進入 Step 6（僅 masterAgent）
+    // 進入 Step 6（僅 masterAgent，原 Step 7）
     if (formModel.accountType === 'masterAgent') {
       currentStep.value = 5;
     }
@@ -623,34 +626,14 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 6 處理（僅整理資料，不呼叫 API） */
+  /** Step 6 處理：建立帳戶並設定預設資料（原 Step 7） */
   if (currentStep.value === 5) {
-    // Step 6 不需要額外處理，資料已經在 formModel 中
-
-    // Phase 3 過渡：輸出當前 Step 和 formModel
-    console.log('=== Wizard Step 6 完成 ===');
-    console.log('Current Step Index:', currentStep.value);
-    console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
-
-    // 進入 Step 7（僅 masterAgent）
-    if (formModel.accountType === 'masterAgent') {
-      currentStep.value = 6;
-    }
-    else {
-      // masterAgentX 跳過 Step 6 和 Step 7，直接完成（待實作後續步驟）
-      message.info('設定已完成（待後續 API 整合）');
-    }
-    return;
-  }
-
-  /** Step 7 處理：建立帳戶並設定預設資料 */
-  if (currentStep.value === 6) {
     // 如果是編輯模式，跳過創建帳戶
     if (props.editRecord && createdAccountId.value) {
-      console.log('=== Wizard Step 7 完成（編輯模式，跳過創建） ===');
-      // 進入 Step 8（僅 masterAgent 且 level === 1）
+      console.log('=== Wizard Step 6 完成（編輯模式，跳過創建） ===');
+      // 進入 Step 7（僅 masterAgent 且 level === 1，原 Step 8）
       if (formModel.accountType === 'masterAgent' && userStore.level === 1) {
-        currentStep.value = 7;
+        currentStep.value = 6;
       }
       else {
         // 如果不是 level 1 或不是 masterAgent，在 Step 7 完成時直接調用更新 API
@@ -664,8 +647,19 @@ async function nextOriginal() {
             ? formModel.roles.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
             : [];
 
+          // 為了確保使用 formModel 中的最新欄位值重新構建 internalSettings 和 remoteConfigURLs
+          // 我們需要暫時保存原始值，然後清空它們，這樣 buildInternalSettings 和 buildRemoteConfigURLs 會重新構建
+          const originalInternalSettings = formModel.internalSettings;
+          const originalRemoteConfigURLs = formModel.remoteConfigURLs;
+          formModel.internalSettings = '';
+          formModel.remoteConfigURLs = '';
+
           const internalSettings = buildInternalSettings(account, formModel, userStore.level);
           const remoteConfigURLs = buildRemoteConfigURLs(formModel, userStore.level, account);
+
+          // 恢復原始值
+          formModel.internalSettings = originalInternalSettings;
+          formModel.remoteConfigURLs = originalRemoteConfigURLs;
 
           // Vue2 對齊：構建 reCaptchaV2Settings（作為獨立欄位傳遞）
           const reCaptchaHasValue = Boolean(
@@ -692,7 +686,9 @@ async function nextOriginal() {
             isMaintained: Boolean(props.editRecord.isMaintained), // 保持原有狀態
             roles: roleIds,
             website: websiteToUse,
-            hashKey: props.editRecord.hashKey, // 保留原有 hashKey
+            hashKey: (formModel as any).hashKey && String((formModel as any).hashKey).trim()
+              ? String((formModel as any).hashKey).trim()
+              : props.editRecord.hashKey, // 優先使用 formModel 中的 hashKey，如果沒有則保留原有 hashKey
             currencyCode: formModel.currencyCode ?? props.editRecord.currencyCode,
             apiDomain: (formModel as any).apiDomain ?? props.editRecord.apiDomain,
             whiteIPList: (formModel as any).whiteIPList ?? props.editRecord.whiteIPList ?? '',
@@ -846,15 +842,15 @@ async function nextOriginal() {
       // 儲存帳戶 ID（用於後續步驟）
       createdAccountId.value = newMasterAgent?.id || null;
 
-      console.log('=== Wizard Step 7 完成（帳戶建立） ===');
+      console.log('=== Wizard Step 6 完成（帳戶建立） ===');
       console.log('Current Step Index:', currentStep.value);
       console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
       console.log('Create Payload:', JSON.parse(JSON.stringify(payload)));
       console.log('Created Account ID:', createdAccountId.value);
 
-      // 進入 Step 8（僅 masterAgent 且 level === 1）
+      // 進入 Step 7（僅 masterAgent 且 level === 1，原 Step 8）
       if (formModel.accountType === 'masterAgent' && userStore.level === 1) {
-        currentStep.value = 7;
+        currentStep.value = 6;
       }
       else {
         // 不符合條件，直接完成
@@ -877,18 +873,18 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 8 處理（僅整理資料，不呼叫 API） */
-  if (currentStep.value === 7) {
+  /** Step 7 處理（僅整理資料，不呼叫 API，原 Step 8） */
+  if (currentStep.value === 6) {
     // Step 8 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
-    console.log('=== Wizard Step 8 完成（最後一步） ===');
+    console.log('=== Wizard Step 7 完成（最後一步） ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
     console.log('=== Wizard 完整流程結束 ===');
 
     // 如果是編輯模式，更新帳戶
-    console.log('=== Wizard Step 8 完成（編輯模式） ===', props.editRecord, createdAccountId.value);
+    console.log('=== Wizard Step 7 完成（編輯模式） ===', props.editRecord, createdAccountId.value);
     if (props.editRecord && createdAccountId.value) {
       isSubmitting.value = true;
       try {
@@ -900,8 +896,19 @@ async function nextOriginal() {
           ? formModel.roles.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
           : [];
 
+        // 為了確保使用 formModel 中的最新欄位值重新構建 internalSettings 和 remoteConfigURLs
+        // 我們需要暫時保存原始值，然後清空它們，這樣 buildInternalSettings 和 buildRemoteConfigURLs 會重新構建
+        const originalInternalSettings = formModel.internalSettings;
+        const originalRemoteConfigURLs = formModel.remoteConfigURLs;
+        formModel.internalSettings = '';
+        formModel.remoteConfigURLs = '';
+
         const internalSettings = buildInternalSettings(account, formModel, userStore.level);
         const remoteConfigURLs = buildRemoteConfigURLs(formModel, userStore.level, account);
+
+        // 恢復原始值
+        formModel.internalSettings = originalInternalSettings;
+        formModel.remoteConfigURLs = originalRemoteConfigURLs;
 
         // Vue2 對齊：構建 reCaptchaV2Settings（作為獨立欄位傳遞）
         const reCaptchaHasValue = Boolean(
@@ -928,7 +935,9 @@ async function nextOriginal() {
           isMaintained: Boolean(props.editRecord.isMaintained), // 保持原有狀態
           roles: roleIds,
           website: websiteToUse,
-          hashKey: props.editRecord.hashKey, // 保留原有 hashKey
+          hashKey: (formModel as any).hashKey && String((formModel as any).hashKey).trim()
+            ? String((formModel as any).hashKey).trim()
+            : props.editRecord.hashKey, // 優先使用 formModel 中的 hashKey，如果沒有則保留原有 hashKey
           currencyCode: formModel.currencyCode ?? props.editRecord.currencyCode,
           apiDomain: (formModel as any).apiDomain ?? props.editRecord.apiDomain,
           whiteIPList: (formModel as any).whiteIPList ?? props.editRecord.whiteIPList ?? '',
@@ -1009,6 +1018,165 @@ async function nextOriginal() {
 }
 
 /**
+ * 完成按鈕處理（編輯模式下直接更新並關閉）
+ */
+const onFinish = async () => {
+  // 驗證當前步驟
+  const ok = await validateCurrentStep();
+  if (!ok) {
+    return;
+  }
+
+  // 如果沒有編輯記錄或帳戶 ID，不允許完成
+  if (!props.editRecord || !createdAccountId.value) {
+    message.warning('無法完成：缺少必要的編輯資訊');
+    return;
+  }
+
+  isSubmitting.value = true;
+  try {
+    const account = String(formModel.account ?? '').trim();
+    const websiteToUse
+      = formModel.accountType === 'masterAgentX' ? account : formModel.website;
+
+    const roleIds = Array.isArray(formModel.roles)
+      ? formModel.roles.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+      : [];
+
+    // 為了確保使用 formModel 中的最新欄位值重新構建 internalSettings 和 remoteConfigURLs
+    // 我們需要暫時保存原始值，然後清空它們，這樣 buildInternalSettings 和 buildRemoteConfigURLs 會重新構建
+    const originalInternalSettings = formModel.internalSettings;
+    const originalRemoteConfigURLs = formModel.remoteConfigURLs;
+    formModel.internalSettings = '';
+    formModel.remoteConfigURLs = '';
+
+    const internalSettings = buildInternalSettings(account, formModel, userStore.level);
+    const remoteConfigURLs = buildRemoteConfigURLs(formModel, userStore.level, account);
+
+    // 恢復原始值（如果用戶在 step 8 直接編輯了 JSON，則使用編輯後的值）
+    // 但只有在用戶確實修改了這些欄位時才使用原始值
+    // 這裡我們優先使用重新構建的 internalSettings，因為它包含了所有 formModel 欄位的最新值
+    // 如果用戶在 step 8 直接編輯了 internalSettings JSON，我們需要合併這些修改
+    // 但為了簡化，我們先使用重新構建的值，確保所有欄位更新都被包含
+    formModel.internalSettings = originalInternalSettings;
+    formModel.remoteConfigURLs = originalRemoteConfigURLs;
+
+    // Vue2 對齊：構建 reCaptchaV2Settings（作為獨立欄位傳遞）
+    const reCaptchaHasValue = Boolean(
+      formModel.reCaptcha_secretKey || formModel.reCaptcha_name || formModel.reCaptcha_siteKey,
+    );
+    const reCaptchaV2Settings = reCaptchaHasValue
+      ? {
+          masterAgent: account,
+          secretKey: String(formModel.reCaptcha_secretKey ?? ''),
+          name: String(formModel.reCaptcha_name ?? ''),
+          siteKey: String(formModel.reCaptcha_siteKey ?? ''),
+          enabled: Boolean(formModel.reCaptcha_enabled),
+          platform: 'web',
+        }
+      : undefined;
+
+    // Vue2 對齊：從 editRecord 保留必要欄位，從 formModel 構建更新欄位
+    const updatePayload = {
+      id: createdAccountId.value,
+      account,
+      name: String(formModel.name ?? props.editRecord.name ?? ''),
+      prefix: props.editRecord.prefix,
+      isEnabled: Boolean(props.editRecord.isEnabled), // 保持原有狀態
+      isMaintained: Boolean(props.editRecord.isMaintained), // 保持原有狀態
+      roles: roleIds,
+      website: websiteToUse,
+      hashKey: (formModel as any).hashKey && String((formModel as any).hashKey).trim()
+        ? String((formModel as any).hashKey).trim()
+        : props.editRecord.hashKey, // 優先使用 formModel 中的 hashKey，如果沒有則保留原有 hashKey
+      currencyCode: formModel.currencyCode ?? props.editRecord.currencyCode,
+      apiDomain: (formModel as any).apiDomain ?? props.editRecord.apiDomain,
+      whiteIPList: (formModel as any).whiteIPList ?? props.editRecord.whiteIPList ?? '',
+      cdnList: (formModel as any).cdnList ?? props.editRecord.cdnList ?? '',
+      proxyList: (formModel as any).proxyList ?? props.editRecord.proxyList ?? '',
+      currencies: props.editRecord.currencies ?? [], // 保留原有 currencies
+      isSingleWallet: (formModel as any).isSingleWallet !== undefined
+        ? Boolean((formModel as any).isSingleWallet)
+        : props.editRecord.isSingleWallet,
+      singleWallerVersion: (formModel as any).singleWallerVersion !== undefined
+        ? Number((formModel as any).singleWallerVersion)
+        : props.editRecord.singleWallerVersion,
+      vipDowngradeFormula: (formModel as any).vipDowngradeFormula !== undefined
+        ? Number((formModel as any).vipDowngradeFormula)
+        : props.editRecord.vipDowngradeFormula,
+      isRanking: Boolean((formModel as any).isRanking ?? props.editRecord.isRanking),
+      levelFormula: (formModel as any).levelFormula !== undefined
+        ? Number((formModel as any).levelFormula)
+        : props.editRecord.levelFormula,
+      activityFormula: (formModel as any).activityFormula ?? props.editRecord.activityFormula,
+      levelUpNeedPoint: (formModel as any).levelUpNeedPoint !== undefined
+        ? (formModel as any).levelUpNeedPoint
+        : props.editRecord.levelUpNeedPoint,
+      gaKey: formModel.gaKey ?? props.editRecord.gaKey ?? '',
+      firebaseSdkConfig: formModel.firebaseSdkConfig ?? props.editRecord.firebaseSdkConfig ?? '',
+      firebaseAdminSdkConfig: formModel.firebaseAdminSdkConfig ?? props.editRecord.firebaseAdminSdkConfig,
+      firebaseConfig: formModel.firebaseConfig ?? props.editRecord.firebaseConfig,
+      iosPaymentKey: (formModel as any).iosPaymentKey ?? props.editRecord.iosPaymentKey ?? '',
+      androidPaymentKey: (formModel as any).androidPaymentKey ?? props.editRecord.androidPaymentKey ?? '',
+      ecPaymentKey: (formModel as any).ecPaymentKey ?? props.editRecord.ecPaymentKey ?? '',
+      gcpKey: (formModel as any).gcpKey ?? props.editRecord.gcpKey ?? '',
+      androidBundleID: (formModel as any).androidBundleID ?? props.editRecord.androidBundleID,
+      iosBundleID: (formModel as any).iosBundleID ?? props.editRecord.iosBundleID,
+      serviceEmail: formModel.serviceEmail ?? props.editRecord.serviceEmail,
+      facebookID: formModel.facebookID ?? props.editRecord.facebookID,
+      backendKey: props.editRecord.backendKey, // 保留原有 backendKey
+      agentBackendKey: props.editRecord.agentBackendKey, // 保留原有 agentBackendKey
+      isAllowMemberNicknameDuplicate: (formModel as any).isAllowMemberNicknameDuplicate !== undefined
+        ? Boolean((formModel as any).isAllowMemberNicknameDuplicate)
+        : props.editRecord.isAllowMemberNicknameDuplicate,
+      internalSettings,
+      remoteConfigURLs,
+      reCaptchaV2Settings, // Vue2 對齊：作為獨立欄位
+    };
+
+    // 調用 API 更新帳戶
+    await Api.updateMasterAgentAccount(updatePayload);
+
+    console.log('=== Wizard 編輯模式完成（完成按鈕） ===');
+    console.log('Update Payload:', JSON.parse(JSON.stringify(updatePayload)));
+
+    message.success('設定更新成功');
+
+    // 標記 Wizard 為已完成
+    isWizardCompleted.value = true;
+    // 觸發 success 事件
+    emit('success');
+    // 關閉 Dialog
+    handleClose();
+  }
+  catch (error: any) {
+    console.error('更新設定失敗:', error);
+    const errorMessage
+      = error?.response?.data?.message || error?.message || '更新設定失敗，請稍後再試';
+    message.error(errorMessage);
+  }
+  finally {
+    isSubmitting.value = false;
+  }
+};
+
+/**
+ * 計算是否顯示「完成」按鈕（編輯模式下，且不在最後一步）
+ */
+const shouldShowFinishButton = computed(() => {
+  // 只在編輯模式下顯示
+  if (!props.editRecord) {
+    return false;
+  }
+  // 如果當前步驟是最後一步（step 7），不顯示完成按鈕（因為「下一步」按鈕已經顯示為「完成」）
+  if (currentStep.value === 6) {
+    return false;
+  }
+  // 其他步驟在編輯模式下都顯示完成按鈕
+  return true;
+});
+
+/**
  * Next（下一步）邏輯
  */
 const onNext = async () => {
@@ -1047,31 +1215,31 @@ const getStepStatus = (stepIndex: number): 'wait' | 'process' | 'finish' => {
  * 計算是否顯示「下一步」按鈕
  */
 const shouldShowNextButton = computed(() => {
-  // Step 0-2 都顯示
-  if (currentStep.value < 3) {
+  // Step 0-1 都顯示
+  if (currentStep.value < 2) {
     return true;
   }
-  // Step 3：masterAgent 有 Step 4，masterAgentX 沒有
+  // Step 2：masterAgent 有 Step 3，masterAgentX 沒有（原 Step 3）
+  if (currentStep.value === 2) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 3：僅 masterAgent 顯示（因為有 Step 4，原 Step 4）
   if (currentStep.value === 3) {
     return formModel.accountType === 'masterAgent';
   }
-  // Step 4：僅 masterAgent 顯示（因為有 Step 5）
+  // Step 4：僅 masterAgent 顯示（因為有 Step 5，原 Step 5）
   if (currentStep.value === 4) {
     return formModel.accountType === 'masterAgent';
   }
-  // Step 5：僅 masterAgent 顯示（因為有 Step 6）
+  // Step 5：僅 masterAgent 顯示（因為有 Step 6，原 Step 6）
   if (currentStep.value === 5) {
     return formModel.accountType === 'masterAgent';
   }
-  // Step 6：僅 masterAgent 顯示（因為有 Step 7）
+  // Step 6：僅 masterAgent 且 level === 1 顯示（原 Step 7）
   if (currentStep.value === 6) {
-    return formModel.accountType === 'masterAgent';
-  }
-  // Step 7：僅 masterAgent 且 level === 1 顯示
-  if (currentStep.value === 7) {
     return formModel.accountType === 'masterAgent' && userStore.level === 1;
   }
-  // Step 12 之後（待實作）
+  // Step 7 之後（待實作）
   return false;
 });
 
@@ -1079,6 +1247,9 @@ const shouldShowNextButton = computed(() => {
  * 計算「下一步」按鈕文字
  */
 const getNextButtonText = computed(() => {
+  if (currentStep.value === 1) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
   if (currentStep.value === 2) {
     return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
   }
@@ -1092,9 +1263,6 @@ const getNextButtonText = computed(() => {
     return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
   }
   if (currentStep.value === 6) {
-    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
-  }
-  if (currentStep.value === 7) {
     return '完成';
   }
   return '下一步';
@@ -1255,7 +1423,7 @@ onBeforeUnmount(() => {
         />
         <a-step
           title="Step 2"
-          description="角色與權限"
+          description="交易設定"
           :status="getStepStatus(1)"
           :class="{
             'step-clickable': isStepClickable(1),
@@ -1263,8 +1431,9 @@ onBeforeUnmount(() => {
           }"
         />
         <a-step
+          v-if="formModel.accountType === 'masterAgent'"
           title="Step 3"
-          description="交易設定"
+          description="Firebase"
           :status="getStepStatus(2)"
           :class="{
             'step-clickable': isStepClickable(2),
@@ -1274,7 +1443,7 @@ onBeforeUnmount(() => {
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 4"
-          description="Firebase"
+          description="社群登入"
           :status="getStepStatus(3)"
           :class="{
             'step-clickable': isStepClickable(3),
@@ -1284,7 +1453,7 @@ onBeforeUnmount(() => {
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 5"
-          description="社群登入"
+          description="金流設定"
           :status="getStepStatus(4)"
           :class="{
             'step-clickable': isStepClickable(4),
@@ -1294,7 +1463,7 @@ onBeforeUnmount(() => {
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 6"
-          description="金流設定"
+          description="人機驗證設定"
           :status="getStepStatus(5)"
           :class="{
             'step-clickable': isStepClickable(5),
@@ -1302,23 +1471,13 @@ onBeforeUnmount(() => {
           }"
         />
         <a-step
-          v-if="formModel.accountType === 'masterAgent'"
+          v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
           title="Step 7"
-          description="人機驗證設定"
+          description="進階設定"
           :status="getStepStatus(6)"
           :class="{
             'step-clickable': isStepClickable(6),
             'step-disabled': !isStepClickable(6),
-          }"
-        />
-        <a-step
-          v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
-          title="Step 8"
-          description="進階設定"
-          :status="getStepStatus(7)"
-          :class="{
-            'step-clickable': isStepClickable(7),
-            'step-disabled': !isStepClickable(7),
           }"
         />
       </a-steps>
@@ -1330,43 +1489,38 @@ onBeforeUnmount(() => {
           :form-model="formModel"
           :is-edit="Boolean(props.editRecord)"
           :level="userStore.level"
-        />
-        <Step2Roles
-          v-show="currentStep === 1"
-          ref="step2Ref"
-          :form-model="formModel"
           :edit-record-roles="editRecordRoles"
           @update:roles="(value) => { formModel.roles = value; }"
         />
         <Step3WalletAndFormula
-          v-show="currentStep === 2"
+          v-show="currentStep === 1"
           :form-model="formModel"
-          :level="userStore.level"
         />
         <Step5FirebaseAnalytics
-          v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 2 && formModel.accountType === 'masterAgent'"
           ref="step5Ref"
           :form-model="formModel"
         />
         <Step7CustomerAndSocial
-          v-show="currentStep === 4 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
           ref="step7Ref"
           :form-model="formModel"
         />
         <Step8PaymentSettings
-          v-show="currentStep === 5 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 4 && formModel.accountType === 'masterAgent'"
           ref="step8Ref"
           :form-model="formModel"
         />
         <Step11Recaptcha
-          v-show="currentStep === 6 && formModel.accountType === 'masterAgent'"
+          v-show="currentStep === 5 && formModel.accountType === 'masterAgent'"
           ref="step11Ref"
           :form-model="formModel"
         />
         <Step12AdvancedSettings
-          v-show="currentStep === 7 && formModel.accountType === 'masterAgent' && userStore.level === 1"
+          v-show="currentStep === 6 && formModel.accountType === 'masterAgent' && userStore.level === 1"
           ref="step12Ref"
           :form-model="formModel"
+          :level="userStore.level"
         />
       </div>
 
@@ -1382,6 +1536,14 @@ onBeforeUnmount(() => {
             @click="onNext"
           >
             {{ getNextButtonText }}
+          </a-button>
+          <a-button
+            v-if="shouldShowFinishButton"
+            type="primary"
+            :loading="isSubmitting"
+            @click="onFinish"
+          >
+            完成
           </a-button>
           <!-- <a-button
             v-if="currentStep === 3 && formModel.accountType === 'masterAgent'"
