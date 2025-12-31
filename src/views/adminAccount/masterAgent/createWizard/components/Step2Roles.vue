@@ -14,6 +14,8 @@ interface Props {
   formModel: {
     roles: number[];
   };
+  /** 編輯模式下的完整角色對象數組（用於檢查不在清單中的角色） */
+  editRecordRoles?: Array<{ id: number; name: string; [key: string]: any }>;
 }
 
 // 使用 computed 的 getter/setter，通過 emit 更新父組件
@@ -54,6 +56,20 @@ const loadRoles = async () => {
       label: r.name,
       value: r.id,
     }));
+
+    // Vue2 對齊：檢查已設定的角色是否在角色清單中，如果不在則加入
+    if (props.editRecordRoles && props.editRecordRoles.length > 0) {
+      const rolesIDList = roleOptions.value.map(role => role.value);
+      props.editRecordRoles.forEach((role: any) => {
+        if (role.id && rolesIDList.indexOf(role.id) === -1) {
+          // 如果角色不在清單中，將其加入到選項列表中
+          roleOptions.value.push({
+            label: role.name || `角色 ${role.id}`,
+            value: role.id,
+          });
+        }
+      });
+    }
   }
   catch (error) {
     console.error('載入角色列表失敗:', error);

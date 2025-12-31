@@ -7,15 +7,19 @@ import { ref } from 'vue';
 
 defineOptions({ name: 'Step3WalletAndFormula' });
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 interface Props {
   formModel: {
+    freezeDuration?: number;
+    orderExpireTime?: number;
+    otpMode?: string;
     minTransactionBalance: number;
     sendSmsOTPIntervals: number;
     authExpireTime: number;
     spinUnfreezeRatio: number;
   };
+  level?: number;
 }
 
 const formRef = ref<FormInstance>();
@@ -41,6 +45,52 @@ defineExpose({
       交易設定
     </a-divider>
 
+    <!-- Level 1 欄位 -->
+    <a-form-item
+      v-if="props.level === 1"
+      label="凍結週期(天)"
+      name="freezeDuration"
+    >
+      <a-input-number
+        v-model:value="formModel.freezeDuration"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="贈禮交易過期時間(天)"
+      name="orderExpireTime"
+    >
+      <a-input-number
+        v-model:value="formModel.orderExpireTime"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="OTP 模式"
+      name="otpMode"
+    >
+      <a-select
+        v-model:value="formModel.otpMode"
+        style="width: 100%"
+      >
+        <a-select-option value="Real">
+          Real
+        </a-select-option>
+        <a-select-option value="Fake">
+          Fake
+        </a-select-option>
+      </a-select>
+    </a-form-item>
+
+    <!-- Level 2 欄位 -->
     <a-form-item label="贈禮最小交易金額" name="minTransactionBalance">
       <a-input-number
         v-model:value="formModel.minTransactionBalance"

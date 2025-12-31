@@ -24,8 +24,10 @@ interface Props {
     onePhoneNumberToAccountCounts: number;
     boSmsAccount: string;
     boSmsPassWord: string;
+    accountPointsWarningValue?: number;
   };
   isEdit?: boolean;
+  level?: number;
 }
 
 const formRef = ref<FormInstance>();
@@ -157,6 +159,20 @@ onMounted(() => {
       <a-input-password
         v-model:value="formModel.boSmsPassWord"
         placeholder="請輸入三竹簡訊商密碼"
+      />
+    </a-form-item>
+
+    <a-form-item
+      v-if="props.level === 1"
+      label="簡訊帳號點數不足告警水位"
+      name="accountPointsWarningValue"
+    >
+      <a-input-number
+        v-model:value="formModel.accountPointsWarningValue"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+        placeholder="請輸入簡訊帳號點數不足告警水位"
       />
     </a-form-item>
   </a-form>

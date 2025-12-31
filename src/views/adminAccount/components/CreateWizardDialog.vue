@@ -47,6 +47,10 @@ const createdAccountId = ref<number | null>(null);
  * Wizard 是否已完成
  */
 const isWizardCompleted = ref<boolean>(false);
+/**
+ * 編輯模式下的完整角色對象數組（用於 Step2 檢查不在清單中的角色）
+ */
+const editRecordRoles = ref<Array<{ id: number; name: string; [key: string]: any }>>([]);
 
 /** Step 狀態管理 */
 const stepStates = reactive<Record<number, StepStatus>>({});
@@ -63,6 +67,9 @@ const step12Ref = ref<InstanceType<typeof Step12AdvancedSettings> | null>(null);
  * Step 3 的預設值
  */
 const getStep3Defaults = () => ({
+  freezeDuration: 7,
+  orderExpireTime: 3,
+  otpMode: 'Real',
   minTransactionBalance: 0,
   sendSmsOTPIntervals: 2,
   authExpireTime: 30,
@@ -78,8 +85,28 @@ const formModel = reactive<{
   roles: number[];
   boSmsAccount: string;
   boSmsPassWord: string;
+  accountPointsWarningValue?: number;
   onePhoneNumberToAccountCounts: number;
+  /** Step 9 欄位 */
+  smsAccount: string;
+  smsPassWord: string;
+  cloudSmsAccount: string;
+  cloudSmsPassWord: string;
+  isOpenOtherSMS?: string;
+  useSMSPlatforms?: string;
+  /** Step 8 欄位 */
+  paymentMode?: string;
+  topUpRate?: number;
+  soNet?: any;
+  nganLuong?: any;
+  moPay?: any;
+  btPay?: any;
+  /** Step 10 欄位（目前未使用，僅保留 slot_prizeDecimalPlaces） */
+  slot_prizeDecimalPlaces?: number;
   /** Step 3 欄位 */
+  freezeDuration?: number;
+  orderExpireTime?: number;
+  otpMode?: string;
   minTransactionBalance: number;
   sendSmsOTPIntervals: number;
   authExpireTime: number;
@@ -97,6 +124,9 @@ const formModel = reactive<{
   lineClientSecret: string;
   facebookID: string;
   /** Step 6 欄位 */
+  myCardWebsite?: string;
+  myCardRedirectVerifyWebsite?: string;
+  myCardCallbackDomain?: string;
   myCard_facServiceID: string;
   myCard_secretKey: string;
   myCard_allowIPs: string;
@@ -109,6 +139,12 @@ const formModel = reactive<{
   reCaptcha_siteKey: string;
   reCaptcha_enabled: boolean;
   /** Step 12 欄位 */
+  isSingleWallet?: boolean;
+  singleWallerVersion?: number;
+  vipDowngradeFormula?: number;
+  levelFormula?: number;
+  activityFormula?: number;
+  levelUpNeedPoint?: number;
   internalSettings: string;
   remoteConfigURLs: string;
 }>({
@@ -120,7 +156,24 @@ const formModel = reactive<{
   roles: [],
   boSmsAccount: '',
   boSmsPassWord: '',
+  accountPointsWarningValue: 3000, // 預設值，確保 lv1 和 lv2 送出相同資料
   onePhoneNumberToAccountCounts: 1,
+  /** Step 9 預設值 */
+  smsAccount: '',
+  smsPassWord: '',
+  cloudSmsAccount: '',
+  cloudSmsPassWord: '',
+  isOpenOtherSMS: undefined,
+  useSMSPlatforms: undefined,
+  /** Step 8 預設值 */
+  paymentMode: 'Real',
+  topUpRate: 100,
+  soNet: undefined,
+  nganLuong: undefined,
+  moPay: undefined,
+  btPay: undefined,
+  /** Step 10 預設值（目前未使用，僅保留 slot_prizeDecimalPlaces） */
+  slot_prizeDecimalPlaces: 2,
   /** Step 3 預設值 */
   ...getStep3Defaults(),
   /** Step 4 預設值 */
@@ -136,6 +189,9 @@ const formModel = reactive<{
   lineClientSecret: '',
   facebookID: '',
   /** Step 8 預設值 */
+  myCardWebsite: '',
+  myCardRedirectVerifyWebsite: '',
+  myCardCallbackDomain: '',
   myCard_facServiceID: '',
   myCard_secretKey: '',
   myCard_allowIPs: '',
@@ -147,7 +203,13 @@ const formModel = reactive<{
   reCaptcha_name: '',
   reCaptcha_siteKey: '',
   reCaptcha_enabled: false,
-  /** Step 8 預設值 */
+  /** Step 12 預設值 */
+  isSingleWallet: false,
+  singleWallerVersion: 1,
+  vipDowngradeFormula: 1,
+  levelFormula: 0,
+  activityFormula: 1,
+  levelUpNeedPoint: undefined,
   internalSettings: '',
   remoteConfigURLs: '',
 });
@@ -188,12 +250,20 @@ const safeJsonParse = (raw?: string) => {
  * 載入編輯資料
  */
 const loadEditData = (record: Partial<any>) => {
-  const roleIds = (record.roles || []).map((r: any) => Number(r.id)).filter(n => Number.isFinite(n));
+  // 保存完整的角色對象（用於 Step2 檢查不在清單中的角色）
+  editRecordRoles.value = (record.roles || []).map((r: any) => ({
+    id: Number(r.id),
+    name: r.name || `角色 ${r.id}`,
+    ...r,
+  })).filter((r: any) => Number.isFinite(r.id));
+
+  const roleIds = editRecordRoles.value.map((r: any) => r.id);
   const internalObj: any = safeJsonParse(record.internalSettings) ?? {};
   const paymentSettings = internalObj?.paymentSettings ?? {};
   const smsSettings = internalObj?.smsSettings ?? {};
   const accountSettings = internalObj?.accountSettings ?? {};
   const transactionSettings = internalObj?.transactionSettings ?? {};
+  const slotGameSettings = internalObj?.slotGameSettings ?? {};
 
   const remoteObj: any = safeJsonParse(record.remoteConfigURLs) ?? {};
 
@@ -224,7 +294,7 @@ const loadEditData = (record: Partial<any>) => {
     firebaseAdminSdkConfig: (record as any)?.firebaseAdminSdkConfig ?? '',
     firebaseConfig: (record as any)?.firebaseConfig ?? '',
     gaKey: '',
-    firebaseSdkConfig: '',
+    firebaseSdkConfig: (record as any)?.firebaseSdkConfig ?? '',
 
     // 客服/Line/Facebook（對齊 vue2：優先使用 remoteConfigURLs，如果沒有則使用 internalSettings）
     serviceEmail: remoteObj?.serviceEmail ?? (record as any)?.serviceEmail ?? '',
@@ -235,6 +305,9 @@ const loadEditData = (record: Partial<any>) => {
     facebookID: remoteObj?.facebookID ?? (record as any)?.facebookID ?? '',
 
     // MyCard 設定
+    myCardWebsite: myCard?.website ?? '',
+    myCardRedirectVerifyWebsite: myCard?.myCardRedirectVerifyWebsite ?? '',
+    myCardCallbackDomain: myCard?.callbackDomain ?? '',
     myCard_facServiceID: myCard?.facServiceID ?? '',
     myCard_secretKey: myCard?.secretKey ?? '',
     myCard_allowIPs: myCard?.allowIPs ?? '',
@@ -242,11 +315,29 @@ const loadEditData = (record: Partial<any>) => {
     myCard_topUpSecretKeyB: myCard?.topUpSecretKeyB ?? '',
     myCard_topUpFacId: myCard?.topUpFacId ?? '',
 
+    // Payment 設定
+    paymentMode: paymentSettings?.paymentMode ?? 'Real',
+    topUpRate: paymentSettings?.topUpRate ?? 100,
+    soNet: paymentSettings?.soNet ?? undefined,
+    nganLuong: paymentSettings?.nganLuong ?? undefined,
+    moPay: paymentSettings?.moPay ?? undefined,
+    btPay: paymentSettings?.btPay ?? undefined,
+
     // 簡訊設定
     boSmsAccount: smsSettings?.boSmsAccount ?? '',
     boSmsPassWord: smsSettings?.boSmsPassWord ?? '',
+    accountPointsWarningValue: smsSettings?.accountPointsWarningValue ?? 3000, // 對齊新建模式的預設值
+    smsAccount: smsSettings?.smsAccount ?? '',
+    smsPassWord: smsSettings?.smsPassWord ?? '',
+    cloudSmsAccount: smsSettings?.cloudSmsAccount ?? '',
+    cloudSmsPassWord: smsSettings?.cloudSmsPassWord ?? '',
+    isOpenOtherSMS: smsSettings?.isOpenOtherSMS ?? undefined,
+    useSMSPlatforms: smsSettings?.useSMSPlatforms ?? undefined,
 
     // 交易設定（從 internalSettings.transactionSettings 讀取，對齊 vue2）
+    freezeDuration: transactionSettings?.freezeDuration?.value ?? 7,
+    orderExpireTime: transactionSettings?.orderExpireTime?.value ?? 3,
+    otpMode: transactionSettings?.otpMode ?? 'Real',
     minTransactionBalance: transactionSettings?.minTransactionBalance ?? 0,
     sendSmsOTPIntervals: transactionSettings?.sendSmsOTPIntervals?.value ?? 2,
     authExpireTime: transactionSettings?.authExpireTime?.value ?? 30,
@@ -258,6 +349,23 @@ const loadEditData = (record: Partial<any>) => {
     reCaptcha_name: (remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.name ?? '',
     reCaptcha_siteKey: (remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.siteKey ?? '',
     reCaptcha_enabled: Boolean((remoteObj?.reCaptchaV2Settings ?? internalObj?.reCaptchaV2Settings)?.enabled),
+
+    // Slot 遊戲設定（目前僅使用 prizeDecimalPlaces）
+    slot_prizeDecimalPlaces: slotGameSettings?.prizeDecimalPlaces ?? 2,
+
+    // Step 8 進階設定欄位（從 record 直接讀取）
+    apiDomain: (record as any)?.apiDomain ?? '',
+    whiteIPList: (record as any)?.whiteIPList ?? '',
+    cdnList: (record as any)?.cdnList ?? '',
+    proxyList: (record as any)?.proxyList ?? '',
+    hashKey: (record as any)?.hashKey ?? '',
+    isSingleWallet: (record as any)?.isSingleWallet ?? false,
+    singleWallerVersion: (record as any)?.singleWallerVersion ?? 1,
+    vipDowngradeFormula: (record as any)?.vipDowngradeFormula ?? 1,
+    levelFormula: (record as any)?.levelFormula ?? 0,
+    activityFormula: (record as any)?.activityFormula ?? 1,
+    levelUpNeedPoint: (record as any)?.levelUpNeedPoint ?? undefined,
+    isAllowMemberNicknameDuplicate: (record as any)?.isAllowMemberNicknameDuplicate ?? false,
 
     // raw json（僅管理員顯示）
     internalSettings: record.internalSettings ?? '',
@@ -354,6 +462,9 @@ const validateCurrentStep = async (): Promise<boolean> => {
       // 這些 step 不需要驗證，直接返回 true
       isValid = true;
       break;
+    case 7: // Step 8: 進階設定（需要驗證金鑰）
+      isValid = await step12Ref.value?.validate() ?? false;
+      break;
     default:
       isValid = true;
       break;
@@ -382,19 +493,24 @@ const isStepClickable = (i: number) => {
  * Step 點擊事件處理
  */
 const onStepClick = async (targetStep: number) => {
+  // 如果點擊的是當前 step，不需要處理
+  if (targetStep === currentStep.value) {
+    return;
+  }
+
   const clickable = isStepClickable(targetStep);
   console.log('[Wizard][click step]', { step: targetStep, clickable, isEdit: Boolean(props.editRecord) });
 
-  // 編輯模式下，檢查當前 step 的驗證狀態
-  if (props.editRecord) {
-    // 檢查當前 step 的驗證機制是否有不符的
-    const ok = await validateCurrentStep();
-    if (!ok) {
-      message.warning('當前步驟驗證失敗，無法切換。請先完成當前步驟的驗證。');
-      console.warn('[Wizard] current step validation failed in edit mode, blocked');
-      return;
-    }
+  // 無論是編輯模式還是創建模式，切換前都要驗證當前 step
+  const ok = await validateCurrentStep();
+  if (!ok) {
+    message.warning('當前步驟驗證失敗，無法切換。請先完成當前步驟的驗證。');
+    console.warn('[Wizard] current step validation failed, blocked');
+    return;
+  }
 
+  // 編輯模式下，驗證通過後允許切換
+  if (props.editRecord) {
     // 驗證通過，更新當前 step 狀態並允許切換
     stepStates[currentStep.value].touched = true;
     stepStates[currentStep.value].valid = true;
@@ -410,18 +526,9 @@ const onStepClick = async (targetStep: number) => {
     return;
   }
 
-  // 若目前 step 尚未驗證通過，不允許離開
-  if (!stepStates[currentStep.value]?.valid) {
-    const ok = await validateCurrentStep();
-    if (!ok) {
-      console.warn('[Wizard] current step invalid, blocked');
-      return;
-    }
-
-    stepStates[currentStep.value].touched = true;
-    stepStates[currentStep.value].valid = true;
-  }
-
+  // 驗證通過，更新當前 step 狀態並允許切換
+  stepStates[currentStep.value].touched = true;
+  stepStates[currentStep.value].valid = true;
   currentStep.value = targetStep;
 };
 
@@ -993,10 +1100,28 @@ const getNextButtonText = computed(() => {
   return '下一步';
 });
 
-const prev = () => {
-  if (currentStep.value > 0) {
-    currentStep.value = currentStep.value - 1;
+/**
+ * 上一步按鈕處理
+ */
+const prev = async () => {
+  // 如果已經在第一步，不需要處理
+  if (currentStep.value <= 0) {
+    return;
   }
+
+  // 切換前驗證當前 step（包括必填欄位驗證）
+  // 如果驗證失敗，阻止返回上一步，要求用戶先完成當前步驟
+  const ok = await validateCurrentStep();
+  if (!ok) {
+    message.warning('當前步驟驗證失敗，無法返回上一步。請先完成當前步驟的驗證。');
+    console.warn('[Wizard] current step validation failed, blocked prev');
+    return;
+  }
+
+  // 驗證通過，更新當前 step 狀態並返回上一步
+  stepStates[currentStep.value].touched = true;
+  stepStates[currentStep.value].valid = true;
+  currentStep.value = currentStep.value - 1;
 };
 
 /**
@@ -1007,6 +1132,9 @@ const resetWizard = () => {
   isSubmitting.value = false;
   createdAccountId.value = null;
   isWizardCompleted.value = false;
+
+  // 重置 editRecordRoles
+  editRecordRoles.value = [];
 
   // 重置 formModel
   Object.assign(formModel, {
@@ -1028,6 +1156,9 @@ const resetWizard = () => {
     lineClientID: '',
     lineClientSecret: '',
     facebookID: '',
+    myCardWebsite: '',
+    myCardRedirectVerifyWebsite: '',
+    myCardCallbackDomain: '',
     myCard_facServiceID: '',
     myCard_secretKey: '',
     myCard_allowIPs: '',
@@ -1041,6 +1172,12 @@ const resetWizard = () => {
     reCaptcha_name: '',
     reCaptcha_siteKey: '',
     reCaptcha_enabled: false,
+    isSingleWallet: false,
+    singleWallerVersion: 1,
+    vipDowngradeFormula: 1,
+    levelFormula: 0,
+    activityFormula: 1,
+    levelUpNeedPoint: undefined,
     internalSettings: '',
     remoteConfigURLs: '',
   });
@@ -1192,16 +1329,19 @@ onBeforeUnmount(() => {
           ref="step1Ref"
           :form-model="formModel"
           :is-edit="Boolean(props.editRecord)"
+          :level="userStore.level"
         />
         <Step2Roles
           v-show="currentStep === 1"
           ref="step2Ref"
           :form-model="formModel"
+          :edit-record-roles="editRecordRoles"
           @update:roles="(value) => { formModel.roles = value; }"
         />
         <Step3WalletAndFormula
           v-show="currentStep === 2"
           :form-model="formModel"
+          :level="userStore.level"
         />
         <Step5FirebaseAnalytics
           v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"

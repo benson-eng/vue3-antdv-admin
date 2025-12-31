@@ -65,6 +65,10 @@ interface Props {
     smsPassWord: string;
     boSmsAccount: string;
     boSmsPassWord: string;
+    cloudSmsAccount?: string;
+    cloudSmsPassWord?: string;
+    isOpenOtherSMS?: string;
+    useSMSPlatforms?: string;
   };
 }
 

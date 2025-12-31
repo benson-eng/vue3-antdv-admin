@@ -28,7 +28,8 @@
     "enabledMaintained": "啟用前台",
     "disabledMaintained": "禁用前台",
     "isMaintaining": "維護",
-    "running": "運行中..."
+    "running": "運行中...",
+    "generate": "產生"
   },
   "action": {
     "operation": "操作",
@@ -71,6 +72,10 @@
     "1": "BoTV作法",
     "2": "幣商版",
     "3": "MechHunter幣商版"
+  },
+  "singleWalletVersionLabel": {
+    "1": "V1",
+    "2": "V2"
   },
   "recaptcha": {
     "keySettings": "人機驗證 設定",

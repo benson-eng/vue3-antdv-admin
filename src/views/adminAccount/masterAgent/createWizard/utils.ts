@@ -120,9 +120,10 @@ export const buildInternalSettings = (account: string, values: any, authLevel: n
   if (values.myCard_topUpFacId !== undefined) {
     myCard.topUpFacId = values.myCard_topUpFacId;
   }
-  const myCardCallbackDomain = myCard.callbackDomain || (website ? `https://mycard.${website}/` : '');
-  const myCardWebsite = myCard.website || 'https://bargain.mycard520.com.tw';
-  const myCardRedirectVerifyWebsite = myCard.myCardRedirectVerifyWebsite || (website ? `https://pd.${website}/` : '');
+  // 優先使用表單中的值，如果沒有則使用預設值
+  const myCardCallbackDomain = values.myCardCallbackDomain || myCard.callbackDomain || (website ? `https://mycard.${website}/` : '');
+  const myCardWebsite = values.myCardWebsite || myCard.website || 'https://bargain.mycard520.com.tw';
+  const myCardRedirectVerifyWebsite = values.myCardRedirectVerifyWebsite || myCard.myCardRedirectVerifyWebsite || (website ? `https://pd.${website}/` : '');
 
   // 處理 reCAPTCHA 設定
   const hasReCAPTCHAValue = values.reCaptcha_secretKey || values.reCaptcha_name || values.reCaptcha_siteKey;
@@ -141,12 +142,29 @@ export const buildInternalSettings = (account: string, values: any, authLevel: n
   const transactionSettings: any = {
     masterAgent: account,
   };
+  // Level 1 欄位：凍結週期（數值，單位為天）
   if (values.freezeDuration !== undefined) {
-    transactionSettings.freezeDuration = values.freezeDuration;
+    transactionSettings.freezeDuration = {
+      unit: 'days',
+      value: Number(values.freezeDuration ?? 7),
+    };
   }
+  // Level 1 欄位：贈禮交易過期時間（數值，單位為天）
+  if (values.orderExpireTime !== undefined) {
+    transactionSettings.orderExpireTime = {
+      unit: 'days',
+      value: Number(values.orderExpireTime ?? 3),
+    };
+  }
+  // Level 1 欄位：OTP 模式
+  if (values.otpMode !== undefined) {
+    transactionSettings.otpMode = values.otpMode;
+  }
+  // Level 2 欄位：贈禮最小交易金額
   if (values.minTransactionBalance !== undefined) {
     transactionSettings.minTransactionBalance = values.minTransactionBalance;
   }
+  // Level 2 欄位：OTP 發送間隔
   if (values.sendSmsOTPIntervals !== undefined) {
     // Vue2 中是物件 { unit: "minutes", value: 2 }，但 Vue3 可能是數字，需要轉換
     if (typeof values.sendSmsOTPIntervals === 'object' && values.sendSmsOTPIntervals !== null) {
@@ -159,6 +177,7 @@ export const buildInternalSettings = (account: string, values: any, authLevel: n
       };
     }
   }
+  // Level 2 欄位：OTP 驗證相關過期時間
   if (values.authExpireTime !== undefined) {
     if (typeof values.authExpireTime === 'object' && values.authExpireTime !== null) {
       transactionSettings.authExpireTime = values.authExpireTime;
@@ -170,15 +189,10 @@ export const buildInternalSettings = (account: string, values: any, authLevel: n
       };
     }
   }
-  if (values.orderExpireTime !== undefined) {
-    transactionSettings.orderExpireTime = values.orderExpireTime;
-  }
   if (values.settlementIntervalUnit !== undefined) {
     transactionSettings.settlementIntervalUnit = values.settlementIntervalUnit;
   }
-  if (values.otpMode !== undefined) {
-    transactionSettings.otpMode = values.otpMode;
-  }
+  // Level 2 欄位：押注解鎖倍率
   if (values.spinUnfreezeRatio !== undefined) {
     transactionSettings.spinUnfreezeRatio = values.spinUnfreezeRatio;
   }
