@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { CloseOutlined, FullscreenExitOutlined, FullscreenOutlined } from '@ant-design/icons-vue';
 import { message, Modal } from 'ant-design-vue';
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import Api from '@/api/backend/adminAccount/masterAgent';
@@ -50,6 +51,10 @@ const isWizardCompleted = ref<boolean>(false);
  * Dialog Key，用於強制重新創建子組件，重置密碼輸入框的眼睛狀態
  */
 const dialogKey = ref<number>(0);
+/**
+ * 視窗是否全屏
+ */
+const isFullscreen = ref<boolean>(false);
 /**
  * 編輯模式下的完整角色對象數組（用於 Step1 檢查不在清單中的角色）
  */
@@ -228,6 +233,15 @@ const validateAccountType = (accountType: string | undefined): accountType is Ac
  */
 const handleClose = () => {
   emit('update:visible', false);
+  // 關閉時重置全屏狀態
+  isFullscreen.value = false;
+};
+
+/**
+ * 切換全屏狀態
+ */
+const toggleFullscreen = () => {
+  isFullscreen.value = !isFullscreen.value;
 };
 
 /**
@@ -1390,6 +1404,8 @@ watch(
       initializeWizard();
       // 更新 dialogKey 以強制重新創建子組件，重置密碼輸入框的眼睛狀態
       dialogKey.value = Date.now();
+      // 重置全屏狀態
+      isFullscreen.value = false;
     }
   },
   { immediate: true },
@@ -1419,14 +1435,43 @@ onBeforeUnmount(() => {
 <template>
   <a-modal
     :open="visible"
-    :title="props.editRecord ? '導引式編輯' : '導引式建立'"
-    width="90%"
     :footer="null"
     :mask-closable="false"
     :keyboard="false"
-    :style="{ top: '40px' }"
+    :width="isFullscreen ? '100vw' : '90%'"
+    :style="isFullscreen ? { top: 0, paddingBottom: 0, maxWidth: '100vw' } : { top: '40px' }"
+    :body-style="isFullscreen ? { height: 'calc(100vh - 55px)', overflow: 'auto', padding: '16px 24px' } : {}"
+    :wrap-class-name="isFullscreen ? 'fullscreen-modal-wrap' : ''"
     @cancel="handleClose"
   >
+    <template #title>
+      <span>{{ props.editRecord ? '導引式編輯' : '導引式建立' }}</span>
+    </template>
+    <template #closeIcon>
+      <div
+        class="wizard-close-actions"
+      >
+        <a-button
+          type="text"
+          size="small"
+          @click.stop="toggleFullscreen"
+        >
+          <template #icon>
+            <FullscreenExitOutlined v-if="isFullscreen" />
+            <FullscreenOutlined v-else />
+          </template>
+        </a-button>
+        <a-button
+          type="text"
+          size="small"
+          @click.stop="handleClose"
+        >
+          <template #icon>
+            <CloseOutlined />
+          </template>
+        </a-button>
+      </div>
+    </template>
     <div class="create-wizard-dialog">
       <a-steps
         :current="currentStep"
@@ -1632,5 +1677,37 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: flex-end;
   margin-top: 16px;
+}
+</style>
+
+<style>
+/* 全屏模式樣式 */
+.fullscreen-modal-wrap {
+  padding: 0 !important;
+}
+
+.fullscreen-modal-wrap .ant-modal {
+  top: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.fullscreen-modal-wrap .ant-modal-content {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-modal-wrap .ant-modal-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.wizard-close-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* 放大 ↔ X */
+  transform: translateX(-15px);
 }
 </style>
