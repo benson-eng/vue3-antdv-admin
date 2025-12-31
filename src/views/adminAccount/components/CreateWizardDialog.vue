@@ -47,6 +47,10 @@ const createdAccountId = ref<number | null>(null);
  */
 const isWizardCompleted = ref<boolean>(false);
 /**
+ * Dialog Key，用於強制重新創建子組件，重置密碼輸入框的眼睛狀態
+ */
+const dialogKey = ref<number>(0);
+/**
  * 編輯模式下的完整角色對象數組（用於 Step1 檢查不在清單中的角色）
  */
 const editRecordRoles = ref<Array<{ id: number; name: string; [key: string]: any }>>([]);
@@ -449,15 +453,22 @@ const validateCurrentStep = async (): Promise<boolean> => {
     case 0: // Step 1: 基本資訊（包含角色）
       isValid = await step1Ref.value?.validate() ?? false;
       break;
-    case 1: // Step 2: 錢包與公式（不需要驗證，原 Step 3）
-    case 2: // Step 3: Firebase Analytics（不需要驗證，原 Step 4）
-    case 3: // Step 4: 社群登入（不需要驗證，原 Step 5）
-    case 4: // Step 5: 金流設定（不需要驗證，原 Step 6）
-    case 5: // Step 6: 人機驗證（不需要驗證，原 Step 7）
-      // 這些 step 不需要驗證，直接返回 true
+    case 1: // Step 2: 錢包與公式（不需要驗證）
       isValid = true;
       break;
-    case 6: // Step 7: 進階設定（需要驗證金鑰，原 Step 8）
+    case 2: // Step 3: Firebase Analytics（Step5FirebaseAnalytics，需要驗證 JSON 格式）
+      isValid = await step5Ref.value?.validate() ?? false;
+      break;
+    case 3: // Step 4: 社群登入（不需要驗證）
+      isValid = true;
+      break;
+    case 4: // Step 5: 金流設定（不需要驗證）
+      isValid = true;
+      break;
+    case 5: // Step 6: 人機驗證（不需要驗證）
+      isValid = true;
+      break;
+    case 6: // Step 7: 進階設定（需要驗證金鑰）
       isValid = await step12Ref.value?.validate() ?? false;
       break;
     default:
@@ -1269,6 +1280,14 @@ const getNextButtonText = computed(() => {
 });
 
 /**
+ * 計算是否顯示「上一步」按鈕
+ * Step 1（currentStep === 0）不顯示，其他步驟都顯示
+ */
+const shouldShowPrevButton = computed(() => {
+  return currentStep.value > 0;
+});
+
+/**
  * 上一步按鈕處理
  */
 const prev = async () => {
@@ -1369,6 +1388,8 @@ watch(
       // Dialog 開啟時初始化
       resetWizard();
       initializeWizard();
+      // 更新 dialogKey 以強制重新創建子組件，重置密碼輸入框的眼睛狀態
+      dialogKey.value = Date.now();
     }
   },
   { immediate: true },
@@ -1486,6 +1507,7 @@ onBeforeUnmount(() => {
         <Step1BasicInfo
           v-show="currentStep === 0"
           ref="step1Ref"
+          :key="dialogKey"
           :form-model="formModel"
           :is-edit="Boolean(props.editRecord)"
           :level="userStore.level"
@@ -1519,6 +1541,7 @@ onBeforeUnmount(() => {
         <Step12AdvancedSettings
           v-show="currentStep === 6 && formModel.accountType === 'masterAgent' && userStore.level === 1"
           ref="step12Ref"
+          :key="dialogKey"
           :form-model="formModel"
           :level="userStore.level"
         />
@@ -1526,7 +1549,11 @@ onBeforeUnmount(() => {
 
       <div class="footer">
         <a-space>
-          <a-button :disabled="currentStep === 0 || isSubmitting" @click="prev">
+          <a-button
+            v-if="shouldShowPrevButton"
+            :disabled="isSubmitting"
+            @click="prev"
+          >
             上一步
           </a-button>
           <a-button

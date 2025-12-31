@@ -1,5 +1,9 @@
 <script setup lang="ts">
+/* eslint-disable vue/no-mutating-props */
+// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
+// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
+import type { Rule } from 'ant-design-vue/es/form';
 import { message } from 'ant-design-vue';
 import { ref } from 'vue';
 
@@ -47,43 +51,90 @@ const formatJson = (fieldName: 'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 
 };
 
 /**
- * 輕量驗證 JSON（僅檢查，不阻擋）
+ * 驗證 JSON 格式
+ * @param value 要驗證的值
+ * @returns 如果為空或格式正確返回 true，否則返回 false
  */
-const validateJson = (value: string): boolean => {
-  if (!value || !value.trim()) { return true; } // 空值視為有效
+const validateJson = (value: string): { valid: boolean; error?: string } => {
+  if (!value || !value.trim()) {
+    return { valid: true }; // 空值視為有效（選填欄位）
+  }
+
   const trimmed = value.trim();
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) { return true; } // 不是 JSON 格式，不檢查
+
+  // 檢查是否看起來像 JSON（以 { 或 [ 開頭）
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return { valid: false, error: 'JSON 格式應以 { 或 [ 開頭' };
+  }
+
   try {
     JSON.parse(trimmed);
-    return true;
+    return { valid: true };
   }
-  catch {
-    return false;
+  catch (error) {
+    return { valid: false, error: 'JSON 格式錯誤，請檢查語法' };
   }
 };
+
+/**
+ * 創建 JSON 驗證規則
+ */
+const createJsonValidator = (): Rule => ({
+  validator: (_rule: any, value: string) => {
+    const result = validateJson(value);
+    if (!result.valid) {
+      return Promise.reject(new Error(result.error || '格式錯誤'));
+    }
+    return Promise.resolve();
+  },
+});
 
 // 暴露方法給父元件
 defineExpose({
   formRef,
-  /** Step 5 不需要驗證，所有欄位都是選填 */
+  /** Step 5 驗證：如果有輸入，必須符合 JSON 格式 */
   validate: async () => {
-    // 輕量檢查 JSON 格式（僅警告，不阻擋）
-    const fields: Array<'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig'> = [
-      'firebaseSdkConfig',
-      'firebaseAdminSdkConfig',
-      'firebaseConfig',
-    ];
-    let hasWarning = false;
-    fields.forEach((field) => {
-      if (!validateJson(props.formModel[field])) {
-        hasWarning = true;
+    // 1️⃣ 先跑 ant-form 的 rules（如果有）
+    if (formRef.value) {
+      try {
+        await formRef.value.validate();
       }
-    });
-    if (hasWarning) {
-      message.warning('部分欄位 JSON 格式可能有誤，但不影響繼續');
+      catch (error) {
+        console.log('[Step5] 表單規則驗證失敗:', error);
+        return false;
+      }
     }
+
+    // 2️⃣ 再「強制驗證 JSON」（關鍵）
+    const jsonFields: Array<{
+      key: keyof Props['formModel'];
+      label: string;
+    }> = [
+      { key: 'firebaseAdminSdkConfig', label: 'Firebase 管理員 SDK 配置' },
+      { key: 'firebaseConfig', label: 'Firebase 設定' },
+    ];
+
+    for (const { key, label } of jsonFields) {
+      const value = props.formModel[key];
+      const result = validateJson(value);
+      if (!result.valid) {
+        message.error(`${label}：${result.error}`);
+        // 確保表單也顯示錯誤狀態
+        if (formRef.value) {
+          try {
+            await formRef.value.validateFields([key as string]).catch(() => {});
+          }
+          catch {
+            // 忽略錯誤，已經顯示了 message.error
+          }
+        }
+        return false; // 🔥 真正阻擋 Wizard
+      }
+    }
+
     return true;
   },
+
 });
 </script>
 
@@ -119,7 +170,11 @@ defineExpose({
       />
     </a-form-item> -->
 
-    <a-form-item label="Firebase 管理員 SDK 配置" name="firebaseAdminSdkConfig">
+    <a-form-item
+      label="Firebase 管理員 SDK 配置"
+      name="firebaseAdminSdkConfig"
+      :rules="[createJsonValidator()]"
+    >
       <template #extra>
         <a-button
           size="small"
@@ -133,11 +188,15 @@ defineExpose({
       <a-textarea
         v-model:value="formModel.firebaseAdminSdkConfig"
         :rows="6"
-        placeholder="請輸入 Firebase 管理員 SDK 配置（JSON 格式或文字）&#10;可稍後補齊"
+        placeholder="請輸入 Firebase 管理員 SDK 配置（JSON 格式或文字）"
       />
     </a-form-item>
 
-    <a-form-item label="Firebase 設定" name="firebaseConfig">
+    <a-form-item
+      label="Firebase 設定"
+      name="firebaseConfig"
+      :rules="[createJsonValidator()]"
+    >
       <template #extra>
         <a-button
           size="small"
@@ -151,7 +210,7 @@ defineExpose({
       <a-textarea
         v-model:value="formModel.firebaseConfig"
         :rows="6"
-        placeholder="請輸入 Firebase 設定（JSON 格式或文字）&#10;可稍後補齊"
+        placeholder="請輸入 Firebase 設定（JSON 格式或文字）"
       />
     </a-form-item>
   </a-form>
