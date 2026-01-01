@@ -33,16 +33,17 @@ const routes: RouteRecordRaw[] = [
           icon: 'ant-design:UserSwitch-outlined',
         },
       },
-      {
-        // Vue2 既有：總代理管理(遊戲) masterAgentX（同頁但隱藏部分設定）
-        path: 'masterAgentX',
-        name: 'AdminAccountMasterAgentX',
-        component: () => import('@/views/adminAccount/masterAgent/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.masterAgentX'),
-          icon: 'ant-design:UserSwitch-outlined',
-        },
-      },
+      // {
+      //   // Vue2 既有：總代理管理(遊戲) masterAgentX（同頁但隱藏部分設定）
+      //   // 這個頁面路徑先留著，但暫時不使用(2026-01-01 備註人:shang)
+      //   path: 'masterAgentX',
+      //   name: 'AdminAccountMasterAgentX',
+      //   component: () => import('@/views/adminAccount/masterAgent/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.masterAgentX'),
+      //     icon: 'ant-design:UserSwitch-outlined',
+      //   },
+      // },
       {
         path: 'currency',
         name: 'AdminAccountCurrency',

@@ -10,12 +10,15 @@
     "currencies": "幣別",
     "isSingleWallet": "單一錢包",
     "apiDomain": "API Domain",
+    "hashKey": "金鑰",
     "whiteIPList": "白名單",
     "cdnList": "CDN名單",
     "accountStatus": "帳戶狀態",
     "adminMaintained": "後台維護",
     "createDatetime": "建立日期",
-    "lastLoginDatetime": "最後登入時間"
+    "lastLoginDatetime": "最後登入時間",
+    "prefix": "前綴",
+    "lastLoginIP": "最後登入IP"
   },
   "labels": {
     "input": "請輸入帳號",
@@ -43,15 +46,20 @@
   "dialog": {
     "editMasterAgent": "編輯總代理",
     "createMasterAgent": "新增總代理",
-    "changePassword": "變更密碼：{account}"
+    "changePassword": "變更密碼：{account}",
+    "editAgent": "編輯代理商",
+    "createAgent": "新增代理商"
   },
   "message": {
     "updateFailed": "更新失敗",
+    "updateSuccess": "更新成功",
     "changePasswordSuccess": "變更成功",
     "editSuccess": "編輯成功",
     "createSuccess": "新增成功",
     "enableBackendSuccess": "成功{status} {account} 的後台",
-    "enableFrontendSuccess": "成功{status} {account} 的前台"
+    "enableFrontendSuccess": "成功{status} {account} 的前台",
+    "loadRolesFailed": "載入角色清單失敗，請稍後再試",
+    "apiSettingsSaveFailed": "API 設定儲存失敗"
   },
   "confirm": {
     "enableMaintained": "確認要{action} {account} 的前台？",
@@ -88,5 +96,22 @@
     "enabled": "啟用開關",
     "enableSettings": "啟用設定",
     "extraHint": "當所有金鑰資訊填寫完成後，才可啟用人機驗證"
+  },
+  "rules": {
+    "apiDomain": "請輸入 API Domain",
+    "accountRequired": "請輸入帳號",
+    "fourFieldsRequired": "請完整填寫設定欄位，或全部留空",
+    "websiteProtocol": "Website 不可包含 http/https",
+    "whiteIPListLength": "White IP List 長度不可超過 255",
+    "newPasswordRequired": "請輸入新密碼"
+  },
+  "page": {
+    "agentManagement": "代理商管理",
+    "masterAgent": "站長",
+    "selectMasterAgent": "請選擇站長",
+    "selectMasterAgentFirst": "請先選擇總代理"
+  },
+  "field": {
+    "newPassword": "新密碼"
   }
 }

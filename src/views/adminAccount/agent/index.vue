@@ -4,17 +4,20 @@ import type { TableColumnItem, TableListItem } from './columns';
 import type { AgentFormValues } from './formSchemas';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal, Switch, Tag } from 'ant-design-vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref } from 'vue';
 import AgentApi from '@/api/backend/adminAccount/agent';
 import MasterAgentApi from '@/api/backend/adminAccount/masterAgent';
 import { useTable } from '@/components/core/dynamic-table';
+import { useI18n } from '@/hooks/useI18n';
 import { useFormModal } from '@/hooks/useModal';
 import { useUserStore } from '@/store/modules/user';
-import { baseColumns } from './columns';
-import { getAgentSchemas, passwordSchemas } from './formSchemas';
+import { getBaseColumns } from './columns';
+import { getAgentSchemas, getPasswordSchemas, loadRolesOnce } from './formSchemas';
 
 defineOptions({ name: 'AdminAccountAgent' });
 
+const { t } = useI18n('page.adminAccount');
+const { t: tCommon } = useI18n();
 const userStore = useUserStore();
 const canCreate = computed(() => userStore.level === 2 || userStore.level === 4);
 const canEditApiSettings = computed(() => userStore.level <= 2);
@@ -29,13 +32,7 @@ const masterAgentOptions = ref<{ label: string; value: string }[]>([]);
 const selectedMasterAgent = ref<string>(userStore.level >= 4 ? String(userStore.masterAgent || '') : '');
 
 const searchKeyword = ref<string>('');
-const searchIsEnabled = ref<'true' | 'false' | undefined>(undefined);
 const searchDateRange = ref<[Dayjs, Dayjs] | undefined>(undefined);
-
-const statusOptions = [
-  { label: '啟用', value: 'true' },
-  { label: '停用', value: 'false' },
-];
 
 interface TableListResponse {
   items: TableListItem[];
@@ -101,7 +98,7 @@ const validateAndNormalizeApiSettings = (args: {
 
   const invalidProtocolRegex = /^(http:\/\/|https:\/\/)/i;
   if (website && invalidProtocolRegex.test(website)) {
-    throw new Error('Website 不可包含 http/https');
+    throw new Error(t('rules.websiteProtocol'));
   }
 
   const isAllEmpty = [hashKey, apiDomain, whiteIPList, website].every(v => !v);
@@ -113,11 +110,11 @@ const validateAndNormalizeApiSettings = (args: {
   const hasAny = [hashKey, apiDomain, whiteIPList, website].some(v => !!v);
   const hasAll = [hashKey, apiDomain, whiteIPList, website].every(v => !!v);
   if (hasAny && !hasAll) {
-    throw new Error('請完整填寫設定欄位，或全部留空');
+    throw new Error(t('rules.fourFieldsRequired'));
   }
 
   if (whiteIPList && whiteIPList.length > 255) {
-    throw new Error('White IP List 長度不可超過 255');
+    throw new Error(t('rules.whiteIPListLength'));
   }
 
   const websitePayload = website ? `${website}-${args.masterAgent}` : '';
@@ -170,6 +167,13 @@ const loadMasterAgentOptions = async () => {
       .map((i: any) => String(i?.account ?? '').trim())
       .filter(Boolean)
       .map(account => ({ label: account, value: account }));
+
+    // 自動帶入第一個選項
+    if (masterAgentOptions.value.length > 0 && !selectedMasterAgent.value) {
+      selectedMasterAgent.value = masterAgentOptions.value[0].value;
+      // 自動觸發表格重新載入
+      tableInstance?.reload();
+    }
   }
   catch (e) {
     console.error(e);
@@ -185,15 +189,31 @@ const onMasterAgentChanged = () => {
   tableInstance?.reload();
 };
 
+const calculateTableScrollX = () => {
+  /** 帳號 + 名稱 + 前綴 + 角色 + Website + API Domain + White IP List */
+  const baseColumnsWidth = 140 + 140 + 80 + 220 + 200 + 200 + 220;
+  /** 建立時間 + 最後登入時間 + 最後登入 IP */
+  const datetimeColumnsWidth = 180 + 180 + 160;
+  /** 啟用 + 狀態 */
+  const statusColumnsWidth = 120 + 120;
+  /** 操作 */
+  const actionColumnWidth = 200;
+  const totalWidth = baseColumnsWidth + datetimeColumnsWidth + statusColumnsWidth + actionColumnWidth;
+  /** 加上一些緩衝空間，確保不會出現跑版 */
+  return totalWidth + 50;
+};
+
 const loadTableData = async (params: LoadDataParams): Promise<TableListResponse> => {
   const masterAgent = String(selectedMasterAgent.value || '').trim();
   if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  const listRaw = await AgentApi.getAgentListByMasterAgent({ masterAgent });
+  const response = await AgentApi.getAgentListByMasterAgent({ masterAgent });
+  // Vue2 版本返回 { data: [...] }，需要解構
+  const listRaw = (response as any)?.data ?? response;
   const listBase = (Array.isArray(listRaw) ? listRaw : [])
-    .filter((a: any) => a?.name !== `${masterAgent}agent`)
+    // .filter((a: any) => a?.name !== `${masterAgent}agent`)
     .map((a: any) => ({
       ...a,
       id: Number(a.id),
@@ -206,7 +226,9 @@ const loadTableData = async (params: LoadDataParams): Promise<TableListResponse>
     }));
 
   const accounts = listBase.map((a: any) => a.account).filter(Boolean);
-  const apiSettings = accounts.length ? await AgentApi.getAgentApiSettings({ agentAccounts: accounts }) : [];
+  const apiSettingsResponse = accounts.length ? await AgentApi.getAgentApiSettings({ agentAccounts: accounts }) : null;
+  // Vue2 版本返回 { data: [...] }，需要解構
+  const apiSettings = (apiSettingsResponse as any)?.data ?? (Array.isArray(apiSettingsResponse) ? apiSettingsResponse : []);
   const apiMap: Record<string, any> = {};
   (Array.isArray(apiSettings) ? apiSettings : []).forEach((item: any) => {
     const acc = String(item?.account ?? '');
@@ -234,11 +256,6 @@ const loadTableData = async (params: LoadDataParams): Promise<TableListResponse>
       const acc = String(i?.account ?? '').toLowerCase();
       const name = String(i?.name ?? '').toLowerCase();
       if (!acc.includes(keyword) && !name.includes(keyword)) {
-        return false;
-      }
-    }
-    if (searchIsEnabled.value !== undefined) {
-      if (Boolean(i?.isEnabled) !== (searchIsEnabled.value === 'true')) {
         return false;
       }
     }
@@ -285,12 +302,12 @@ const buildUpdatePayload = (record: Partial<TableListItem>, overrides: Record<st
 const toggleEnabled = async (record: TableListItem, checked: boolean) => {
   try {
     await AgentApi.updateAgentAccount(buildUpdatePayload(record, { isEnabled: checked }));
-    message.success('更新成功');
+    message.success(t('message.updateSuccess'));
     tableInstance?.reload();
   }
   catch (e) {
     console.error(e);
-    message.error('更新失敗');
+    message.error(t('message.updateFailed'));
     tableInstance?.reload();
   }
 };
@@ -301,19 +318,19 @@ const openPasswordModal = async (record: Partial<TableListItem>) => {
   }
   await showModal({
     modalProps: {
-      title: `變更密碼：${record.account}`,
+      title: t('dialog.changePassword', { account: record.account }),
       width: 520,
       async onFinish(values) {
         await AgentApi.updateAgentAccountPassword({
           account: String(record.account),
           newPassword: String(values.newPassword),
         });
-        message.success('變更成功');
+        message.success(t('message.changePasswordSuccess'));
       },
     },
     formProps: {
       labelWidth: 120,
-      schemas: passwordSchemas,
+      schemas: getPasswordSchemas(t),
     },
   });
 };
@@ -322,13 +339,59 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
   const isEdit = Boolean(record?.id);
   const masterAgent = String(selectedMasterAgent.value || '').trim();
   if (!masterAgent) {
-    message.warning('請先選擇總代理');
+    message.warning(t('page.selectMasterAgentFirst'));
     return;
   }
 
+  // Step 2: 在開窗前先確保 roles 已載入
+  let rolesOptions: Array<{ label: string; value: number }> = [];
+  try {
+    rolesOptions = await loadRolesOnce();
+  }
+  catch (error) {
+    console.error('載入角色清單失敗:', error);
+    message.error(t('message.loadRolesFailed'));
+    return;
+  }
+
+  // Step 3: 編輯狀態 roles 對齊（在開窗前先處理，避免重複觸發）
+  // 如果角色不存在，將它們添加到選項中（與站台設定一樣）
+  let finalRolesOptions = [...rolesOptions];
+  let finalRoleIds: number[] = [];
+
+  if (isEdit && record) {
+    const roleIds = (record.roles || []).map((r: any) => Number(r.id)).filter(n => Number.isFinite(n));
+    const roleOptionsValues = rolesOptions.map(r => r.value);
+
+    // 找出不存在的角色
+    const missingRoleIds = roleIds.filter(id => !roleOptionsValues.includes(id));
+
+    // 將不存在的角色添加到選項中
+    if (missingRoleIds.length > 0) {
+      const missingRoles = (record.roles || []).filter((r: any) => {
+        const roleId = Number(r.id);
+        return Number.isFinite(roleId) && missingRoleIds.includes(roleId);
+      });
+
+      const missingRoleOptions = missingRoles.map((r: any) => ({
+        label: r.name ? `${r.name}(${r.id})` : String(r.id),
+        value: Number(r.id),
+      }));
+
+      // 將不存在的角色添加到選項中
+      finalRolesOptions = [...rolesOptions, ...missingRoleOptions];
+    }
+
+    // 使用完整的 roleIds（包括不存在的角色）
+    finalRoleIds = roleIds;
+  }
+
+  // 使用 ref 保存表單實例，用於驗證
+  const formInstanceRef = ref<any>(null);
+
   const [formRef] = await showModal({
     modalProps: {
-      title: isEdit ? '編輯代理商' : '新增代理商',
+      title: isEdit ? t('dialog.editAgent') : t('dialog.createAgent'),
       width: 860,
       async onFinish(values: AgentFormValues) {
         const roleIds = Array.isArray(values.roles)
@@ -337,7 +400,25 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
 
         const account = String(values.account ?? '').trim();
         if (!account) {
-          throw new Error('請輸入帳號');
+          throw new Error(t('rules.accountRequired'));
+        }
+
+        // Step 4: API 設定四欄聯動驗證（只要其中一個有輸入，另外三個都要有輸入）
+        if (canEditApiSettings.value) {
+          const website = String(values.website ?? '').trim();
+          const hashKey = String(values.hashKey ?? '').trim();
+          const apiDomain = String(values.apiDomain ?? '').trim();
+          const whiteIPList = String(values.whiteIPList ?? '').trim();
+
+          // 檢查是否有任何一個欄位有值
+          const hasAny = [website, hashKey, apiDomain, whiteIPList].some(v => !!v);
+          // 檢查是否全部都有值
+          const hasAll = [website, hashKey, apiDomain, whiteIPList].every(v => !!v);
+
+          // 四欄聯動：有填就必須全部填
+          if (hasAny && !hasAll) {
+            throw new Error(t('rules.fourFieldsRequired'));
+          }
         }
 
         if (isEdit && record?.id) {
@@ -349,15 +430,22 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
             roles: roleIds,
           });
 
-          await persistAgentApiSettings({
-            agentAccount: account,
-            masterAgent,
-            values,
-            hasExistingSettings: Boolean((record as any)?.hashKey || (record as any)?.apiDomain || (record as any)?.whiteIPList || (record as any)?.website),
-            oldHashKey: (record as any)?.hashKey,
-          });
+          try {
+            await persistAgentApiSettings({
+              agentAccount: account,
+              masterAgent,
+              values,
+              hasExistingSettings: Boolean((record as any)?.hashKey || (record as any)?.apiDomain || (record as any)?.whiteIPList || (record as any)?.website),
+              oldHashKey: (record as any)?.hashKey,
+            });
+          }
+          catch (error: any) {
+            const errorMsg = error?.message || t('message.apiSettingsSaveFailed');
+            message.error(errorMsg);
+            throw error;
+          }
 
-          message.success('編輯成功');
+          message.success(t('message.editSuccess'));
         }
         else {
           await AgentApi.createAgentAccount({
@@ -371,14 +459,21 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
             masterAgentAccount: masterAgent,
           });
 
-          await persistAgentApiSettings({
-            agentAccount: account,
-            masterAgent,
-            values,
-            hasExistingSettings: false,
-          });
+          try {
+            await persistAgentApiSettings({
+              agentAccount: account,
+              masterAgent,
+              values,
+              hasExistingSettings: false,
+            });
+          }
+          catch (error: any) {
+            const errorMsg = error?.message || t('message.apiSettingsSaveFailed');
+            message.error(errorMsg);
+            throw error;
+          }
 
-          message.success('新增成功');
+          message.success(t('message.createSuccess'));
         }
 
         tableInstance?.reload();
@@ -386,17 +481,34 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
     },
     formProps: {
       labelWidth: 130,
-      schemas: getAgentSchemas({ canEditApiSettings: canEditApiSettings.value }),
+      // 設定表單驗證觸發時機
+      validateTrigger: ['blur', 'change'],
+      schemas: getAgentSchemas({
+        canEditApiSettings: canEditApiSettings.value,
+        pt: t,
+        masterAgent,
+        onHashKeyGen: generateBackendKey,
+        rolesOptions: finalRolesOptions, /**
+                                          * 傳入角色選項（包含不存在的角色，已添加到選項中）
+                                          */
+        getFormInstance: () => formInstanceRef.value, // 傳入獲取表單實例的函數
+      }),
     },
   });
 
+  // 保存表單實例引用，用於驗證
+  formInstanceRef.value = formRef;
+
+  // 使用 nextTick 確保表單已完全初始化後再設定值
+  await nextTick();
+
   if (isEdit && record) {
-    const roleIds = (record.roles || []).map((r: any) => Number(r.id)).filter(n => Number.isFinite(n));
+    // 使用完整的 roleIds（包含不存在的角色，已添加到選項中）
     formRef?.setFieldsValue({
       account: record.account,
       name: record.name,
       prefix: (record as any).prefix ?? '',
-      roles: roleIds,
+      roles: finalRoleIds,
       website: normalizeWebsiteForForm((record as any)?.website),
       hashKey: (record as any)?.hashKey ? '**************' : '',
       apiDomain: (record as any)?.apiDomain ?? '',
@@ -405,6 +517,7 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
     formRef?.updateSchema([{ field: 'account', componentProps: { disabled: true } }]);
   }
   else {
+    // 新增時，API 設定欄位預設為空
     formRef?.setFieldsValue({
       website: '',
       hashKey: '',
@@ -416,32 +529,36 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
 };
 
 const columns = ref<TableColumnItem[]>([
-  ...baseColumns,
+  ...getBaseColumns(t),
   {
-    title: '啟用',
+    title: t('labels.enable'),
     dataIndex: 'isEnabled',
     width: 120,
+    align: 'center',
     hideInSearch: true,
     customRender: ({ record }) => (
       <Switch
         checked={Boolean(record.isEnabled)}
-        checkedChildren="啟用"
-        unCheckedChildren="停用"
+        checkedChildren={t('labels.enable')}
+        unCheckedChildren={t('labels.disable')}
         onChange={checked => toggleEnabled(record, Boolean(checked))}
       />
     ),
   },
   {
-    title: '狀態',
+    title: t('column.accountStatus'),
     dataIndex: 'statusTag',
     width: 120,
+    align: 'center',
     hideInSearch: true,
     customRender: ({ record }) => (
-      <Tag color={record.isEnabled ? 'green' : 'red'}>{record.isEnabled ? '啟用' : '停用'}</Tag>
+      <Tag color={record.isEnabled ? 'green' : 'red'}>
+        {record.isEnabled ? t('labels.enable') : t('labels.disable')}
+      </Tag>
     ),
   },
   {
-    title: '操作',
+    title: t('action.operation'),
     dataIndex: 'ACTION',
     width: 200,
     align: 'center',
@@ -449,12 +566,12 @@ const columns = ref<TableColumnItem[]>([
     hideInSearch: true,
     actions: ({ record }) => [
       {
-        label: '編輯',
+        label: t('action.edit'),
         type: 'link',
         onClick: () => openFormModal(record),
       },
       {
-        label: '改密碼',
+        label: t('action.changePassword'),
         type: 'link',
         onClick: () => openPasswordModal(record),
       },
@@ -469,22 +586,23 @@ void Modal;
 <template>
   <DynamicTable
     row-key="id"
-    header-title="代理商管理"
+    :header-title="t('page.agentManagement')"
     :data-request="loadTableData"
     :columns="columns"
+    :scroll="{ x: calculateTableScrollX() }"
     :form-props="{ schemas: [] }"
   >
     <template #form-formHeader>
       <a-col :span="24">
         <a-row :gutter="16" align="middle">
           <a-col :span="6">
-            <a-form-item label="總代理" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+            <a-form-item :label="t('page.masterAgent')" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
               <a-select
                 v-if="canSelectMasterAgent"
                 v-model:value="selectedMasterAgent"
                 :options="masterAgentOptions"
-                allow-clear
-                placeholder="請選擇總代理"
+                :allow-clear="false"
+                :placeholder="t('page.selectMasterAgent')"
                 @change="onMasterAgentChanged"
               />
               <a-input v-else v-model:value="selectedMasterAgent" disabled />
@@ -492,20 +610,19 @@ void Modal;
           </a-col>
 
           <a-col :span="6">
-            <a-form-item label="帳號/名稱" class="mb-0" :label-col="{ span: 7 }" :wrapper-col="{ span: 17 }">
-              <a-input v-model:value="searchKeyword" placeholder="請輸入關鍵字" />
+            <a-form-item :label="t('column.account')" class="mb-0" :label-col="{ span: 7 }" :wrapper-col="{ span: 17 }">
+              <a-input v-model:value="searchKeyword" :placeholder="t('labels.input')" />
             </a-form-item>
           </a-col>
 
           <a-col :span="6">
-            <a-form-item label="啟用" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-select v-model:value="searchIsEnabled" :options="statusOptions" allow-clear placeholder="全部" />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="6">
-            <a-form-item label="建立時間" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-range-picker v-model:value="searchDateRange" style="width: 100%" :allow-clear="true" />
+            <a-form-item :label="t('column.createDatetime')" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+              <a-range-picker
+                v-model:value="searchDateRange"
+                style="width: 100%"
+                :allow-clear="true"
+                :placeholder="[tCommon('startTime'), tCommon('dueTime')]"
+              />
             </a-form-item>
           </a-col>
         </a-row>
@@ -515,13 +632,9 @@ void Modal;
     <template #toolbar>
       <a-space>
         <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
-          新增
+          {{ t('button.add') }}
         </a-button>
       </a-space>
     </template>
   </DynamicTable>
 </template>
-
-
-
-

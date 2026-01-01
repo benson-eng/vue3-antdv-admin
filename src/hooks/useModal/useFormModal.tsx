@@ -46,7 +46,26 @@ export function useFormModal<T extends object = Recordable>() {
       content: () => {
         const _formProps = Object.assign({}, { showActionButtonGroup: false }, formProps);
 
-        return <SchemaForm ref={formRef} {..._formProps}></SchemaForm>;
+        return (
+          <div>
+            {/* Trap inputs 用於阻止瀏覽器自動填充（Step 5） */}
+            <input
+              type="text"
+              autocomplete="username"
+              name="fake-username"
+              style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}
+              tabIndex={-1}
+            />
+            <input
+              type="password"
+              autocomplete="current-password"
+              name="fake-password"
+              style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}
+              tabIndex={-1}
+            />
+            <SchemaForm ref={formRef} {..._formProps}></SchemaForm>
+          </div>
+        );
       },
     });
 
