@@ -16,8 +16,6 @@ const props = defineProps<Props>();
 
 interface Props {
   formModel: {
-    freezeDuration?: number;
-    orderExpireTime?: number;
     paymentMode?: string;
     topUpRate?: number;
     myCardWebsite?: string;
@@ -188,40 +186,6 @@ defineExpose({
         <span>此區塊為進階設定，僅限系統管理員使用。錯誤設定可能導致系統異常。</span>
       </template>
     </a-alert>
-
-    <!-- 交易設定 -->
-    <a-divider
-      v-if="props.level === 1"
-      orientation="left"
-    >
-      交易設定
-    </a-divider>
-
-    <a-form-item
-      v-if="props.level === 1"
-      label="凍結週期(天)"
-      name="freezeDuration"
-    >
-      <a-input-number
-        v-model:value="formModel.freezeDuration"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-      />
-    </a-form-item>
-
-    <a-form-item
-      v-if="props.level === 1"
-      label="贈禮交易過期時間(天)"
-      name="orderExpireTime"
-    >
-      <a-input-number
-        v-model:value="formModel.orderExpireTime"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-      />
-    </a-form-item>
 
     <!-- 金流設定 -->
     <a-divider orientation="left">

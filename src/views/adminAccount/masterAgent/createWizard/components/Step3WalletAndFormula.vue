@@ -2,7 +2,8 @@
 /* eslint-disable vue/no-mutating-props */
 // 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
 // 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
-import type { FormInstance, Rule } from 'ant-design-vue';
+import type { FormInstance } from 'ant-design-vue';
+import type { Rule } from 'ant-design-vue/es/form';
 import { ref } from 'vue';
 
 defineOptions({ name: 'Step3WalletAndFormula' });
@@ -13,6 +14,8 @@ interface Props {
   formModel: {
     minTransactionBalance: number;
     spinUnfreezeRatio: number;
+    freezeDuration: number;
+    orderExpireTime: number;
   };
 }
 
@@ -40,6 +43,12 @@ const rules: Record<string, Rule[]> = {
   ],
   spinUnfreezeRatio: [
     { required: true, validator: createNumberValidator('押注解鎖倍率'), trigger: 'blur' },
+  ],
+  freezeDuration: [
+    { required: true, validator: createNumberValidator('凍結週期(天)'), trigger: 'blur' },
+  ],
+  orderExpireTime: [
+    { required: true, validator: createNumberValidator('贈禮交易過期時間(天)'), trigger: 'blur' },
   ],
 };
 
@@ -90,6 +99,30 @@ defineExpose({
         :precision="0"
         style="width: 100%"
         placeholder="請輸入押注解鎖倍率"
+      />
+    </a-form-item>
+
+    <a-form-item
+      label="凍結週期(天)"
+      name="freezeDuration"
+    >
+      <a-input-number
+        v-model:value="formModel.freezeDuration"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+
+    <a-form-item
+      label="贈禮交易過期時間(天)"
+      name="orderExpireTime"
+    >
+      <a-input-number
+        v-model:value="formModel.orderExpireTime"
+        :min="0"
+        :precision="0"
+        style="width: 100%"
       />
     </a-form-item>
   </a-form>
