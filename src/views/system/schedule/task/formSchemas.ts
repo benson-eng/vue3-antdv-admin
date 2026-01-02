@@ -112,11 +112,11 @@ export const taskSchemas: FormSchema<API.TaskDto>[] = [
     field: 'status',
     component: 'RadioGroup',
     defaultValue: 1,
-    label: '状态',
+    label: '狀態',
     componentProps: {
       options: [
         {
-          label: '运行',
+          label: '運行',
           value: 1,
         },
         {

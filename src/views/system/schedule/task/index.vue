@@ -19,34 +19,34 @@
       </template>
       <template #expandedRowRender="{ record }">
         <Descriptions :column="1">
-          <Descriptions.Item label="任务编号"># {{ record.id }}</Descriptions.Item>
-          <Descriptions.Item label="执行次数">
-            {{ record.limit > 0 ? `仅 ${record.limit} 次` : '无次数限制' }}
+          <Descriptions.Item label="任務編號"># {{ record.id }}</Descriptions.Item>
+          <Descriptions.Item label="執行次數">
+            {{ record.limit > 0 ? `僅 ${record.limit} 次` : '無次數限制' }}
           </Descriptions.Item>
           <Descriptions.Item v-if="record.type === 1" label="执行间隔">
             每{{ record.every }}毫秒执行一次
           </Descriptions.Item>
           <Descriptions.Item v-else label="Cron表达式">
             <Tooltip>
-              <template #title>秒 分 小时 日期 月份 星期 年(可选)</template>
+              <template #title>秒 分 小時 日期 月份 星期 年(可選)</template>
               {{ record.cron }}
             </Tooltip>
           </Descriptions.Item>
-          <Descriptions.Item v-if="record.type === 0" label="执行时间段">
+          <Descriptions.Item v-if="record.type === 0" label="執行時間段">
             <span>{{ parseExecTime(record) }}</span>
           </Descriptions.Item>
-          <Descriptions.Item label="执行操作">
+          <Descriptions.Item label="執行操作">
             <Popconfirm
-              title="确认手动执行一次该任务吗?"
+              title="確認手動執行一次該任務嗎?"
               :disabled="!$auth('system:task:once')"
               @confirm="handleOnce(record)"
             >
               <a-button type="link" size="small" :disabled="!$auth('system:task:once')">
-                <template #icon><ToolOutlined /></template>仅一次
+                <template #icon><ToolOutlined /></template>僅一次
               </a-button>
             </Popconfirm>
             <Popconfirm
-              title="确认运行该任务吗?"
+              title="確認運行該任務嗎?"
               :disabled="!$auth('system:task:start') || !(record.status === 0)"
               @confirm="handleStart(record)"
             >
@@ -55,11 +55,11 @@
                 size="small"
                 :disabled="!$auth('system:task:start') || !(record.status === 0)"
               >
-                <template #icon><CaretRightOutlined /></template>运行
+                <template #icon><CaretRightOutlined /></template>運行
               </a-button>
             </Popconfirm>
             <Popconfirm
-              title="确认停止该任务吗?"
+              title="確認停止該任務嗎?"
               :disabled="!$auth('system:task:stop') || !(record.status === 1)"
               @confirm="handleStop(record)"
             >

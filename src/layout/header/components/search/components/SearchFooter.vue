@@ -2,16 +2,16 @@
   <div class="flex items-center">
     <span class="mr-14px">
       <EnterOutlined class="icon text-15px p-2px mr-3px" />
-      确认
+      確認
     </span>
     <span class="mr-14px">
       <ArrowUpOutlined class="icon text-15px p-2px mr-5px" />
       <ArrowDownOutlined class="icon text-15px p-2px mr-3px" />
-      切换
+      切換
     </span>
     <span>
       <CloseOutlined class="icon text-15px p-2px mr-3px" />
-      关闭
+      關閉
     </span>
   </div>
 </template>

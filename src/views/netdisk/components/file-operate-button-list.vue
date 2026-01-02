@@ -1,10 +1,10 @@
 <template>
   <Space>
     <a-button v-if="copyMode || cutMode" :disabled="disabledPasteButton" @click="handlePaste">
-      <DeliveredProcedureOutlined />粘贴
+      <DeliveredProcedureOutlined />粘貼
     </a-button>
     <Dropdown size="small">
-      <Tooltip title="注意：复制或剪切时会覆盖重名文件" placement="top">
+      <Tooltip title="注意：複製或剪切時會覆蓋重名文件" placement="top">
         <a-button color="#e6a23c" :disabled="disabledMultiOperateButton">
           <template #icon><MenuOutlined /></template>
           批量操作
@@ -136,7 +136,7 @@
     } else if (command === 'delete') {
       // delete
       Modal.confirm({
-        title: '你确定要删除吗?',
+        title: '你確定要刪除嗎?',
         icon: createVNode(ExclamationCircleOutlined),
         onOk: handleDelete,
       });

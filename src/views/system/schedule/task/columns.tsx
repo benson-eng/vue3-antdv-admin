@@ -18,7 +18,7 @@ const getStatusInfo = (status) => {
     case 0:
       return '停止';
     case 1:
-      return '运行';
+      return '運行';
   }
 };
 

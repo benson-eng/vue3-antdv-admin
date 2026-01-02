@@ -53,7 +53,7 @@ const removeTab = () => {
   // 基本檢查：如果只有一個 tab，不允許關閉
   // 注意：tabsViewStore.closeCurrentTab 中已有更詳細的保護邏輯（首頁保護、Wizard 保護）
   if (tabsList.value.length === 1) {
-    return message.warning('这已经是最后一页，不能再关闭了！');
+    return message.warning('這已經是最後一頁，不能再關閉了！');
   }
   // tabsViewMutations.closeCurrentTabs(route)
   tabsViewStore.closeCurrentTab(props.tabItem);

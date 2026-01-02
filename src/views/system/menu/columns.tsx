@@ -85,7 +85,7 @@ export const baseColumns: TableColumnItem[] = [
       const show = record.show;
       const enable = ~~show === 1;
       const color = enable ? 'green' : 'red';
-      const text = enable ? '显示' : '隐藏';
+      const text = enable ? '顯示' : '隱藏';
       return <Tag color={color}>{text}</Tag>;
     },
   },

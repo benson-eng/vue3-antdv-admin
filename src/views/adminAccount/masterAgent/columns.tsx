@@ -39,6 +39,29 @@ export const getBaseColumns = (
       ),
     },
     {
+      title: pt('column.adminMaintained'), // Vue2: adminAccount.column.adminMaintained = "後台維護"
+      dataIndex: 'isEnabled',
+      width: 100,
+      formItemProps: {
+        component: 'Select',
+        componentProps: {
+          options: [
+            { label: pt('labels.all'), value: '' }, // 使用空字串代表「全部」，以便 Select 正確顯示為已選中
+            { label: pt('labels.enable'), value: true },
+            { label: pt('labels.disable'), value: false },
+          ],
+          allowClear: false, // 移除清除按鈕，因為預設就是「全部」
+          placeholder: pt('labels.all'),
+        },
+        defaultValue: '', // 預設值為「全部」（空字串）
+      },
+      customRender: ({ record }) => (
+        <Tag color={record.isEnabled ? 'green' : 'red'}>
+          {record.isEnabled ? pt('labels.enable') : pt('labels.disable')}
+        </Tag>
+      ),
+    },
+    {
       title: pt('column.roles'), // Vue2: adminAccount.column.roles = "角色"
       dataIndex: 'roles',
       width: 220,
@@ -133,28 +156,6 @@ export const getBaseColumns = (
           style: { width: '100%' },
         },
       },
-    },
-    {
-      title: pt('column.adminMaintained'), // Vue2: adminAccount.column.adminMaintained = "後台維護"
-      dataIndex: 'isEnabled',
-      width: 100,
-      formItemProps: {
-        component: 'Select',
-        componentProps: {
-          options: [
-            { label: pt('labels.all'), value: undefined },
-            { label: pt('labels.enable'), value: true },
-            { label: pt('labels.disable'), value: false },
-          ],
-          allowClear: true,
-          placeholder: pt('labels.all'),
-        },
-      },
-      customRender: ({ record }) => (
-        <Tag color={record.isEnabled ? 'green' : 'red'}>
-          {record.isEnabled ? pt('labels.enable') : pt('labels.disable')}
-        </Tag>
-      ),
     },
   );
 

@@ -18,7 +18,7 @@
           :custom-request="uploadFile"
         >
           <i class="el-icon-upload" />
-          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <div class="el-upload__text">將文件拖到此處，或<em>點擊上傳</em></div>
         </Upload.Dragger>
       </Spin>
     </Drawer>
@@ -51,9 +51,9 @@
   const fileList = ref<UploadFile<any>[]>([]);
 
   const title = computed(() => {
-    return `上传文件到${
+    return `上傳文件到${
       isEmpty(path.value) ? '根' : path.value.substring(0, path.value.length - 1)
-    }目录`;
+    }目錄`;
   });
 
   const open = (filePath: string) => {
@@ -78,7 +78,7 @@
   const handleClose = () => {
     if (subscribes.value.length > 0 && subscribes.value.length !== successSubs.value.length) {
       Modal.confirm({
-        title: '关闭会取消未上传的文件，确认关闭吗？',
+        title: '關閉會取消未上傳的文件，確認關閉嗎？',
         icon: createVNode(ExclamationCircleOutlined),
         onOk: close,
       });
@@ -114,7 +114,7 @@
       error: (err) => {
         onError?.(err);
         handleUploadError(err, file as File);
-        console.log('上传失败', err);
+        console.log('上傳失敗', err);
       },
       complete: (res) => {
         successSubs.value.push(sub);
@@ -130,9 +130,9 @@
       failFile.status = 'error';
     }
     notification.error({
-      message: '上传进度提醒',
-      description: `上传${file?.name}文件失败！错误信息：${
-        err.code === 614 ? '上传文件已存在' : err.message
+      message: '上傳進度提醒',
+      description: `上傳${file?.name}文件失敗！錯誤信息：${
+        err.code === 614 ? '上傳文件已存在' : err.message
       }`,
       duration: 0,
     });
@@ -143,7 +143,7 @@
       successFile.status = 'success';
     }
     notification.success({
-      message: `上传${successFile?.name}成功`,
+      message: `上傳${successFile?.name}成功`,
     });
   };
   const clear = async () => {

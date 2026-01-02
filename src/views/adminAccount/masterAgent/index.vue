@@ -354,17 +354,30 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
 
   const list = rawListCache.value;
   // Vue2：只顯示「啟用」或「非維護」的總代
-  const baseFiltered = (Array.isArray(list) ? list : []).filter(
-    (i: any) => Boolean(i?.isEnabled) || !i?.isMaintained,
-  );
+  const baseFiltered = (Array.isArray(list) ? list : []);
+  // .filter(
+  //   (i: any) => Boolean(i?.isEnabled) || !i?.isMaintained,
+  // );
 
   // 從 params 中讀取篩選條件（篩選值會通過 handleFormValues 合併到 params 中）
   const searchParams = params as Record<string, any>;
   const filterAccount = searchParams.account ? String(searchParams.account).trim() : '';
-  const filterIsEnabled = searchParams.isEnabled !== undefined ? Boolean(searchParams.isEnabled) : undefined;
+  /**
+   * 後台維護預設為「全部」（空字串 '' 代表全部），資料抓完要執行一次過濾
+   * 空字串 '' 轉換為 undefined 表示「全部」，不過濾任何資料
+   * 預設值為「全部」
+   */
+  const filterIsEnabled = 'isEnabled' in searchParams
+    ? (searchParams.isEnabled === '' || searchParams.isEnabled === undefined
+        ? undefined // 空字串或 undefined 代表「全部」
+        : Boolean(searchParams.isEnabled))
+    : undefined;
   const filterDateRange = searchParams.createDatetime as [Dayjs, Dayjs] | undefined;
 
-  // Vue2 filterList 邏輯對齊
+  /**
+   * Vue2 filterList 邏輯對齊
+   * 資料抓完要執行一次過濾（即使預設值是「全部」，過濾邏輯也會執行）
+   */
   const filtered = baseFiltered.filter((data: any) => {
     // 帳號篩選：Vue2 同時比對 account 和 name（不區分大小寫）
     let rtValue = true;
@@ -376,6 +389,7 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
     }
 
     // 啟用狀態過濾：Vue2 使用 === 嚴格比對
+    // 當 filterIsEnabled 為 undefined 時（預設「全部」），不過濾，保留所有資料
     if (filterIsEnabled !== undefined) {
       rtValue = rtValue && Boolean(data?.isEnabled) === filterIsEnabled;
     }
@@ -762,20 +776,20 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
 
 /**
  * 計算表格總寬度：所有欄位寬度總和
- * 基礎欄位：account(160) + name(160) + isMaintained(100) + roles(220) + website(160) + currencies(100) = 900
+ * 基礎欄位：account(160) + name(160) + isMaintained(100) + adminMaintained(100) + roles(220) + website(160) + currencies(100) = 1000
  * 管理員額外欄位：isSingleWallet(120) + apiDomain(140) + whiteIPList(140) + cdnList(140) = 540
- * 共用欄位：createDatetime(180) + adminMaintained(100) = 280
+ * 共用欄位：createDatetime(180) = 180
  * 操作欄：ACTION(250)
- * 管理員總和：900 + 540 + 280 + 250 = 1970
- * 非管理員總和：900 + 280 + 250 = 1430
+ * 管理員總和：1000 + 540 + 180 + 250 = 1970
+ * 非管理員總和：1000 + 180 + 250 = 1430
  */
 const calculateTableScrollX = () => {
-  /** account + name + isMaintained + roles + website + currencies */
-  const baseColumnsWidth = 900;
+  /** account + name + isMaintained + adminMaintained + roles + website + currencies */
+  const baseColumnsWidth = 1000;
   /** isSingleWallet + apiDomain + whiteIPList + cdnList */
   const adminOnlyColumnsWidth = 540;
-  /** createDatetime + adminMaintained */
-  const commonColumnsWidth = 280;
+  /** createDatetime */
+  const commonColumnsWidth = 180;
   /** ACTION */
   const actionColumnWidth = 250;
   const totalWidth = userStore.level === 1

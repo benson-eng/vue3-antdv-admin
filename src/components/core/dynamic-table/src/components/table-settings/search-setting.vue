@@ -2,7 +2,7 @@
   <template v-if="formSchemas?.length && tableProps.search">
     <Tooltip placement="top">
       <template #title>
-        <span>{{ innerPropsRef.search ? '隐藏搜索' : '显示搜索' }}</span>
+        <span>{{ innerPropsRef.search ? '隱藏搜索' : '顯示搜索' }}</span>
       </template>
       <SearchOutlined @click="toggle" />
     </Tooltip>
