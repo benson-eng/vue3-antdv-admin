@@ -2,7 +2,7 @@
 /* eslint-disable vue/no-mutating-props */
 // 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
 // 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
-import type { FormInstance } from 'ant-design-vue';
+import type { FormInstance, Rule } from 'ant-design-vue';
 import { ref } from 'vue';
 
 defineOptions({ name: 'Step3WalletAndFormula' });
@@ -20,11 +20,49 @@ interface Props {
 
 const formRef = ref<FormInstance>();
 
+// 自定義驗證函數：檢查數字欄位是否為有效值（不為 null、undefined，且為數字）
+const createNumberValidator = (fieldName: string) => {
+  return (_rule: any, value: number | null | undefined) => {
+    if (value === null || value === undefined) {
+      return Promise.reject(new Error(`請輸入${fieldName}`));
+    }
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return Promise.reject(new Error(`${fieldName}必須為有效數字`));
+    }
+    return Promise.resolve();
+  };
+};
+
+// 表單驗證規則
+const rules: Record<string, Rule[]> = {
+  minTransactionBalance: [
+    { required: true, validator: createNumberValidator('贈禮最小交易金額'), trigger: 'blur' },
+  ],
+  sendSmsOTPIntervals: [
+    { required: true, validator: createNumberValidator('OTP 發送間隔'), trigger: 'blur' },
+  ],
+  authExpireTime: [
+    { required: true, validator: createNumberValidator('OTP 驗證相關過期時間'), trigger: 'blur' },
+  ],
+  spinUnfreezeRatio: [
+    { required: true, validator: createNumberValidator('押注解鎖倍率'), trigger: 'blur' },
+  ],
+};
+
 // 暴露方法給父元件
 defineExpose({
   formRef,
-  /** Step 3 不需要驗證，所有欄位都有預設值 */
-  validate: async () => true,
+  /** Step 2 交易設定驗證：確保所有欄位都有值且不可為空 */
+  validate: async () => {
+    try {
+      await formRef.value?.validate();
+      return true;
+    }
+    catch (error) {
+      console.error('[Step 2 交易設定] 驗證失敗:', error);
+      return false;
+    }
+  },
 });
 </script>
 
@@ -32,6 +70,7 @@ defineExpose({
   <a-form
     ref="formRef"
     :model="formModel"
+    :rules="rules"
     layout="horizontal"
     :label-col="{ style: { width: '200px' } }"
     :wrapper-col="{ style: { flex: 1 } }"
@@ -46,6 +85,7 @@ defineExpose({
         :min="0"
         :precision="0"
         style="width: 100%"
+        placeholder="請輸入贈禮最小交易金額"
       />
     </a-form-item>
 
@@ -55,6 +95,7 @@ defineExpose({
         :min="0"
         :precision="0"
         style="width: 100%"
+        placeholder="請輸入 OTP 發送間隔"
       />
     </a-form-item>
 
@@ -64,6 +105,7 @@ defineExpose({
         :min="0"
         :precision="0"
         style="width: 100%"
+        placeholder="請輸入 OTP 驗證相關過期時間"
       />
     </a-form-item>
 
@@ -73,6 +115,7 @@ defineExpose({
         :min="0"
         :precision="0"
         style="width: 100%"
+        placeholder="請輸入押注解鎖倍率"
       />
     </a-form-item>
   </a-form>

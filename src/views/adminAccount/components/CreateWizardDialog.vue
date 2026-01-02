@@ -64,6 +64,7 @@ const editRecordRoles = ref<Array<{ id: number; name: string; [key: string]: any
 const stepStates = reactive<Record<number, StepStatus>>({});
 
 const step1Ref = ref<InstanceType<typeof Step1BasicInfo> | null>(null);
+const step3Ref = ref<InstanceType<typeof Step3WalletAndFormula> | null>(null);
 const step5Ref = ref<InstanceType<typeof Step5FirebaseAnalytics> | null>(null);
 const step7Ref = ref<InstanceType<typeof Step7CustomerAndSocial> | null>(null);
 const step8Ref = ref<InstanceType<typeof Step8PaymentSettings> | null>(null);
@@ -467,8 +468,8 @@ const validateCurrentStep = async (): Promise<boolean> => {
     case 0: // Step 1: 基本資訊（包含角色）
       isValid = await step1Ref.value?.validate() ?? false;
       break;
-    case 1: // Step 2: 錢包與公式（不需要驗證）
-      isValid = true;
+    case 1: // Step 2: 交易設定（需要驗證所有欄位不可為空）
+      isValid = await step3Ref.value?.validate() ?? false;
       break;
     case 2: // Step 3: Firebase Analytics（Step5FirebaseAnalytics，需要驗證 JSON 格式）
       isValid = await step5Ref.value?.validate() ?? false;
@@ -1561,6 +1562,7 @@ onBeforeUnmount(() => {
         />
         <Step3WalletAndFormula
           v-show="currentStep === 1"
+          ref="step3Ref"
           :form-model="formModel"
         />
         <Step5FirebaseAnalytics

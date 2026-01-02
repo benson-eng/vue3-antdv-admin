@@ -36,15 +36,15 @@ const tabsViewStore = useTabsViewStore();
 
 const activeKey = computed(() => tabsViewStore.getCurrentTab?.fullPath);
 
-/** 标签页列表 */
+/** 標籤頁列表 */
 const tabsList = computed(() => tabsViewStore.getTabsList);
 
-/** 目标路由是否等于当前路由 */
+/** 目標路由是否等於當前路由 */
 const isCurrentRoute = (route) => {
   return router.currentRoute.value.matched.some(item => item.name === route.name);
 };
 
-/** 关闭当前页面 */
+/** 關閉當前頁面 */
 const removeTab = () => {
   // 首頁不可關閉
   if (props.tabItem.name === 'Home') {
@@ -59,7 +59,7 @@ const removeTab = () => {
   tabsViewStore.closeCurrentTab(props.tabItem);
 };
 
-/** 刷新页面 */
+/** 刷新頁面 */
 const reloadPage = () => {
   router.replace({
     name: REDIRECT_NAME,
@@ -69,37 +69,37 @@ const reloadPage = () => {
   });
 };
 
-/** 关闭左侧 */
+/** 關閉左側 */
 const closeLeft = () => {
   // tabsViewMutations.closeLeftTabs(route)
   tabsViewStore.closeLeftTabs(props.tabItem);
   !isCurrentRoute(props.tabItem) && router.replace(props.tabItem.fullPath);
 };
 
-/** 关闭右侧 */
+/** 關閉右側 */
 const closeRight = () => {
   // tabsViewMutations.closeRightTabs(route)
   tabsViewStore.closeRightTabs(props.tabItem);
   !isCurrentRoute(props.tabItem) && router.replace(props.tabItem.fullPath);
 };
 
-/** 关闭其他 */
+/** 關閉其他 */
 const closeOther = () => {
   // tabsViewMutations.closeOtherTabs(route)
   tabsViewStore.closeOtherTabs(props.tabItem);
   !isCurrentRoute(props.tabItem) && router.replace(props.tabItem.fullPath);
 };
 
-/** 关闭全部 */
+/** 關閉全部 */
 const closeAll = () => {
   tabsViewStore.closeAllTabs();
   router.replace('/');
 };
 
-/** 打开页面所在的文件(仅在开发环境有效) */
+/** 打開頁面所在的文件(僅在開發環境有效) */
 const openPageFile = async () => {
   if (!isDevMode) {
-    console.warn('仅在开发环境有效');
+    console.warn('僅在開發環境有效');
     return;
   }
 
@@ -171,7 +171,7 @@ defineExpose({
           <a-menu-divider />
           <a-menu-item key="7" @click="openPageFile">
             <ColumnWidthOutlined />
-            打开页面文件
+            打開頁面文件
           </a-menu-item>
         </template>
       </a-menu>
