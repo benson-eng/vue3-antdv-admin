@@ -10,6 +10,7 @@ import Step3WalletAndFormula from '../masterAgent/createWizard/components/Step3W
 import Step5FirebaseAnalytics from '../masterAgent/createWizard/components/Step5FirebaseAnalytics.vue';
 import Step7CustomerAndSocial from '../masterAgent/createWizard/components/Step7CustomerAndSocial.vue';
 import Step8PaymentSettings from '../masterAgent/createWizard/components/Step8PaymentSettings.vue';
+import Step9SmsSettings from '../masterAgent/createWizard/components/Step9SmsSettings.vue';
 import Step11Recaptcha from '../masterAgent/createWizard/components/Step11Recaptcha.vue';
 import Step12AdvancedSettings from '../masterAgent/createWizard/components/Step12AdvancedSettings.vue';
 import { buildInternalSettings, buildRemoteConfigURLs, generateHashKey, generateSecret } from '../masterAgent/createWizard/utils';
@@ -68,6 +69,7 @@ const step3Ref = ref<InstanceType<typeof Step3WalletAndFormula> | null>(null);
 const step5Ref = ref<InstanceType<typeof Step5FirebaseAnalytics> | null>(null);
 const step7Ref = ref<InstanceType<typeof Step7CustomerAndSocial> | null>(null);
 const step8Ref = ref<InstanceType<typeof Step8PaymentSettings> | null>(null);
+const step9Ref = ref<InstanceType<typeof Step9SmsSettings> | null>(null);
 const step11Ref = ref<InstanceType<typeof Step11Recaptcha> | null>(null);
 const step12Ref = ref<InstanceType<typeof Step12AdvancedSettings> | null>(null);
 
@@ -416,8 +418,8 @@ const initializeWizard = () => {
   if (props.editRecord) {
     loadEditData(props.editRecord);
     // 編輯模式下，將所有 step 標記為已觸碰和已驗證（因為資料已經存在，通過了建立流程）
-    // 注意：TOTAL_STEPS 在後面定義，這裡使用 7（固定值，已移除 Step 2）
-    for (let i = 0; i < 7; i++) {
+    // 注意：TOTAL_STEPS 在後面定義，這裡使用 8（固定值，已移除 Step 2）
+    for (let i = 0; i < 8; i++) {
       stepStates[i] = {
         touched: true, // 編輯模式下所有 step 都可以點擊
         valid: true, // 默認已驗證，因為已經是通過建立的程序流程了
@@ -431,9 +433,9 @@ const initializeWizard = () => {
 };
 
 /**
- * Steps 總數（固定為 7，涵蓋所有可能的 steps，已移除 Step 2）
+ * Steps 總數（固定為 8，涵蓋所有可能的 steps，已移除 Step 2）
  */
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 /**
  * 初始化 Step 狀態
@@ -480,10 +482,13 @@ const validateCurrentStep = async (): Promise<boolean> => {
     case 4: // Step 5: 金流設定（不需要驗證）
       isValid = true;
       break;
-    case 5: // Step 6: 人機驗證（不需要驗證）
+    case 5: // Step 6: 簡訊設定（不需要驗證）
       isValid = true;
       break;
-    case 6: // Step 7: 進階設定（需要驗證金鑰）
+    case 6: // Step 7: 人機驗證（不需要驗證）
+      isValid = true;
+      break;
+    case 7: // Step 8: 進階設定（需要驗證金鑰）
       isValid = await step12Ref.value?.validate() ?? false;
       break;
     default:
@@ -634,14 +639,14 @@ async function nextOriginal() {
 
   /** Step 5 處理（僅整理資料，不呼叫 API，原 Step 6） */
   if (currentStep.value === 4) {
-    // Step 6 不需要額外處理，資料已經在 formModel 中
+    // Step 5 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
     console.log('=== Wizard Step 5 完成 ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
 
-    // 進入 Step 6（僅 masterAgent，原 Step 7）
+    // 進入 Step 6（僅 masterAgent，原 Step 9）
     if (formModel.accountType === 'masterAgent') {
       currentStep.value = 5;
     }
@@ -652,14 +657,34 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 6 處理：建立帳戶並設定預設資料（原 Step 7） */
+  /** Step 6 處理（僅整理資料，不呼叫 API，原 Step 9） */
   if (currentStep.value === 5) {
+    // Step 6 不需要額外處理，資料已經在 formModel 中
+
+    // Phase 3 過渡：輸出當前 Step 和 formModel
+    console.log('=== Wizard Step 6 完成 ===');
+    console.log('Current Step Index:', currentStep.value);
+    console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
+
+    // 進入 Step 7（僅 masterAgent，原 Step 7）
+    if (formModel.accountType === 'masterAgent') {
+      currentStep.value = 6;
+    }
+    else {
+      // masterAgentX 跳過 Step 6 和 Step 7，直接完成（待實作後續步驟）
+      message.info('設定已完成（待後續 API 整合）');
+    }
+    return;
+  }
+
+  /** Step 7 處理：建立帳戶並設定預設資料（原 Step 7） */
+  if (currentStep.value === 6) {
     // 如果是編輯模式，跳過創建帳戶
     if (props.editRecord && createdAccountId.value) {
-      console.log('=== Wizard Step 6 完成（編輯模式，跳過創建） ===');
-      // 進入 Step 7（僅 masterAgent 且 level === 1，原 Step 8）
+      console.log('=== Wizard Step 7 完成（編輯模式，跳過創建） ===');
+      // 進入 Step 8（僅 masterAgent 且 level === 1，原 Step 8）
       if (formModel.accountType === 'masterAgent' && userStore.level === 1) {
-        currentStep.value = 6;
+        currentStep.value = 7;
       }
       else {
         // 如果不是 level 1 或不是 masterAgent，在 Step 7 完成時直接調用更新 API
@@ -868,15 +893,15 @@ async function nextOriginal() {
       // 儲存帳戶 ID（用於後續步驟）
       createdAccountId.value = newMasterAgent?.id || null;
 
-      console.log('=== Wizard Step 6 完成（帳戶建立） ===');
+      console.log('=== Wizard Step 7 完成（帳戶建立） ===');
       console.log('Current Step Index:', currentStep.value);
       console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
       console.log('Create Payload:', JSON.parse(JSON.stringify(payload)));
       console.log('Created Account ID:', createdAccountId.value);
 
-      // 進入 Step 7（僅 masterAgent 且 level === 1，原 Step 8）
+      // 進入 Step 8（僅 masterAgent 且 level === 1，原 Step 8）
       if (formModel.accountType === 'masterAgent' && userStore.level === 1) {
-        currentStep.value = 6;
+        currentStep.value = 7;
       }
       else {
         // 不符合條件，直接完成
@@ -899,18 +924,18 @@ async function nextOriginal() {
     return;
   }
 
-  /** Step 7 處理（僅整理資料，不呼叫 API，原 Step 8） */
-  if (currentStep.value === 6) {
+  /** Step 8 處理（僅整理資料，不呼叫 API，原 Step 8） */
+  if (currentStep.value === 7) {
     // Step 8 不需要額外處理，資料已經在 formModel 中
 
     // Phase 3 過渡：輸出當前 Step 和 formModel
-    console.log('=== Wizard Step 7 完成（最後一步） ===');
+    console.log('=== Wizard Step 8 完成（最後一步） ===');
     console.log('Current Step Index:', currentStep.value);
     console.log('FormModel (深層):', JSON.parse(JSON.stringify(formModel)));
     console.log('=== Wizard 完整流程結束 ===');
 
     // 如果是編輯模式，更新帳戶
-    console.log('=== Wizard Step 7 完成（編輯模式） ===', props.editRecord, createdAccountId.value);
+    console.log('=== Wizard Step 8 完成（編輯模式） ===', props.editRecord, createdAccountId.value);
     if (props.editRecord && createdAccountId.value) {
       isSubmitting.value = true;
       try {
@@ -1194,8 +1219,8 @@ const shouldShowFinishButton = computed(() => {
   if (!props.editRecord) {
     return false;
   }
-  // 如果當前步驟是最後一步（step 7），不顯示完成按鈕（因為「下一步」按鈕已經顯示為「完成」）
-  if (currentStep.value === 6) {
+  // 如果當前步驟是最後一步（step 8），不顯示完成按鈕（因為「下一步」按鈕已經顯示為「完成」）
+  if (currentStep.value === 7) {
     return false;
   }
   // 其他步驟在編輯模式下都顯示完成按鈕
@@ -1257,15 +1282,19 @@ const shouldShowNextButton = computed(() => {
   if (currentStep.value === 4) {
     return formModel.accountType === 'masterAgent';
   }
-  // Step 5：僅 masterAgent 顯示（因為有 Step 6，原 Step 6）
+  // Step 5：僅 masterAgent 顯示（因為有 Step 6，原 Step 9）
   if (currentStep.value === 5) {
     return formModel.accountType === 'masterAgent';
   }
-  // Step 6：僅 masterAgent 且 level === 1 顯示（原 Step 7）
+  // Step 6：僅 masterAgent 顯示（因為有 Step 7，原 Step 7）
   if (currentStep.value === 6) {
+    return formModel.accountType === 'masterAgent';
+  }
+  // Step 7：僅 masterAgent 且 level === 1 顯示（原 Step 8）
+  if (currentStep.value === 7) {
     return formModel.accountType === 'masterAgent' && userStore.level === 1;
   }
-  // Step 7 之後（待實作）
+  // Step 8 之後（待實作）
   return false;
 });
 
@@ -1289,6 +1318,9 @@ const getNextButtonText = computed(() => {
     return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
   }
   if (currentStep.value === 6) {
+    return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
+  }
+  if (currentStep.value === 7) {
     return '完成';
   }
   return '下一步';
@@ -1530,7 +1562,7 @@ onBeforeUnmount(() => {
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 6"
-          description="人機驗證設定"
+          description="簡訊設定"
           :status="getStepStatus(5)"
           :class="{
             'step-clickable': isStepClickable(5),
@@ -1538,13 +1570,23 @@ onBeforeUnmount(() => {
           }"
         />
         <a-step
-          v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
+          v-if="formModel.accountType === 'masterAgent'"
           title="Step 7"
-          description="進階設定"
+          description="人機驗證設定"
           :status="getStepStatus(6)"
           :class="{
             'step-clickable': isStepClickable(6),
             'step-disabled': !isStepClickable(6),
+          }"
+        />
+        <a-step
+          v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
+          title="Step 8"
+          description="進階設定"
+          :status="getStepStatus(7)"
+          :class="{
+            'step-clickable': isStepClickable(7),
+            'step-disabled': !isStepClickable(7),
           }"
         />
       </a-steps>
@@ -1580,13 +1622,19 @@ onBeforeUnmount(() => {
           ref="step8Ref"
           :form-model="formModel"
         />
-        <Step11Recaptcha
+        <Step9SmsSettings
           v-show="currentStep === 5 && formModel.accountType === 'masterAgent'"
+          ref="step9Ref"
+          :form-model="formModel"
+          :level="userStore.level"
+        />
+        <Step11Recaptcha
+          v-show="currentStep === 6 && formModel.accountType === 'masterAgent'"
           ref="step11Ref"
           :form-model="formModel"
         />
         <Step12AdvancedSettings
-          v-show="currentStep === 6 && formModel.accountType === 'masterAgent' && userStore.level === 1"
+          v-show="currentStep === 7 && formModel.accountType === 'masterAgent' && userStore.level === 1"
           ref="step12Ref"
           :key="dialogKey"
           :form-model="formModel"

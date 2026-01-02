@@ -12,8 +12,6 @@ defineProps<Props>();
 interface Props {
   formModel: {
     minTransactionBalance: number;
-    sendSmsOTPIntervals: number;
-    authExpireTime: number;
     spinUnfreezeRatio: number;
   };
 }
@@ -39,12 +37,6 @@ const createNumberValidator = (fieldName: string) => {
 const rules: Record<string, Rule[]> = {
   minTransactionBalance: [
     { required: true, validator: createNumberValidator('贈禮最小交易金額'), trigger: 'blur' },
-  ],
-  sendSmsOTPIntervals: [
-    { required: true, validator: createNumberValidator('OTP 發送間隔'), trigger: 'blur' },
-  ],
-  authExpireTime: [
-    { required: true, validator: createNumberValidator('OTP 驗證相關過期時間'), trigger: 'blur' },
   ],
   spinUnfreezeRatio: [
     { required: true, validator: createNumberValidator('押注解鎖倍率'), trigger: 'blur' },
@@ -88,26 +80,6 @@ defineExpose({
         :precision="0"
         style="width: 100%"
         placeholder="請輸入贈禮最小交易金額"
-      />
-    </a-form-item>
-
-    <a-form-item label="OTP 發送間隔(分鐘)" name="sendSmsOTPIntervals">
-      <a-input-number
-        v-model:value="formModel.sendSmsOTPIntervals"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入 OTP 發送間隔"
-      />
-    </a-form-item>
-
-    <a-form-item label="OTP 驗證相關過期時間(分鐘)" name="authExpireTime">
-      <a-input-number
-        v-model:value="formModel.authExpireTime"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入 OTP 驗證相關過期時間"
       />
     </a-form-item>
 

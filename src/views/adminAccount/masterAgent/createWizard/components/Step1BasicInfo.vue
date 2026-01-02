@@ -26,8 +26,6 @@ interface Props {
     currencyCode: string;
     serviceEmail: string;
     onePhoneNumberToAccountCounts: number;
-    boSmsAccount: string;
-    boSmsPassWord: string;
     roles: number[];
   };
   isEdit?: boolean;
@@ -226,20 +224,6 @@ onMounted(() => {
         :min="1"
         :precision="0"
         style="width: 100%"
-      />
-    </a-form-item>
-
-    <a-form-item label="三竹簡訊商帳號" name="boSmsAccount">
-      <a-input
-        v-model:value="formModel.boSmsAccount"
-        placeholder="請輸入三竹簡訊商帳號"
-      />
-    </a-form-item>
-
-    <a-form-item label="三竹簡訊商密碼" name="boSmsPassWord">
-      <a-input-password
-        v-model:value="formModel.boSmsPassWord"
-        placeholder="請輸入三竹簡訊商密碼"
       />
     </a-form-item>
   </a-form>

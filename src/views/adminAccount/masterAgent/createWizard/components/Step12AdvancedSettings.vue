@@ -18,8 +18,6 @@ interface Props {
   formModel: {
     freezeDuration?: number;
     orderExpireTime?: number;
-    otpMode?: string;
-    accountPointsWarningValue?: number;
     paymentMode?: string;
     topUpRate?: number;
     myCardWebsite?: string;
@@ -223,24 +221,6 @@ defineExpose({
         :precision="0"
         style="width: 100%"
       />
-    </a-form-item>
-
-    <a-form-item
-      v-if="props.level === 1"
-      label="OTP 模式"
-      name="otpMode"
-    >
-      <a-select
-        v-model:value="formModel.otpMode"
-        style="width: 100%"
-      >
-        <a-select-option value="Real">
-          Real
-        </a-select-option>
-        <a-select-option value="Fake">
-          Fake
-        </a-select-option>
-      </a-select>
     </a-form-item>
 
     <!-- 金流設定 -->
@@ -533,20 +513,6 @@ defineExpose({
     <a-divider orientation="left">
       其他設定
     </a-divider>
-
-    <a-form-item
-      v-if="props.level === 1"
-      label="簡訊帳號點數不足告警水位"
-      name="accountPointsWarningValue"
-    >
-      <a-input-number
-        v-model:value="formModel.accountPointsWarningValue"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入簡訊帳號點數不足告警水位"
-      />
-    </a-form-item>
 
     <a-form-item label="允許會員暱稱重複" name="isAllowMemberNicknameDuplicate">
       <a-checkbox v-model:checked="(formModel as any).isAllowMemberNicknameDuplicate" />
