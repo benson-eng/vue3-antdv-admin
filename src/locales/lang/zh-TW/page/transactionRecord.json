@@ -1,0 +1,61 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員"
+  },
+  "column": {
+    "remitterVip": "贈禮人VIP",
+    "remitterNickname": "贈禮人暱稱",
+    "receiverVip": "收禮人VIP",
+    "receiverNickname": "收禮人暱稱",
+    "currencyType": "禮物別",
+    "showItemName": "禮物名",
+    "remittances": "贈送數量",
+    "serviceFee": "手續費",
+    "state": "狀態",
+    "transferAt": "贈送時間",
+    "receivedAt": "收禮時間",
+    "expireTime": "過期時間",
+    "canceledAt": "取消時間",
+    "searchType": "查詢種類",
+    "control": "控制"
+  },
+  "state": {
+    "Success": "成功",
+    "WaitReceiverAgree": "等待收禮者同意",
+    "WaitRemitterConfirm": "等待贈禮者確認",
+    "WaitReceiverReceive": "等待收禮者接收",
+    "Recover": "贈禮收回",
+    "Expired": "已過期",
+    "Cancel": "已取消",
+    "Aborted": "強制中止",
+    "WaitReceive": "等待中"
+  },
+  "searchType": {
+    "coin": "幣別",
+    "item": "道具",
+    "token": "代幣"
+  },
+  "itemType": {
+    "entityItem": "實體道具",
+    "eventItem": "活動道具",
+    "gachapon": "扭蛋",
+    "freeScratchCard": "免費刮刮卡"
+  },
+  "notify": {
+    "confirmStopTransaction": "是否中止",
+    "give": "贈送",
+    "stop": "中止",
+    "confirmTitle": "確認",
+    "abortSuccess": "中止成功",
+    "abortError": "中止失敗",
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "needAccount": "會員欄位不能為空",
+    "connectionError": "連接錯誤"
+  },
+  "search": "查詢",
+  "confirm": "確認",
+  "cancel": "取消"
+}
+

@@ -57,7 +57,7 @@ export function transformI18n(message: string | Title18n = '', isI18n = true) {
     : (i18n.global as unknown as Composer).t
   ).bind(i18n.global) as I18nGlobalTranslation;
 
-  // 处理动态路由的title, 格式 {zh_CN:"",en_US:""}
+  // 处理动态路由的title, 格式 {zh_TW:"",en_US:""}
   if (typeof message === 'object') {
     const locale = String(unref(i18n.global.locale as any));
     return (message as any)?.[locale] ?? '';

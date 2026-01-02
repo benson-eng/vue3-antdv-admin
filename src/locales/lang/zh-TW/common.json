@@ -1,0 +1,24 @@
+{
+  "back": "返回",
+  "cancelText": "取消",
+  "chooseText": "請選擇",
+  "closeText": "關閉",
+  "dark": "深色主題",
+  "delText": "刪除",
+  "inputText": "請輸入",
+  "light": "亮色主題",
+  "loadingText": "載入中...",
+  "okText": "確認",
+  "queryText": "查詢",
+  "redo": "重新整理",
+  "resetText": "重置",
+  "routes": {
+    "account": {
+      "settings": ""
+    }
+  },
+  "saveText": "儲存",
+  "searchText": "搜尋",
+  "startTime": "開始時間",
+  "dueTime": "結束時間"
+}

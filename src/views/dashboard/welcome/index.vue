@@ -1,15 +1,15 @@
 <template>
   <div class="box">
     <img src="~@/assets/analysis.svg" />
-    <Descriptions title="系统信息" bordered>
+    <Descriptions title="系統資訊" bordered>
       <Descriptions.Item key="IP" label="IP">
         {{ loginIp }}
       </Descriptions.Item>
       <Descriptions.Item v-for="(value, key) in browserInfo" :key="key" :label="key">
         {{ value }}
       </Descriptions.Item>
-      <Descriptions.Item label="网络状态">
-        <Badge :status="online ? 'processing' : 'default'" :text="online ? '在线' : '离线'" />
+      <Descriptions.Item label="網路狀態">
+        <Badge :status="online ? 'processing' : 'default'" :text="online ? '線上' : '離線'" />
       </Descriptions.Item>
       <!-- <Descriptions.Item label="WebSocket连接情况">
         <Badge :status="statusTextColor" :text="statusText" />
@@ -38,7 +38,7 @@
   // 获取电池信息
   const { battery, batteryStatus, calcDischargingTime } = useBattery();
   // 获取浏览器信息
-  const browserInfo = ref(BrowserType('zh-cn'));
+  const browserInfo = ref(BrowserType('zh-tw'));
 
   watchEffect(() => {
     Object.assign(browserInfo.value, {

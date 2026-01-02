@@ -10,11 +10,11 @@ interface LocaleState {
 
 export const useLocaleStore = defineStore('locale',{
   state: (): LocaleState => ({
-    locale: Storage.get(LOCALE_KEY, 'zh_CN'),
+    locale: Storage.get(LOCALE_KEY, 'zh_TW'),
   }),
   getters: {
     getLocale(): LocaleType {
-      return this.locale ?? 'zh_CN';
+      return this.locale ?? 'zh_TW';
     },
   },
   actions: {

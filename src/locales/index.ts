@@ -18,7 +18,7 @@ async function createI18nOptions() {
   return {
     locale,
     legacy: false, // 禁用舊版 API，使用 Composition API
-    fallbackLocale: localeMap.zh_CN, // set fallback locale
+    fallbackLocale: localeMap.zh_TW, // set fallback locale
     messages: {
       [locale]: message as { [key: string]: string },
     },

@@ -1,0 +1,16 @@
+{
+  "index": "後台帳戶",
+  "masterAgent": "站台設定",
+  "masterAgentX": "總代理管理(遊戲)",
+  "createWizard": "導引式建立",
+  "currency": "幣別管理",
+  "token": "代幣管理",
+  "roles": "權限管理",
+  "authenticator": "Authenticator管理",
+  "shareholder": "股東管理",
+  "machineSettingPublic": "股東座位設定",
+  "agent": "代理商管理",
+  "agentSettings": "代理功能設定",
+  "subaccount": "子帳戶管理",
+  "subaccountChildren": "子帳戶管理(下階)"
+}

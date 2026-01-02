@@ -1,0 +1,46 @@
+{
+  "title": "隊伍標籤",
+  "add": "新增",
+  "edit": "編輯",
+  "delete": "刪除",
+  "masterAgent": "總代理",
+  "selectMasterAgent": "請選擇總代理",
+  "noPermission": "您沒有權限訪問此頁面",
+  "loadFailed": "載入失敗",
+  "createSuccess": "新增成功",
+  "createFailed": "新增失敗",
+  "updateSuccess": "更新成功",
+  "updateFailed": "更新失敗",
+  "deleteSuccess": "刪除成功",
+  "deleteFailed": "刪除失敗",
+  "orderUpdateSuccess": "順序更新成功",
+  "orderUpdateFailed": "順序更新失敗",
+  "btn": {
+    "submitOrder": "更改順序"
+  },
+  "table": {
+    "tagID": "標籤ID",
+    "tag": "標籤名稱",
+    "order": "順序",
+    "control": "控制",
+    "itemType": "道具類型",
+    "enabled": "啟用"
+  },
+  "form": {
+    "tag": "標籤",
+    "itemType": "道具類型",
+    "tagPlaceholder": "請輸入標籤名稱",
+    "tagRequired": "標籤名稱不能為空"
+  },
+  "formTitle": {
+    "create": "新增標籤",
+    "edit": "修改標籤"
+  },
+  "removeTagPopMessageBox": {
+    "title": "確認刪除",
+    "content": "您確定要刪除此標籤嗎？"
+  },
+  "itemType": {
+    "teamBadge": "隊伍徽章"
+  }
+}

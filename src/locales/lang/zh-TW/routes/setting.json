@@ -1,0 +1,59 @@
+{
+  "setting": "設定",
+  "passwordSetting": "密碼設定",
+  "defaultAvatarSetting": "預設頭像管理",
+  "defaultAvatarSettingPage": {
+    "title": "預設頭像管理",
+    "buttons": {
+      "add": "新增",
+      "edit": "編輯",
+      "delete": "刪除",
+      "cancel": "取消",
+      "confirm": "確認",
+      "create": "新增",
+      "selectImage": "選擇圖片",
+      "remove": "移除"
+    },
+    "filters": {
+      "masterAgent": "總代理",
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "columns": {
+      "id": "頭像編號",
+      "profileUrl": "圖示",
+      "ebableStatus": "啟用狀態",
+      "createDateTime": "創建日期",
+      "isEnabled": "隱藏禁用",
+      "actions": "操作"
+    },
+    "form": {
+      "image": "頭像圖片",
+      "isEnabled": "啟用"
+    },
+    "labels": {
+      "enable": "啟用",
+      "disable": "禁用"
+    },
+    "rules": {
+      "image": "請上傳圖片"
+    },
+    "notify": {
+      "queryFailed": "查詢失敗",
+      "masterAgentRequired": "請先選擇總代理",
+      "createSuccess": "新增成功",
+      "createFailed": "新增失敗",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失敗",
+      "deleteSuccess": "刪除成功",
+      "deleteFailed": "刪除失敗",
+      "deleteConfirm": "確認刪除",
+      "uploadFailed": "上傳失敗",
+      "imageFormatError": "上傳頭像圖片只能是 JPG 或 PNG 格式",
+      "imageSizeError": "圖片過大"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    }
+  }
+}

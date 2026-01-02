@@ -1,0 +1,49 @@
+{
+  "title": "信件圖片管理",
+  "labels": {
+    "masterAgent": "站長",
+    "name": "名稱",
+    "type": "種類",
+    "image": "圖片",
+    "limitMinWidth": "寬: ",
+    "limitMinHeight": "高: ",
+    "actions": "操作"
+  },
+  "rules": {
+    "name": "名稱為必填欄位",
+    "image": "圖片為必填欄位"
+  },
+  "type": {
+    "mail": "信件",
+    "ad": "廣告",
+    "mission": "任務",
+    "dailyDraw": "每日贈送",
+    "gachpon": "扭蛋機",
+    "event": "活動管理",
+    "payment": "金流",
+    "game": "遊戲"
+  },
+  "buttons": {
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "create": "新增",
+    "confirm": "確認",
+    "cancel": "取消"
+  },
+  "notify": {
+    "queryFailed": "查詢失敗",
+    "createSuccess": "新增成功",
+    "createFailed": "新增失敗",
+    "deleteSuccess": "刪除成功",
+    "deleteFailed": "刪除失敗",
+    "deleteConfirm": "確定要刪除此圖片",
+    "deleteTitle": "確認刪除",
+    "updateNotImplemented": "更新功能尚未實作"
+  },
+  "noPermission": {
+    "title": "權限不足",
+    "subTitle": "此功能僅開放給特定層級帳號使用"
+  }
+}
+

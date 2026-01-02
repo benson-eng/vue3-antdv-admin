@@ -1,0 +1,530 @@
+{
+  "member": "會員管理",
+  "data": "會員資料",
+  "memberPersonalInfo": "會員個資管理",
+  "vipSetting": "VIP特權設定",
+  "transactionMemberSetting": "會員交易設定",
+  "fixedVipMemberSetting": "固定會員VIP設定",
+  "identityMemberSetting": "固定會員身分設定",
+  "activityMemberSetting": "固定會員活躍度設定",
+  "memberLevel": "會員遊戲等級設定",
+  "levelRewardsSetting": "遊戲等級獎勵設定",
+  "raceRankBlack": "比賽排名黑名單",
+  "getPlatformAccount": "會員帳號對照表",
+  "suspensionList": "停權列表",
+  "memberNicknameAvatar": "會員暱稱頭像管理",
+  "dataPage": {
+    "title": "會員資料",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "member": "會員",
+    "addAccount": "新增帳號",
+    "batchModify": "批次修改",
+    "batchDelete": "批量刪除",
+    "export": "匯出",
+    "operation": "操作",
+    "editStatus": "修改狀態",
+    "editBalance": "修改餘額",
+    "accountDetail": "帳戶詳細",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteMember": "確定要刪除此會員嗎?",
+    "confirmDeleteBatch": "確定要刪除選中的 {count} 筆資料嗎?",
+    "editSuccess": "編輯成功",
+    "addSuccess": "新增成功",
+    "deleteSuccess": "刪除成功",
+    "batchDeleteSuccess": "批量刪除成功",
+    "editFailed": "編輯失敗",
+    "addFailed": "新增失敗",
+    "deleteFailed": "刪除失敗",
+    "batchDeleteFailed": "批量刪除失敗",
+    "saveFailed": "保存失敗",
+    "statusFeatureDeveloping": "修改狀態功能開發中",
+    "balanceFeatureDeveloping": "修改餘額功能開發中",
+    "detailFeatureDeveloping": "帳戶詳細功能開發中",
+    "columns": {
+      "account": "會員帳號",
+      "status": "狀態",
+      "superior": "上級代理",
+      "superiorAccount": "上級會員",
+      "memberLevel": "會員層級",
+      "vipLevel": "會員等級",
+      "firstDeposit": "首存首出",
+      "registerIp": "駐冊IP",
+      "lastLoginIp": "最後登入IP",
+      "idCard": "身份證號",
+      "line": "Line",
+      "registerTime": "註冊時間",
+      "lastLoginTime": "最後登入時間",
+      "registerSource": "駐冊來源",
+      "depositCount": "終身存款次數",
+      "returnWaterLevel": "返水等級",
+      "promotionCode": "推廣代碼",
+      "createdAt": "創建時間",
+      "statusEnabled": "啟用中",
+      "statusDisabled": "停用",
+      "all": "全部",
+      "pleaseSelect": "請選擇",
+      "inputAccount": "輸入會員帳號",
+      "inputAgentAccount": "輸入代理帳號",
+      "inputIp": "請輸入Ip",
+      "inputIdCard": "請輸入身份證號",
+      "startTime": "開始時間",
+      "endTime": "結束時間",
+      "noWithdraw": "無首出",
+      "noDeposit": "無首存"
+    },
+    "form": {
+      "account": "會員帳號",
+      "password": "密碼",
+      "memberLevel": "會員層級",
+      "vipLevel": "VIP等級",
+      "superior": "上級代理",
+      "status": "狀態",
+      "inputAccount": "請輸入會員帳號",
+      "inputPassword": "請輸入密碼",
+      "selectMemberLevel": "請選擇會員層級",
+      "inputSuperiorAccount": "請輸入上級代理帳號",
+      "enabled": "啟用",
+      "disabled": "停用",
+      "memberLevelOptions": {
+        "inner": "金流內層",
+        "full": "金流全開",
+        "large": "大額入款",
+        "arbitrage": "套利總級",
+        "suspected": "疑似套利"
+      },
+      "vipLevelOptions": {
+        "vip2": "VIP2",
+        "vip8": "VIP8",
+        "normal": "一般會員"
+      }
+    },
+    "common": {
+      "resetText": "重置",
+      "queryText": "查詢",
+      "unfold": "展開",
+      "inputText": "請輸入",
+      "chooseText": "請選擇"
+    },
+    "component": {
+      "form": {
+        "putAway": "收起",
+        "unfold": "展開"
+      }
+    }
+  },
+  "memberPersonalInfoPage": {
+    "title": "會員個資管理",
+    "featureDeveloping": "功能開發中",
+    "common": {
+      "resetText": "重置",
+      "queryText": "查詢",
+      "unfold": "展開",
+      "inputText": "請輸入",
+      "chooseText": "請選擇"
+    },
+    "component": {
+      "form": {
+        "putAway": "收起",
+        "unfold": "展開"
+      },
+      "table": {
+        "total": "共 {total} 筆"
+      }
+    },
+    "filters": {
+      "masterAgent": "總代理",
+      "agent": "代理",
+      "member": "會員",
+      "dateType": "日期類別",
+      "dateTypeCreatedAt": "註冊時間",
+      "dateTypeLastLoginTime": "最後登入時間",
+      "masterAgentRequired": "請先選擇總代理",
+      "agentRequired": "請先選擇總代理/代理",
+      "quick": {
+        "yesterday": "昨日",
+        "today": "今日",
+        "thisWeek": "本週",
+        "lastWeek": "上週",
+        "thisMonth": "本月",
+        "lastMonth": "上月"
+      }
+    },
+    "columns": {
+      "accountID": "會員ID",
+      "account": "會員帳號",
+      "inputAccount": "輸入會員帳號",
+      "dateType": "時間類型",
+      "dateTypeRegisterTime": "註冊時間",
+      "dateTypeLastLoginTime": "最後登入時間",
+      "dateRange": "時間區間",
+      "startTime": "開始時間",
+      "endTime": "結束時間",
+      "nickName": "暱稱",
+      "status": "狀態",
+      "statusEnabled": "啟用中",
+      "statusDisabled": "停用",
+      "all": "全部",
+      "pleaseSelect": "請選擇",
+      "email": "Email",
+      "phoneNumber": "手機",
+      "authProvider": "登入方式",
+      "birthday": "生日",
+      "registerTime": "註冊時間",
+      "lastLoginTime": "最後登入時間",
+      "lastLoginIP": "最後登入IP",
+      "lastLoginIp": "最後登入IP",
+      "operation": "操作",
+      "viewVipRecord": "VIP紀錄",
+      "viewPack": "背包",
+      "viewWallet": "錢包"
+    }
+  },
+  "transactionMemberSettingPage": {
+    "title": "會員交易設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增會員交易設定",
+    "titleEdit": "編輯會員交易設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此會員交易設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "serviceTariff": "交易手續費(%)"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理",
+      "serviceTariff": "輸入 0 ~ 100 正整數"
+    },
+    "columns": {
+      "memberID": "會員",
+      "serviceTariff": "交易手續費(%)",
+      "operation": "操作"
+    }
+  },
+  "fixedVipMemberSettingPage": {
+    "title": "固定會員VIP設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增固定會員VIP設定",
+    "titleEdit": "編輯固定會員VIP設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此固定會員VIP設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "vip": "VIP",
+      "vipPlaceholder": "請選擇 VIP"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "columns": {
+      "memberID": "會員",
+      "vip": "VIP",
+      "operation": "操作"
+    }
+  },
+  "identityMemberSettingPage": {
+    "title": "固定會員身分設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增固定會員身分設定",
+    "titleEdit": "編輯固定會員身分設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此固定會員身分設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "nowIdentity": "目前身分",
+      "identity": "身分"
+    },
+    "identityTypes": {
+      "fraudulentOrRefund": "退刷或退款",
+      "lowCredibility": "低信譽"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "columns": {
+      "memberID": "會員",
+      "identity": "身分",
+      "operation": "操作"
+    }
+  },
+  "suspensionListPage": {
+    "title": "停權列表",
+    "add": "新增",
+    "delete": "解除",
+    "cancel": "取消",
+    "titleAdd": "新增停權名單",
+    "addSuccess": "新增成功",
+    "deleteSuccess": "解除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認解除",
+    "confirmDeleteContent": "確定要解除此停權：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "suspensionType": "停權類型",
+      "suspensionReason": "停權原因",
+      "suspensionTime": "處罰時間"
+    },
+    "punishTypes": {
+      "platformSuspension": "平台停權",
+      "chatRoomBan": "聊天室禁言",
+      "giftBan": "禁止贈禮"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "columns": {
+      "id": "ID",
+      "accountID": "帳號ID",
+      "nickName": "暱稱",
+      "punishStatus": "停權類型",
+      "createdAt": "開始時間",
+      "punishReason": "停權原因",
+      "operation": "操作"
+    }
+  },
+  "activityMemberSettingPage": {
+    "title": "固定會員活躍度設定",
+    "add": "新增",
+    "edit": "編輯",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增固定會員活躍度設定",
+    "titleEdit": "編輯固定會員活躍度設定",
+    "addSuccess": "新增成功",
+    "editSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認刪除",
+    "confirmDeleteContent": "確定要刪除此固定會員活躍度設定：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "nowActivity": "目前活躍度",
+      "activity": "活躍度"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "masterAgentRequired": "請先選擇總代理",
+      "activity": "輸入 1 ~ 99 正整數"
+    },
+    "columns": {
+      "memberID": "會員",
+      "activity": "活躍度",
+      "operation": "操作"
+    }
+  },
+  "memberLevelPage": {
+    "title": "會員遊戲等級設定",
+    "search": "查詢",
+    "confirm": "修改",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "nickName": "會員帳戶",
+      "level": "遊戲等級",
+      "changeLevel": "變更等級",
+      "changeLevelPlaceholder": "請輸入等級"
+    },
+    "notify": {
+      "masterAgentRequired": "請先選擇總代理",
+      "memberRequired": "請先選擇會員",
+      "changeLevel": "請輸入大於0之正整數",
+      "success": "成功",
+      "failed": "失敗"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    }
+  },
+  "memberNicknameAvatarPage": {
+    "title": "會員暱稱頭像管理",
+    "labels": {
+      "masterAgent": "總代理",
+      "search": "查詢帳號",
+      "account": "會員帳號",
+      "nickName": "暱稱",
+      "avatar": "頭像"
+    },
+    "buttons": {
+      "search": "查詢",
+      "updateNickName": "更新暱稱",
+      "updateAvatar": "更新頭像",
+      "confirm": "確認",
+      "cancel": "取消"
+    },
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "form": {
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱"
+    },
+    "avatar": {
+      "original": "原設定",
+      "selectPlaceholder": "請選擇頭像"
+    },
+    "notify": {
+      "updateSuccess": "更新成功",
+      "failed": "失敗",
+      "masterAgentRequired": "請先選擇總代理",
+      "memberRequired": "請先選擇會員",
+      "nickName": "請輸入暱稱",
+      "nickNameExist": "暱稱已存在",
+      "nickNameTooLong": "限{limit1}個中文字或{limit2}個英數字"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    }
+  },
+  "levelRewardsSettingPage": {
+    "title": "遊戲等級獎勵設定",
+    "exportExcel": "匯出Excel",
+    "importExcel": "匯入Excel",
+    "reference": "對照表",
+    "save": "保存",
+    "close": "關閉",
+    "import": "匯入",
+    "importPreview": "匯入預覽",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失敗",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理"
+    },
+    "notify": {
+      "masterAgentRequired": "請先選擇總代理"
+    },
+    "noPermission": {
+      "title": "權限不足",
+      "subTitle": "此功能僅開放給特定層級帳號使用"
+    },
+    "columns": {
+      "id": "ID",
+      "level": "等級",
+      "awardStr": "獎勵內容"
+    },
+    "referenceColumns": {
+      "gameID": "遊戲",
+      "cardTypeList": "卡種",
+      "betList": "押注"
+    },
+    "importColumns": {
+      "level": "level",
+      "gameID": "gameID",
+      "cardItem": "cardItem",
+      "bet": "bet",
+      "creditRate": "creditRate",
+      "amount": "amount",
+      "startDate": "startDate",
+      "endDate": "endDate"
+    },
+    "errors": {
+      "title": "錯誤提醒"
+    }
+  },
+  "raceRankBlackPage": {
+    "title": "比賽排名黑名單",
+    "add": "新增",
+    "delete": "刪除",
+    "cancel": "取消",
+    "titleAdd": "新增比賽排名黑名單",
+    "addSuccess": "已加入黑名單",
+    "deleteSuccess": "已解除黑名單",
+    "saveFailed": "保存失敗",
+    "confirmDelete": "確認解除",
+    "confirmDeleteContent": "確定要解除此會員黑名單：",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理",
+      "eventPlaceholder": "請選擇活動"
+    },
+    "form": {
+      "event": "活動",
+      "member": "會員",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱",
+      "note": "原因",
+      "notePlaceholder": "請輸入加入黑名單原因"
+    },
+    "notify": {
+      "required": "為必填欄位",
+      "noteRequired": "請輸入原因",
+      "masterAgentRequired": "請先選擇總代理",
+      "eventRequired": "請先選擇活動",
+      "settledDisabled": "活動已結算，無法操作",
+      "resultRaceRankBlack": "此會員不在排行榜內",
+      "noAwardItemWarning": "此活動未設定獎勵道具，將略過穿戴/脫除流程"
+    },
+    "columns": {
+      "event": "活動",
+      "memberID": "會員",
+      "blackReason": "原因",
+      "operation": "操作"
+    }
+  },
+  "getPlatformAccountPage": {
+    "title": "會員帳號對照表",
+    "search": "查詢",
+    "reset": "重置",
+    "filters": {
+      "masterAgentPlaceholder": "請選擇總代理",
+      "memberPlaceholder": "輸入 會員ID / 帳號 / 暱稱"
+    },
+    "notify": {
+      "masterAgentRequired": "請先選擇總代理",
+      "memberRequired": "請先選擇會員",
+      "searchFinish": "查詢完成"
+    },
+    "columns": {
+      "member": "會員",
+      "platform": "平台",
+      "account": "帳號"
+    }
+  }
+}

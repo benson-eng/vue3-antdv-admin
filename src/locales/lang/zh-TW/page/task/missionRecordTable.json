@@ -1,0 +1,43 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "missionName": "任務名稱",
+    "missionCreatedTime": "任務建立時間",
+    "missionCompletedTime": "任務完成時間",
+    "loyaltyBox": "活躍寶箱"
+  },
+  "tables": {
+    "settingID": "ID",
+    "memberID": "會員ID",
+    "taskId": "任務ID",
+    "missionCreatedTime": "任務建立時間",
+    "missionCompletedTime": "任務完成時間",
+    "missionCompleted": "完成狀態",
+    "missionVip": "VIP",
+    "missTypeStr": "任務類型",
+    "missionName": "任務名稱",
+    "awardItemsArr": "獎勵項目",
+    "control": "操作"
+  },
+  "enum": {
+    "LoyaltyPointDaily": "每日活躍點",
+    "LoyaltyPointWeekly": "每週活躍點"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "needAccount": "會員欄位不能為空",
+    "connectionError": "連接錯誤"
+  },
+  "search": "查詢",
+  "view": "查看",
+  "datePicker": {
+    "startDate": "開始時間",
+    "dueDate": "結束時間"
+  },
+  "dialog": {
+    "title": "任務詳情"
+  }
+}
+

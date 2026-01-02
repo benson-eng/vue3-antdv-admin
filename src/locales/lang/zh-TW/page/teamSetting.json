@@ -1,0 +1,58 @@
+{
+  "title": "隊伍設定",
+  "add": "新增",
+  "edit": "編輯",
+  "cancel": "取消",
+  "submit": "提交",
+  "masterAgent": "總代理",
+  "selectMasterAgent": "請選擇總代理",
+  "noPermission": "您沒有權限訪問此頁面",
+  "loadFailed": "載入失敗",
+  "createSuccess": "新增成功",
+  "createFailed": "新增失敗",
+  "updateSuccess": "更新成功",
+  "updateFailed": "更新失敗",
+  "saveFailed": "儲存失敗",
+  "enable": "啟用",
+  "disable": "禁用",
+  "tagCreateSuccess": "標籤創建成功",
+  "tagCreateFailed": "標籤創建失敗",
+  "table": {
+    "id": "ID",
+    "type": "類型",
+    "tagID": "標籤ID",
+    "itemName": "道具名稱",
+    "teamIcon": "隊伍圖標",
+    "iconFile": "圖標檔案",
+    "enabled": "啟用",
+    "creationDate": "建立日期",
+    "updatedOn": "更新日期",
+    "control": "控制"
+  },
+  "form": {
+    "itemName": "道具名稱",
+    "itemNamePlaceholder": "請輸入道具名稱",
+    "itemNameRequired": "道具名稱不能為空",
+    "tagID": "標籤ID",
+    "tagIDPlaceholder": "請選擇標籤",
+    "teamIcon": "隊伍圖標",
+    "iconFile": "圖標檔案",
+    "upload": "上傳",
+    "remove": "移除",
+    "createTag": "建立標籤",
+    "imageRequired": "請上傳圖片"
+  },
+  "formTitle": {
+    "create": "新增隊伍徽章",
+    "edit": "編輯隊伍徽章"
+  },
+  "tagDialog": {
+    "title": "建立勳章標籤",
+    "tag": "標籤",
+    "tagPlaceholder": "請輸入標籤名稱",
+    "tagRequired": "標籤名稱不能為空"
+  },
+  "itemType": {
+    "teamBadge": "隊伍徽章"
+  }
+}

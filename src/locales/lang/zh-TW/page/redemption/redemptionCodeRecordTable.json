@@ -1,0 +1,44 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "checkoutRedemptionCode": "兌換碼查詢",
+    "result": "查詢結果",
+    "redeemedTime": "兌換時間"
+  },
+  "tables": {
+    "id": "ID",
+    "nickname": "暱稱",
+    "type": "類別",
+    "orderName": "兌換名稱",
+    "rewards": "兌換品項",
+    "redemptionCode": "兌換碼",
+    "redeemedTime": "兌換時間"
+  },
+  "column": {
+    "orderName": "兌換名稱",
+    "rewards": "兌換品項",
+    "redemptionCode": "兌換碼",
+    "type": "類別",
+    "Nickname": "暱稱"
+  },
+  "CodeState": {
+    "AVAILABLE": "兌換碼可用",
+    "REMOVED": "兌換碼已刪除",
+    "USED": "兌換碼已使用過",
+    "UNAVAILABLE": "兌換碼不可使用(不存在or其他原因)"
+  },
+  "type": {
+    "1": "一碼一次",
+    "2": "一碼多次"
+  },
+  "notify": {
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "needAccount": "會員欄位不能為空",
+    "connectionError": "連接錯誤"
+  },
+  "search": "查詢",
+  "cancel": "取消"
+}
+

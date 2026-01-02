@@ -1,0 +1,53 @@
+{
+  "template": "模板管理",
+  "OTPSmsTemplates": "OTP簡訊模板",
+  "PrivateTeamAnnouncementTemplate": "群組公告模板",
+  "OTPSmsTemplatesPage": {
+    "selectOTPType": "請選擇OTP類型",
+    "buttons": {
+      "update": "更新",
+      "refresh": "重新整理"
+    },
+    "filters": {
+      "masterAgent": "站長"
+    },
+    "label": {
+      "template": "內文",
+      "otp": "一次性密碼",
+      "orderID": "交易訂單ID",
+      "expireTimeMin": "OTP過期時間"
+    },
+    "OTPType": {
+      "BindPhone": "綁定手機",
+      "SetTransactionPassword": "設定交易密碼",
+      "TransactionPassword": "OTP交易密碼",
+      "ChangePassword": "更改密碼"
+    },
+    "notify": {
+      "queryFailed": "查詢失敗",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失敗",
+      "masterAgentRequired": "請先選擇總代理",
+      "otp": "目前輸入會寄出{limit3}封簡訊"
+    }
+  },
+  "PrivateTeamAnnouncementTemplatePage": {
+    "buttons": {
+      "update": "更新",
+      "refresh": "重新整理"
+    },
+    "filters": {
+      "masterAgent": "站長"
+    },
+    "label": {
+      "template": "公告模板"
+    },
+    "notify": {
+      "queryFailed": "查詢失敗",
+      "updateSuccess": "更新成功",
+      "updateFailed": "更新失敗",
+      "masterAgentRequired": "請先選擇總代理"
+    }
+  }
+}
+

@@ -1,0 +1,17 @@
+{
+  "title": "報表系統",
+  "cashRecord": "金錢紀錄",
+  "gachaponGameRecord": "活動中獎紀錄",
+  "missionRecordTable": "任務紀錄",
+  "singleMailRecordTable": "信件紀錄",
+  "redemptionCodeRecord": "兌換碼紀錄",
+  "transactionRecordTable": "贈禮紀錄查詢",
+  "tokenRecordTable": "代幣紀錄",
+  "validFrozenStatementsRecord": "凍結明細表",
+  "externalGameRecords": "外部遊戲紀錄",
+  "smsRecordTable": "簡訊紀錄",
+  "safetyBoxRecordTable": "保險箱紀錄",
+  "dailyLoginRewardRecord": "每日登入獎勵紀錄",
+  "distAcctStationRecord": "站台報表",
+  "distAcctFamilyRecord": "家族報表"
+}

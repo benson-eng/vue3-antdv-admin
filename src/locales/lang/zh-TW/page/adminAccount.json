@@ -1,0 +1,117 @@
+{
+  "column": {
+    "account": "後台帳戶",
+    "name": "名稱",
+    "name2": "網站名稱",
+    "isMaintained": "前台維護",
+    "roles": "角色",
+    "website": "網站名稱",
+    "website2": "網域",
+    "currencies": "幣別",
+    "isSingleWallet": "單一錢包",
+    "apiDomain": "API Domain",
+    "hashKey": "金鑰",
+    "whiteIPList": "白名單",
+    "cdnList": "CDN名單",
+    "accountStatus": "帳戶狀態",
+    "adminMaintained": "後台維護",
+    "createDatetime": "建立日期",
+    "lastLoginDatetime": "最後登入時間",
+    "prefix": "前綴",
+    "lastLoginIP": "最後登入IP"
+  },
+  "labels": {
+    "input": "請輸入帳號",
+    "all": "全部",
+    "enable": "啟用",
+    "disable": "禁用",
+    "yes": "是",
+    "no": "否",
+    "changePassword": "變更密碼",
+    "enabledMaintained": "啟用前台",
+    "disabledMaintained": "禁用前台",
+    "isMaintaining": "維護",
+    "running": "運行中...",
+    "generate": "產生"
+  },
+  "action": {
+    "operation": "操作",
+    "edit": "編輯",
+    "changePassword": "改密碼",
+    "disableMaintained": "禁用前台",
+    "enableMaintained": "啟用前台",
+    "disableAccount": "禁用後台",
+    "enableAccount": "啟用後台"
+  },
+  "dialog": {
+    "editMasterAgent": "編輯總代理",
+    "createMasterAgent": "新增總代理",
+    "changePassword": "變更密碼：{account}",
+    "editAgent": "編輯代理商",
+    "createAgent": "新增代理商"
+  },
+  "message": {
+    "updateFailed": "更新失敗",
+    "updateSuccess": "更新成功",
+    "changePasswordSuccess": "變更成功",
+    "editSuccess": "編輯成功",
+    "createSuccess": "新增成功",
+    "enableBackendSuccess": "成功{status} {account} 的後台",
+    "enableFrontendSuccess": "成功{status} {account} 的前台",
+    "loadRolesFailed": "載入角色清單失敗，請稍後再試",
+    "apiSettingsSaveFailed": "API 設定儲存失敗"
+  },
+  "confirm": {
+    "enableMaintained": "確認要{action} {account} 的前台？",
+    "enableAccount": "確認要{action} {account} 的後台？"
+  },
+  "button": {
+    "add": "新增",
+    "createWizard": "導引式建立"
+  },
+  "queryText": "過濾",
+  "levelFormula": {
+    "0": "無等級",
+    "1": "幣商版",
+    "2": "免幣版"
+  },
+  "vipDowngradeFormula": {
+    "0": "免幣版",
+    "1": "一般版",
+    "2": "幣商版",
+    "3": "MechHunter幣商版"
+  },
+  "singleWalletVersionLabel": {
+    "1": "V1",
+    "2": "V2"
+  },
+  "recaptcha": {
+    "keySettings": "人機驗證 設定",
+    "secretKey": "專案API金鑰",
+    "secretKeyPlaceholder": "請輸入人機驗證 專案API金鑰",
+    "siteKey": "網站金鑰",
+    "siteKeyPlaceholder": "請輸入人機驗證 網站金鑰",
+    "name": "設定名稱",
+    "namePlaceholder": "請輸入人機驗證 設定名稱",
+    "enabled": "啟用開關",
+    "enableSettings": "啟用設定",
+    "extraHint": "當所有金鑰資訊填寫完成後，才可啟用人機驗證"
+  },
+  "rules": {
+    "apiDomain": "請輸入 API Domain",
+    "accountRequired": "請輸入帳號",
+    "fourFieldsRequired": "請完整填寫設定欄位，或全部留空",
+    "websiteProtocol": "Website 不可包含 http/https",
+    "whiteIPListLength": "White IP List 長度不可超過 255",
+    "newPasswordRequired": "請輸入新密碼"
+  },
+  "page": {
+    "agentManagement": "代理商管理",
+    "masterAgent": "站長",
+    "selectMasterAgent": "請選擇站長",
+    "selectMasterAgentFirst": "請先選擇總代理"
+  },
+  "field": {
+    "newPassword": "新密碼"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員"
+  },
+  "label": {
+    "searchTime": "查詢時間",
+    "nickName": "會員",
+    "orderType": "orderType",
+    "currencyType": "幣別",
+    "remittances": "提 / 存",
+    "serviceFee": "手續費",
+    "state": "狀態",
+    "transferAt": "時間"
+  },
+  "notify": {
+    "required": "會員與查詢時間為必要數值",
+    "connectionError": "連接錯誤"
+  },
+  "state": {
+    "Success": "成功",
+    "Fail": "失敗"
+  },
+  "search": "查詢"
+}
+

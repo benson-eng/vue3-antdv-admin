@@ -1,0 +1,56 @@
+{
+  "label": {
+    "station": "站台",
+    "family": "家族",
+    "control": "控制",
+    "viewTable": "查看報表",
+    "dateRange": "日期範圍",
+    "target": "對象",
+    "amount": "款項",
+    "currency": "元",
+    "points": "點數",
+    "Payable": "應付",
+    "Payable2": "應付",
+    "Receivable": "應收",
+    "Receivable2": "應收"
+  },
+  "table": {
+    "accountDetails": "帳務明細",
+    "BasicFee": "基礎費用",
+    "PaymentServiceCost": "金流費用",
+    "PurchaseServiceCost": "金流手續費",
+    "GameWinLose": "遊戲輸贏",
+    "Bonus": "紅利",
+    "ServiceFee": "手續費",
+    "timeRange": "時間區間",
+    "item": "項目",
+    "detail": "細項",
+    "fee": "費用",
+    "commissionRate": "抽成比例",
+    "totalDeposit": "總儲值額",
+    "totalAmount": "總額",
+    "totalBonus": "總贈額",
+    "total": "總計",
+    "totalPoints": "本帳單合計點數"
+  },
+  "subType": {
+    "PurchaseServiceCost": "金流手續費",
+    "SMSServiceCost": "簡訊服務費",
+    "PlatformMonthlyFee": "平台月費",
+    "Purchase": "儲值",
+    "GameWinLose": "遊戲輸贏",
+    "Bonus": "紅利",
+    "ServiceFee": "手續費"
+  },
+  "dialog": {
+    "title": "家族報表查詢",
+    "description": "此帳單為",
+    "description2": "的對帳報表，請確認內容無誤。"
+  },
+  "close": "關閉",
+  "print": "列印",
+  "error": {
+    "noPermission": "您沒有權限訪問此頁面"
+  }
+}
+

@@ -1,0 +1,15 @@
+{
+  "labels": {
+    "type": "類型",
+    "currencyType": "幣別",
+    "balance": "數量",
+    "item": "道具",
+    "token": "代幣"
+  },
+  "awardType": {
+    "Currency": "金錢",
+    "Treasures": "道具",
+    "Token": "代幣"
+  }
+}
+

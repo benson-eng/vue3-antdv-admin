@@ -1,0 +1,50 @@
+{
+  "labels": {
+    "masterAgent": "總代理",
+    "agent": "代理商",
+    "member": "會員",
+    "memberID": "會員ID",
+    "wagersID": "回合編號",
+    "winLose": "輸贏統計",
+    "totalWin": "總贏分",
+    "totalBet": "總押注",
+    "playDateTime": "遊玩時間",
+    "gameID": "遊戲ID",
+    "externalPlatform": "平台",
+    "currencyType": "幣別",
+    "note": "備註",
+    "buyFeature": "購買特色遊戲",
+    "betType": "押注種類",
+    "searchTime": "查詢時間",
+    "platform": "平台"
+  },
+  "betType": {
+    "NormalGame": "主遊戲",
+    "FreeGame": "免費遊戲",
+    "BuyFeature": "購買免遊",
+    "BonusGame1": "副獎遊戲一",
+    "BonusGame2": "副獎遊戲二",
+    "DoubleGame": "比倍遊戲",
+    "JackpotGame": "神秘彩金",
+    "GameJP1": "GameJP遊戲1",
+    "GameJP2": "GameJP遊戲2",
+    "GameJP3": "GameJP遊戲3",
+    "GameJP4": "GameJP遊戲4",
+    "GameJP5": "GameJP遊戲5",
+    "GameJP6": "GameJP遊戲6",
+    "BonusGame": "紅利遊戲",
+    "BuyGift": "購買禮物",
+    "NGRespin": "主遊戲 Respin",
+    "FGRespin": "免費遊戲 Respin",
+    "ReSpin": "重轉",
+    "Feature": "特色",
+    "ForceSettle": "強制結算"
+  },
+  "notify": {
+    "emptyAgentID": "代理商不可空白",
+    "emptyDate": "時間不可空白",
+    "searchFinish": "查詢完成"
+  },
+  "search": "查詢"
+}
+

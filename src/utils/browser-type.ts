@@ -1,9 +1,9 @@
 /**
  * @description 获取用户浏览器版本及系统信息
- * @param {string='zh-cn' | 'en'} lang 返回中文的信息还是英文的
+ * @param {string='zh-tw' | 'en'} lang 返回中文的信息還是英文的
  * @constructor
  */
-export default function BrowserType(lang: 'zh-cn' | 'en' = 'en') {
+export default function BrowserType(lang: 'zh-tw' | 'en' = 'en') {
   // 权重：系统 + 系统版本 > 平台 > 内核 + 载体 + 内核版本 + 载体版本 > 外壳 + 外壳版本
   const ua = navigator.userAgent.toLowerCase();
   const testUa = (regexp) => regexp.test(ua);
@@ -104,7 +104,7 @@ export default function BrowserType(lang: 'zh-cn' | 'en' = 'en') {
   ]).get(true) || ['none', 'unknow'];
 
   return {
-    'zh-cn': Object.assign(
+    'zh-tw': Object.assign(
       {
         内核: engine, // 内核: webkit gecko presto trident
         内核版本: engineVs, // 内核版本
