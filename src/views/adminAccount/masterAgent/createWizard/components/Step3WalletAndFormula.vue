@@ -25,13 +25,20 @@ const formRef = ref<FormInstance>();
  * 自定義驗證函數：檢查數字欄位是否為有效值（不為 null、undefined，且為數字）
  */
 const createNumberValidator = (fieldName: string) => {
-  return (_rule: any, value: number | null | undefined) => {
-    if (value === null || value === undefined) {
+  return (_rule: any, value: number | string | null | undefined) => {
+    // 檢查是否為空值
+    if (value === null || value === undefined || value === '') {
       return Promise.reject(new Error(`請輸入${fieldName}`));
     }
-    if (typeof value !== 'number' || Number.isNaN(value)) {
+
+    // 嘗試轉換為數字
+    const numValue = typeof value === 'number' ? value : Number(value);
+
+    // 檢查是否為有效數字
+    if (Number.isNaN(numValue) || !Number.isFinite(numValue)) {
       return Promise.reject(new Error(`${fieldName}必須為有效數字`));
     }
+
     return Promise.resolve();
   };
 };

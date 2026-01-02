@@ -4,8 +4,6 @@
 // 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
 // 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
-import type { Rule } from 'ant-design-vue/es/form';
-import { message } from 'ant-design-vue';
 import { nextTick, ref } from 'vue';
 import { useI18n } from '@/hooks/useI18n';
 import { generateHashKey } from '../utils';
@@ -16,13 +14,7 @@ const props = defineProps<Props>();
 
 interface Props {
   formModel: {
-    paymentMode?: string;
-    topUpRate?: number;
-    myCardWebsite?: string;
-    myCardRedirectVerifyWebsite?: string;
-    myCardCallbackDomain?: string;
     gaKey: string;
-    firebaseSdkConfig: string;
     internalSettings: string;
     remoteConfigURLs: string;
     [key: string]: any;
@@ -48,73 +40,6 @@ const generateHashKeyValue = async () => {
 };
 
 /**
- * 驗證 JSON 格式
- * @param value 要驗證的值
- * @returns 如果為空或格式正確返回 true，否則返回 false
- */
-const validateJson = (value: string): { valid: boolean; error?: string } => {
-  if (!value || !value.trim()) {
-    return { valid: true }; // 空值視為有效（選填欄位）
-  }
-
-  const trimmed = value.trim();
-
-  // 檢查是否看起來像 JSON（以 { 或 [ 開頭）
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-    return { valid: false, error: 'JSON 格式應以 { 或 [ 開頭' };
-  }
-
-  try {
-    JSON.parse(trimmed);
-    return { valid: true };
-  }
-  catch (error) {
-    return { valid: false, error: 'JSON 格式錯誤，請檢查語法' };
-  }
-};
-
-/**
- * 格式化 JSON（輕量檢查）
- */
-const formatJson = (fieldName: 'firebaseSdkConfig') => {
-  const value = props.formModel[fieldName];
-  if (!value || !value.trim()) {
-    message.warning('欄位為空，無法格式化');
-    return;
-  }
-
-  const trimmed = value.trim();
-  // 檢查是否看起來像 JSON（以 { 或 [ 開頭）
-  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
-    message.warning('內容不是 JSON 格式（應以 { 或 [ 開頭）');
-    return;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    const formatted = JSON.stringify(parsed, null, 2);
-    props.formModel[fieldName] = formatted;
-    message.success('JSON 格式化成功');
-  }
-  catch (error) {
-    message.warning('JSON 格式錯誤，無法格式化');
-  }
-};
-
-/**
- * 創建 JSON 驗證規則
- */
-const createJsonValidator = (): Rule => ({
-  validator: (_rule: any, value: string) => {
-    const result = validateJson(value);
-    if (!result.valid) {
-      return Promise.reject(new Error(result.error || '格式錯誤'));
-    }
-    return Promise.resolve();
-  },
-});
-
-/**
  * 驗證表單
  */
 const validate = async (): Promise<boolean> => {
@@ -135,22 +60,6 @@ const validate = async (): Promise<boolean> => {
         console.log('[Step12] 表單規則驗證失敗:', error);
         return false;
       }
-    }
-
-    // 2️⃣ 再「強制驗證 JSON」（關鍵）
-    const result = validateJson(props.formModel.firebaseSdkConfig);
-    if (!result.valid) {
-      message.error(`Firebase SDK 配置：${result.error}`);
-      // 確保表單也顯示錯誤狀態
-      if (formRef.value) {
-        try {
-          await formRef.value.validateFields(['firebaseSdkConfig']).catch(() => {});
-        }
-        catch {
-          // 忽略錯誤，已經顯示了 message.error
-        }
-      }
-      return false; // 🔥 真正阻擋 Wizard
     }
 
     return true;
@@ -187,83 +96,33 @@ defineExpose({
       </template>
     </a-alert>
 
-    <!-- 金流設定 -->
-    <a-divider orientation="left">
-      金流設定
-    </a-divider>
-
-    <a-form-item label="支付模式" name="paymentMode">
-      <a-select
-        v-model:value="formModel.paymentMode"
-        style="width: 100%"
-      >
-        <a-select-option value="Real">
-          Real
-        </a-select-option>
-        <a-select-option value="Fake">
-          Fake
-        </a-select-option>
-      </a-select>
-    </a-form-item>
-
-    <a-form-item label="儲值比例" name="topUpRate">
-      <a-input-number
-        v-model:value="formModel.topUpRate"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入儲值比例"
-      />
-    </a-form-item>
-
-    <a-form-item label="mycard網域" name="myCardWebsite">
-      <a-input
-        v-model:value="formModel.myCardWebsite"
-        placeholder="請輸入 mycard網域"
-      />
-    </a-form-item>
-
-    <a-form-item label="返回的網址" name="myCardRedirectVerifyWebsite">
-      <a-input
-        v-model:value="formModel.myCardRedirectVerifyWebsite"
-        placeholder="請輸入返回的網址"
-      />
-    </a-form-item>
-
-    <a-form-item label="callbackDomain" name="myCardCallbackDomain">
-      <a-input
-        v-model:value="formModel.myCardCallbackDomain"
-        placeholder="請輸入 callbackDomain"
-      />
-    </a-form-item>
-
     <!-- 網路安全設定 -->
     <a-divider orientation="left">
       網路安全設定
     </a-divider>
 
-    <a-form-item label="API Domain" name="apiDomain">
+    <a-form-item v-if="false" label="API Domain" name="apiDomain">
       <a-input
         v-model:value="(formModel as any).apiDomain"
         placeholder="請輸入 API Domain"
       />
     </a-form-item>
 
-    <a-form-item label="白名單" name="whiteIPList">
+    <a-form-item v-if="false" label="白名單" name="whiteIPList">
       <a-input
         v-model:value="(formModel as any).whiteIPList"
         placeholder="請輸入白名單"
       />
     </a-form-item>
 
-    <a-form-item label="CDN 名單" name="cdnList">
+    <a-form-item v-if="false" label="CDN 名單" name="cdnList">
       <a-input
         v-model:value="(formModel as any).cdnList"
         placeholder="請輸入 CDN 名單"
       />
     </a-form-item>
 
-    <a-form-item label="代理伺服器名單" name="proxyList">
+    <a-form-item v-if="false" label="代理伺服器名單" name="proxyList">
       <a-input
         v-model:value="(formModel as any).proxyList"
         placeholder="請輸入代理伺服器名單"
@@ -387,41 +246,6 @@ defineExpose({
       </a-select>
     </a-form-item>
 
-    <!-- Firebase 與分析設定 -->
-    <a-divider orientation="left">
-      Firebase
-    </a-divider>
-
-    <!-- <a-form-item label="GA 金鑰" name="gaKey">
-      <a-textarea
-        v-model:value="formModel.gaKey"
-        :rows="3"
-        placeholder="請輸入 GA 金鑰"
-      />
-    </a-form-item> -->
-
-    <a-form-item
-      label="Firebase SDK 配置"
-      name="firebaseSdkConfig"
-      :rules="[createJsonValidator()]"
-    >
-      <template #extra>
-        <a-button
-          size="small"
-          type="link"
-          style="padding: 0"
-          @click="formatJson('firebaseSdkConfig')"
-        >
-          格式化 JSON
-        </a-button>
-      </template>
-      <a-textarea
-        v-model:value="formModel.firebaseSdkConfig"
-        :rows="5"
-        placeholder="請輸入 Firebase SDK 配置（JSON 格式或文字）"
-      />
-    </a-form-item>
-
     <!-- 支付金鑰設定 -->
     <!-- <a-divider orientation="left">
       支付金鑰設定
@@ -472,15 +296,6 @@ defineExpose({
         placeholder="請輸入 iOS 應用包識別碼"
       />
     </a-form-item> -->
-
-    <!-- 其他設定 -->
-    <a-divider orientation="left">
-      其他設定
-    </a-divider>
-
-    <a-form-item label="允許會員暱稱重複" name="isAllowMemberNicknameDuplicate">
-      <a-checkbox v-model:checked="(formModel as any).isAllowMemberNicknameDuplicate" />
-    </a-form-item>
 
     <!-- JSON 設定欄位 -->
     <a-divider orientation="left">

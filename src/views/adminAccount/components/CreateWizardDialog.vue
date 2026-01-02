@@ -11,7 +11,6 @@ import Step5FirebaseAnalytics from '../masterAgent/createWizard/components/Step5
 import Step7CustomerAndSocial from '../masterAgent/createWizard/components/Step7CustomerAndSocial.vue';
 import Step8PaymentSettings from '../masterAgent/createWizard/components/Step8PaymentSettings.vue';
 import Step9SmsSettings from '../masterAgent/createWizard/components/Step9SmsSettings.vue';
-import Step11Recaptcha from '../masterAgent/createWizard/components/Step11Recaptcha.vue';
 import Step12AdvancedSettings from '../masterAgent/createWizard/components/Step12AdvancedSettings.vue';
 import { buildInternalSettings, buildRemoteConfigURLs, generateHashKey, generateSecret } from '../masterAgent/createWizard/utils';
 
@@ -67,10 +66,9 @@ const stepStates = reactive<Record<number, StepStatus>>({});
 const step1Ref = ref<InstanceType<typeof Step1BasicInfo> | null>(null);
 const step3Ref = ref<InstanceType<typeof Step3WalletAndFormula> | null>(null);
 const step5Ref = ref<InstanceType<typeof Step5FirebaseAnalytics> | null>(null);
-const step7Ref = ref<InstanceType<typeof Step7CustomerAndSocial> | null>(null);
 const step8Ref = ref<InstanceType<typeof Step8PaymentSettings> | null>(null);
 const step9Ref = ref<InstanceType<typeof Step9SmsSettings> | null>(null);
-const step11Ref = ref<InstanceType<typeof Step11Recaptcha> | null>(null);
+const step7Ref = ref<InstanceType<typeof Step7CustomerAndSocial> | null>(null);
 const step12Ref = ref<InstanceType<typeof Step12AdvancedSettings> | null>(null);
 
 /**
@@ -476,7 +474,7 @@ const validateCurrentStep = async (): Promise<boolean> => {
     case 2: // Step 3: Firebase Analytics（Step5FirebaseAnalytics，需要驗證 JSON 格式）
       isValid = await step5Ref.value?.validate() ?? false;
       break;
-    case 3: // Step 4: 社群登入（不需要驗證）
+    case 3: // Step 4: 登入相關（不需要驗證）
       isValid = true;
       break;
     case 4: // Step 5: 金流設定（不需要驗證）
@@ -485,10 +483,7 @@ const validateCurrentStep = async (): Promise<boolean> => {
     case 5: // Step 6: 簡訊設定（不需要驗證）
       isValid = true;
       break;
-    case 6: // Step 7: 人機驗證（不需要驗證）
-      isValid = true;
-      break;
-    case 7: // Step 8: 進階設定（需要驗證金鑰）
+    case 7: // Step 7: 進階設定（需要驗證金鑰）
       isValid = await step12Ref.value?.validate() ?? false;
       break;
     default:
@@ -1542,7 +1537,7 @@ onBeforeUnmount(() => {
         <a-step
           v-if="formModel.accountType === 'masterAgent'"
           title="Step 4"
-          description="社群登入"
+          description="登入相關"
           :status="getStepStatus(3)"
           :class="{
             'step-clickable': isStepClickable(3),
@@ -1570,18 +1565,8 @@ onBeforeUnmount(() => {
           }"
         />
         <a-step
-          v-if="formModel.accountType === 'masterAgent'"
-          title="Step 7"
-          description="人機驗證設定"
-          :status="getStepStatus(6)"
-          :class="{
-            'step-clickable': isStepClickable(6),
-            'step-disabled': !isStepClickable(6),
-          }"
-        />
-        <a-step
           v-if="formModel.accountType === 'masterAgent' && userStore.level === 1"
-          title="Step 8"
+          title="Step 7"
           description="進階設定"
           :status="getStepStatus(7)"
           :class="{
@@ -1612,11 +1597,6 @@ onBeforeUnmount(() => {
           ref="step5Ref"
           :form-model="formModel"
         />
-        <Step7CustomerAndSocial
-          v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
-          ref="step7Ref"
-          :form-model="formModel"
-        />
         <Step8PaymentSettings
           v-show="currentStep === 4 && formModel.accountType === 'masterAgent'"
           ref="step8Ref"
@@ -1628,9 +1608,9 @@ onBeforeUnmount(() => {
           :form-model="formModel"
           :level="userStore.level"
         />
-        <Step11Recaptcha
-          v-show="currentStep === 6 && formModel.accountType === 'masterAgent'"
-          ref="step11Ref"
+        <Step7CustomerAndSocial
+          v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
+          ref="step7Ref"
           :form-model="formModel"
         />
         <Step12AdvancedSettings

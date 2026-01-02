@@ -110,6 +110,7 @@ defineExpose({
       key: keyof Props['formModel'];
       label: string;
     }> = [
+      { key: 'firebaseSdkConfig', label: 'Firebase SDK 配置' },
       { key: 'firebaseAdminSdkConfig', label: 'Firebase 管理員 SDK 配置' },
       { key: 'firebaseConfig', label: 'Firebase 設定' },
     ];
@@ -152,7 +153,11 @@ defineExpose({
       />
     </a-form-item> -->
 
-    <!-- <a-form-item label="Firebase SDK 配置" name="firebaseSdkConfig">
+    <a-form-item
+      label="Firebase SDK 配置"
+      name="firebaseSdkConfig"
+      :rules="[createJsonValidator()]"
+    >
       <template #extra>
         <a-button
           size="small"
@@ -165,10 +170,10 @@ defineExpose({
       </template>
       <a-textarea
         v-model:value="formModel.firebaseSdkConfig"
-        :rows="6"
-        placeholder="請輸入 Firebase SDK 配置（JSON 格式或文字）&#10;例如：{&#10;  &quot;apiKey&quot;: &quot;...&quot;,&#10;  &quot;authDomain&quot;: &quot;...&quot;&#10;}"
+        :rows="5"
+        placeholder="請輸入 Firebase SDK 配置（JSON 格式或文字）"
       />
-    </a-form-item> -->
+    </a-form-item>
 
     <a-form-item
       label="Firebase 管理員 SDK 配置"
