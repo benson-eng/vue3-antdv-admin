@@ -28,7 +28,7 @@ export const getBaseColumns = (pt: (key: string) => string): TableColumnItem[] =
   {
     title: pt('column.prefix'),
     dataIndex: 'prefix',
-    width: 80,
+    width: 130,
     ellipsis: true,
     align: 'center',
     hideInSearch: true,

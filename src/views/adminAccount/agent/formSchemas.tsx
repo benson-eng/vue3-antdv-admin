@@ -196,16 +196,29 @@ export const getAgentSchemas = (opts: {
       // 四欄聯動驗證
       rules: [
         {
+          validator: (_rule: any, value: string) => {
+            if (value) {
+              const invalidProtocolRegex = /^(http:\/\/|https:\/\/)/i;
+              if (invalidProtocolRegex.test(value)) {
+                return Promise.reject(new Error(pt('rules.websiteProtocol')));
+              }
+            }
+            return Promise.resolve();
+          },
+          trigger: ['blur', 'change'],
+        },
+        {
           validator: validateFourFields('website'),
           trigger: ['blur', 'change'],
         },
       ],
-      colProps: { span: 12 },
+      colProps: { span: 24 },
       componentProps: {
         placeholder: `請輸入${pt('column.website')}（不可含 http/https；會自動加上 -masterAgent）`,
         disabled: !opts.canEditApiSettings,
         autocomplete: 'off',
         name: 'agent-website',
+        style: { maxWidth: 'calc(100% - 120px)' },
       },
       afterSlot: () => (masterAgent ? h('span', { class: 'ml-[6px]' }, `-${masterAgent}`) : undefined),
     },
@@ -220,12 +233,13 @@ export const getAgentSchemas = (opts: {
           trigger: ['blur', 'change'],
         },
       ],
-      colProps: { span: 12 },
+      colProps: { span: 24 },
       componentProps: {
         placeholder: `請輸入${pt('column.hashKey')}`,
         disabled: !opts.canEditApiSettings,
         autocomplete: 'new-password',
         name: 'agent-hashkey',
+        style: { maxWidth: 'calc(100% - 120px)' },
       },
       afterSlot: onHashKeyGen
         ? (ctx: any) =>
@@ -254,7 +268,7 @@ export const getAgentSchemas = (opts: {
           trigger: ['blur', 'change'],
         },
       ],
-      colProps: { span: 12 },
+      colProps: { span: 24 },
       componentProps: {
         placeholder: `請輸入${pt('column.apiDomain')}`,
         disabled: !opts.canEditApiSettings,
@@ -272,7 +286,7 @@ export const getAgentSchemas = (opts: {
           trigger: ['blur', 'change'],
         },
       ],
-      colProps: { span: 12 },
+      colProps: { span: 24 },
       componentProps: {
         placeholder: `請輸入${pt('column.whiteIPList')}（長度 ≤ 255）`,
         disabled: !opts.canEditApiSettings,

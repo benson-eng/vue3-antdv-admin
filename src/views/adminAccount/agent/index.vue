@@ -191,7 +191,7 @@ const onMasterAgentChanged = () => {
 
 const calculateTableScrollX = () => {
   /** 帳號 + 名稱 + 前綴 + 角色 + Website + API Domain + White IP List */
-  const baseColumnsWidth = 140 + 140 + 80 + 220 + 200 + 200 + 220;
+  const baseColumnsWidth = 140 + 140 + 130 + 220 + 200 + 200 + 220;
   /** 建立時間 + 最後登入時間 + 最後登入 IP */
   const datetimeColumnsWidth = 180 + 180 + 160;
   /** 啟用 + 狀態 */

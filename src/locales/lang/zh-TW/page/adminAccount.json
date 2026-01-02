@@ -101,8 +101,8 @@
     "apiDomain": "請輸入 API Domain",
     "accountRequired": "請輸入帳號",
     "fourFieldsRequired": "請完整填寫設定欄位，或全部留空",
-    "websiteProtocol": "Website 不可包含 http/https",
-    "whiteIPListLength": "White IP List 長度不可超過 255",
+    "websiteProtocol": "不可包含 http/https",
+    "whiteIPListLength": "長度不可超過 255",
     "newPasswordRequired": "請輸入新密碼"
   },
   "page": {

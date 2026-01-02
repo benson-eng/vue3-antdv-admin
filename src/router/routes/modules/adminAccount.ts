@@ -44,6 +44,61 @@ const routes: RouteRecordRaw[] = [
       //     icon: 'ant-design:UserSwitch-outlined',
       //   },
       // },
+
+      // {
+      //   path: 'shareholder',
+      //   name: 'AdminAccountShareholder',
+      //   component: () => import('@/views/adminAccount/shareholder/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.shareholder'),
+      //     icon: 'ant-design:Team-outlined',
+      //   },
+      // },
+      // {
+      //   path: 'machineSettingPublic',
+      //   name: 'AdminAccountMachineSettingPublic',
+      //   component: () => import('@/views/adminAccount/machineSettingPublic/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.machineSettingPublic'),
+      //     icon: 'ant-design:Setting-outlined',
+      //   },
+      // },
+      {
+        path: 'agent',
+        name: 'AdminAccountAgent',
+        component: () => import('@/views/adminAccount/agent/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.agent'),
+          icon: 'ant-design:UserSwitch-outlined',
+        },
+      },
+      // {
+      //   path: 'agentSettings',
+      //   name: 'AdminAccountAgentSettings',
+      //   component: () => import('@/views/adminAccount/agentSettings/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.agentSettings'),
+      //     icon: 'ant-design:Setting-outlined',
+      //   },
+      // },
+      {
+        path: 'subaccount',
+        name: 'AdminAccountSubaccount',
+        component: () => import('@/views/adminAccount/subaccount/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.subaccount'),
+          icon: 'ant-design:User-outlined',
+        },
+      },
+      {
+        path: 'subaccountChildren',
+        name: 'AdminAccountSubaccountChildren',
+        component: () => import('@/views/adminAccount/subaccountChildren/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.subaccountChildren'),
+          icon: 'ant-design:User-outlined',
+        },
+      },
       {
         path: 'currency',
         name: 'AdminAccountCurrency',
@@ -78,60 +133,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.authenticator'),
           icon: 'ant-design:SafetyCertificate-outlined',
-        },
-      },
-      {
-        path: 'shareholder',
-        name: 'AdminAccountShareholder',
-        component: () => import('@/views/adminAccount/shareholder/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.shareholder'),
-          icon: 'ant-design:Team-outlined',
-        },
-      },
-      {
-        path: 'machineSettingPublic',
-        name: 'AdminAccountMachineSettingPublic',
-        component: () => import('@/views/adminAccount/machineSettingPublic/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.machineSettingPublic'),
-          icon: 'ant-design:Setting-outlined',
-        },
-      },
-      {
-        path: 'agent',
-        name: 'AdminAccountAgent',
-        component: () => import('@/views/adminAccount/agent/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.agent'),
-          icon: 'ant-design:UserSwitch-outlined',
-        },
-      },
-      {
-        path: 'agentSettings',
-        name: 'AdminAccountAgentSettings',
-        component: () => import('@/views/adminAccount/agentSettings/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.agentSettings'),
-          icon: 'ant-design:Setting-outlined',
-        },
-      },
-      {
-        path: 'subaccount',
-        name: 'AdminAccountSubaccount',
-        component: () => import('@/views/adminAccount/subaccount/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.subaccount'),
-          icon: 'ant-design:User-outlined',
-        },
-      },
-      {
-        path: 'subaccountChildren',
-        name: 'AdminAccountSubaccountChildren',
-        component: () => import('@/views/adminAccount/subaccountChildren/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.subaccountChildren'),
-          icon: 'ant-design:User-outlined',
         },
       },
     ],
