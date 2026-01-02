@@ -20,7 +20,9 @@ interface Props {
 
 const formRef = ref<FormInstance>();
 
-// 自定義驗證函數：檢查數字欄位是否為有效值（不為 null、undefined，且為數字）
+/**
+ * 自定義驗證函數：檢查數字欄位是否為有效值（不為 null、undefined，且為數字）
+ */
 const createNumberValidator = (fieldName: string) => {
   return (_rule: any, value: number | null | undefined) => {
     if (value === null || value === undefined) {
