@@ -200,41 +200,41 @@ defineExpose({
     :wrapper-col="{ style: { flex: 1 } }"
   >
     <!-- LINE 登入設定 -->
-    <a-divider orientation="left">
+    <!-- <a-divider orientation="left">
       LINE 登入設定
-    </a-divider>
+    </a-divider> -->
 
-    <a-form-item label="Line 官方帳號" name="lineOfficialAccount">
+    <!-- <a-form-item label="Line 官方帳號" name="lineOfficialAccount">
       <a-input
         v-model:value="localForm.lineOfficialAccount"
         placeholder="請輸入 Line 官方帳號"
         :disabled="props.isReadonly"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item label="LIFF ID" name="liffID">
+    <!-- <a-form-item label="LIFF ID" name="liffID">
       <a-input
         v-model:value="localForm.liffID"
         placeholder="請輸入 LIFF ID"
         :disabled="props.isReadonly"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item label="Line登入ID" name="lineClientID">
+    <!-- <a-form-item label="Line登入ID" name="lineClientID">
       <a-input
         v-model:value="localForm.lineClientID"
         placeholder="請輸入 Line 登入 ID"
         :disabled="props.isReadonly"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item label="line登入密鑰" name="lineClientSecret">
+    <!-- <a-form-item label="line登入密鑰" name="lineClientSecret">
       <a-input
         v-model:value="localForm.lineClientSecret"
         placeholder="請輸入 Line 登入 密鑰"
         :disabled="props.isReadonly"
       />
-    </a-form-item>
+    </a-form-item> -->
 
     <!-- Facebook 登入 -->
     <!-- <a-divider orientation="left">
