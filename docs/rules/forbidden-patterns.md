@@ -217,7 +217,27 @@ customRender: () => userLevel === 1 ? 'xxx' : null;
 
 ---
 
-## 九、規範優先權說明
+## 九、Readonly 模式的資料流規範（強制）
+
+Readonly 模式不得僅依賴 UI disabled 屬性。
+
+以下行為一律禁止：
+
+- 僅使用 `:disabled` 來實作 readonly
+- 在 readonly 模式下仍透過 `v-model` / `emit` / `computed setter` 寫回父層資料
+- 透過 `watch`、初始化流程或副作用間接修改父層資料
+- 切換 step / tab 時導致父層 record 被異動
+
+正確做法：
+
+- Readonly 模式必須在「資料寫入路徑」中斷
+- Step 組件應使用 local 副本（localForm），或 readonly-safe setter
+- 檢視模式下，任何 Step 不得改變父層 record 狀態
+- UI disabled 僅為輔助行為，不得作為唯一 readonly 保證
+
+---
+
+## 十、規範優先權說明
 
 - 本文件位於 docs/rules
 

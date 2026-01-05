@@ -1,11 +1,8 @@
 <script setup lang="ts">
-/* eslint-disable vue/no-mutating-props */
-// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
-// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
 import type { Rule } from 'ant-design-vue/es/form';
 import { message } from 'ant-design-vue';
-import { ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
 
 defineOptions({ name: 'Step5FirebaseAnalytics' });
 
@@ -18,15 +15,91 @@ interface Props {
     firebaseAdminSdkConfig: string;
     firebaseConfig: string;
   };
+  /** 是否為唯讀模式（Level 4 檢視模式） */
+  isReadonly?: boolean;
 }
 
 const formRef = ref<FormInstance>();
 
 /**
+ * 本地表單副本（用於 readonly 模式下隔離寫入）
+ * 在 readonly 模式下，所有變更僅影響 localForm，不會寫回父層
+ * 在非 readonly 模式下，變更會同步回父層 formModel
+ */
+const localForm = reactive<{
+  gaKey: string;
+  firebaseSdkConfig: string;
+  firebaseAdminSdkConfig: string;
+  firebaseConfig: string;
+}>({
+  gaKey: props.formModel.gaKey,
+  firebaseSdkConfig: props.formModel.firebaseSdkConfig,
+  firebaseAdminSdkConfig: props.formModel.firebaseAdminSdkConfig,
+  firebaseConfig: props.formModel.firebaseConfig,
+});
+
+/**
+ * 同步 localForm 到父層 formModel（僅在非 readonly 模式下執行）
+ */
+const syncToParent = () => {
+  if (props.isReadonly) {
+    return; // readonly 模式下不寫回父層
+  }
+  Object.assign(props.formModel, {
+    gaKey: localForm.gaKey,
+    firebaseSdkConfig: localForm.firebaseSdkConfig,
+    firebaseAdminSdkConfig: localForm.firebaseAdminSdkConfig,
+    firebaseConfig: localForm.firebaseConfig,
+  });
+};
+
+/**
+ * 從父層 formModel 同步到 localForm（用於初始化或外部更新）
+ */
+const syncFromParent = () => {
+  localForm.gaKey = props.formModel.gaKey;
+  localForm.firebaseSdkConfig = props.formModel.firebaseSdkConfig;
+  localForm.firebaseAdminSdkConfig = props.formModel.firebaseAdminSdkConfig;
+  localForm.firebaseConfig = props.formModel.firebaseConfig;
+};
+
+// 監聽父層 formModel 變化，同步到 localForm（僅在 readonly 模式下）
+watch(
+  () => props.formModel,
+  () => {
+    if (props.isReadonly) {
+      syncFromParent();
+    }
+  },
+  { deep: true },
+);
+
+// 在非 readonly 模式下，監聽 localForm 變化並同步回父層
+watch(
+  () => [
+    localForm.gaKey,
+    localForm.firebaseSdkConfig,
+    localForm.firebaseAdminSdkConfig,
+    localForm.firebaseConfig,
+  ],
+  () => {
+    syncToParent();
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  syncFromParent();
+});
+
+/**
  * 格式化 JSON（輕量檢查）
  */
 const formatJson = (fieldName: 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
-  const value = props.formModel[fieldName];
+  if (props.isReadonly) {
+    return; // readonly 模式下不允許格式化
+  }
+  const value = localForm[fieldName];
   if (!value || !value.trim()) {
     message.warning('欄位為空，無法格式化');
     return;
@@ -42,7 +115,9 @@ const formatJson = (fieldName: 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
   try {
     const parsed = JSON.parse(trimmed);
     const formatted = JSON.stringify(parsed, null, 2);
-    props.formModel[fieldName] = formatted;
+    localForm[fieldName] = formatted;
+    // 立即同步到父層
+    syncToParent();
     message.success('JSON 格式化成功');
   }
   catch (error) {
@@ -107,7 +182,7 @@ defineExpose({
 
     // 2️⃣ 再「強制驗證 JSON」（關鍵）
     const jsonFields: Array<{
-      key: keyof Props['formModel'];
+      key: keyof typeof localForm;
       label: string;
     }> = [
       { key: 'firebaseAdminSdkConfig', label: 'Firebase 管理員 SDK 配置' },
@@ -115,7 +190,7 @@ defineExpose({
     ];
 
     for (const { key, label } of jsonFields) {
-      const value = props.formModel[key];
+      const value = localForm[key];
       const result = validateJson(value);
       if (!result.valid) {
         message.error(`${label}：${result.error}`);
@@ -141,7 +216,7 @@ defineExpose({
 <template>
   <a-form
     ref="formRef"
-    :model="formModel"
+    :model="localForm"
     layout="vertical"
   >
     <!-- <a-form-item label="GA 金鑰" name="gaKey">
@@ -159,6 +234,7 @@ defineExpose({
     >
       <template #extra>
         <a-button
+          v-if="!props.isReadonly"
           size="small"
           type="link"
           style="padding: 0"
@@ -168,9 +244,10 @@ defineExpose({
         </a-button>
       </template>
       <a-textarea
-        v-model:value="formModel.firebaseAdminSdkConfig"
+        v-model:value="localForm.firebaseAdminSdkConfig"
         :rows="6"
         placeholder="請輸入 Firebase 管理員 SDK 配置（JSON 格式或文字）"
+        :disabled="props.isReadonly"
       />
     </a-form-item>
 
@@ -181,6 +258,7 @@ defineExpose({
     >
       <template #extra>
         <a-button
+          v-if="!props.isReadonly"
           size="small"
           type="link"
           style="padding: 0"
@@ -190,9 +268,10 @@ defineExpose({
         </a-button>
       </template>
       <a-textarea
-        v-model:value="formModel.firebaseConfig"
+        v-model:value="localForm.firebaseConfig"
         :rows="6"
         placeholder="請輸入 Firebase 設定（JSON 格式或文字）"
+        :disabled="props.isReadonly"
       />
     </a-form-item>
   </a-form>

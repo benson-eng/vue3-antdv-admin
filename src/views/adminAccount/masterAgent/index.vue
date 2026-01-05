@@ -533,7 +533,7 @@ const openPasswordModal = async (record: Partial<TableListItem>) => {
   });
 };
 
-const openFormModal = async (record?: Partial<TableListItem>) => {
+const _openFormModal = async (record?: Partial<TableListItem>) => {
   const isEdit = Boolean(record?.id);
 
   const [formRef] = await showModal({
@@ -869,6 +869,17 @@ const columns = ref<TableColumnItem[]>([
       // 如果是子行，不顯示操作按鈕
       if (isChildRow) {
         return [];
+      }
+      console.log('userStore.level', userStore.level);
+      // Level 4 時只顯示檢視按鈕，不顯示改密碼、禁用前台、禁用後台
+      if (userStore.level > 2) {
+        return [
+          {
+            label: pt('action.view') || '檢視',
+            type: 'link',
+            onClick: () => openEditWizard(record),
+          },
+        ];
       }
 
       return [

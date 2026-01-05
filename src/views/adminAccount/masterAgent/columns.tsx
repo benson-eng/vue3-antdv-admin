@@ -1,6 +1,7 @@
 import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { TableColumn } from '@/components/core/dynamic-table';
 import { Tag } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
 export type TableListItem = MasterAgentItem;
 export type TableColumnItem = TableColumn<TableListItem>;
@@ -82,7 +83,7 @@ export const getBaseColumns = (
       ),
     },
     {
-      title: userLevel > 1 ? pt('column.website2') : pt('column.website'), // Vue2: 根據權限顯示不同標籤
+      title: pt('column.website2'), // 統一顯示為「網域」
       dataIndex: 'website',
       width: 160,
       hideInSearch: true,
@@ -155,6 +156,12 @@ export const getBaseColumns = (
           format: 'YYYY-MM-DD',
           style: { width: '100%' },
         },
+      },
+      customRender: ({ record }) => {
+        if (!record.createDatetime) {
+          return '-';
+        }
+        return dayjs(record.createDatetime).format('YYYY-MM-DD HH:mm:ss');
       },
     },
   );

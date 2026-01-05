@@ -1,10 +1,6 @@
-<!-- eslint-disable vue/no-mutating-props -->
 <script setup lang="ts">
-/* eslint-disable vue/no-mutating-props */
-// 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
-// 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
-import { nextTick, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { useI18n } from '@/hooks/useI18n';
 import { generateHashKey } from '../utils';
 
@@ -20,6 +16,8 @@ interface Props {
     [key: string]: any;
   };
   level?: number;
+  /** 是否為唯讀模式（Level 4 檢視模式） */
+  isReadonly?: boolean;
 }
 
 // 多語系
@@ -29,10 +27,132 @@ const t = pageI18n.t;
 const formRef = ref<FormInstance>();
 
 /**
+ * 本地表單副本（用於 readonly 模式下隔離寫入）
+ * 在 readonly 模式下，所有變更僅影響 localForm，不會寫回父層
+ * 在非 readonly 模式下，變更會同步回父層 formModel
+ */
+const localForm = reactive<{
+  gaKey: string;
+  internalSettings: string;
+  remoteConfigURLs: string;
+  hashKey?: string;
+  isSingleWallet?: boolean;
+  singleWallerVersion?: number;
+  vipDowngradeFormula?: number;
+  levelFormula?: number;
+  activityFormula?: number;
+  levelUpNeedPoint?: number;
+  [key: string]: any;
+}>({
+  gaKey: props.formModel.gaKey,
+  internalSettings: props.formModel.internalSettings,
+  remoteConfigURLs: props.formModel.remoteConfigURLs,
+  hashKey: (props.formModel as any).hashKey,
+  isSingleWallet: (props.formModel as any).isSingleWallet,
+  singleWallerVersion: (props.formModel as any).singleWallerVersion,
+  vipDowngradeFormula: (props.formModel as any).vipDowngradeFormula,
+  levelFormula: (props.formModel as any).levelFormula,
+  activityFormula: (props.formModel as any).activityFormula,
+  levelUpNeedPoint: (props.formModel as any).levelUpNeedPoint,
+});
+
+/**
+ * 同步 localForm 到父層 formModel（僅在非 readonly 模式下執行）
+ */
+const syncToParent = () => {
+  if (props.isReadonly) {
+    return; // readonly 模式下不寫回父層
+  }
+  Object.assign(props.formModel, {
+    gaKey: localForm.gaKey,
+    internalSettings: localForm.internalSettings,
+    remoteConfigURLs: localForm.remoteConfigURLs,
+  });
+  // 同步動態欄位
+  if (localForm.hashKey !== undefined) {
+    (props.formModel as any).hashKey = localForm.hashKey;
+  }
+  if (localForm.isSingleWallet !== undefined) {
+    (props.formModel as any).isSingleWallet = localForm.isSingleWallet;
+  }
+  if (localForm.singleWallerVersion !== undefined) {
+    (props.formModel as any).singleWallerVersion = localForm.singleWallerVersion;
+  }
+  if (localForm.vipDowngradeFormula !== undefined) {
+    (props.formModel as any).vipDowngradeFormula = localForm.vipDowngradeFormula;
+  }
+  if (localForm.levelFormula !== undefined) {
+    (props.formModel as any).levelFormula = localForm.levelFormula;
+  }
+  if (localForm.activityFormula !== undefined) {
+    (props.formModel as any).activityFormula = localForm.activityFormula;
+  }
+  if (localForm.levelUpNeedPoint !== undefined) {
+    (props.formModel as any).levelUpNeedPoint = localForm.levelUpNeedPoint;
+  }
+};
+
+/**
+ * 從父層 formModel 同步到 localForm（用於初始化或外部更新）
+ */
+const syncFromParent = () => {
+  localForm.gaKey = props.formModel.gaKey;
+  localForm.internalSettings = props.formModel.internalSettings;
+  localForm.remoteConfigURLs = props.formModel.remoteConfigURLs;
+  localForm.hashKey = (props.formModel as any).hashKey;
+  localForm.isSingleWallet = (props.formModel as any).isSingleWallet;
+  localForm.singleWallerVersion = (props.formModel as any).singleWallerVersion;
+  localForm.vipDowngradeFormula = (props.formModel as any).vipDowngradeFormula;
+  localForm.levelFormula = (props.formModel as any).levelFormula;
+  localForm.activityFormula = (props.formModel as any).activityFormula;
+  localForm.levelUpNeedPoint = (props.formModel as any).levelUpNeedPoint;
+};
+
+// 監聽父層 formModel 變化，同步到 localForm（僅在 readonly 模式下）
+watch(
+  () => props.formModel,
+  () => {
+    if (props.isReadonly) {
+      syncFromParent();
+    }
+  },
+  { deep: true },
+);
+
+// 在非 readonly 模式下，監聽 localForm 變化並同步回父層
+watch(
+  () => [
+    localForm.gaKey,
+    localForm.internalSettings,
+    localForm.remoteConfigURLs,
+    localForm.hashKey,
+    localForm.isSingleWallet,
+    localForm.singleWallerVersion,
+    localForm.vipDowngradeFormula,
+    localForm.levelFormula,
+    localForm.activityFormula,
+    localForm.levelUpNeedPoint,
+  ],
+  () => {
+    syncToParent();
+  },
+  { deep: true },
+);
+
+onMounted(() => {
+  syncFromParent();
+});
+
+/**
  * 產生 hashKey
  */
 const generateHashKeyValue = async () => {
-  (props.formModel as any).hashKey = generateHashKey();
+  if (props.isReadonly) {
+    return; // readonly 模式下不允許產生
+  }
+  localForm.hashKey = generateHashKey();
+  // 立即同步到父層
+  syncToParent();
 
   // 等待 DOM 更新後，清除該欄位的驗證錯誤
   await nextTick();
@@ -45,7 +165,7 @@ const generateHashKeyValue = async () => {
 const validate = async (): Promise<boolean> => {
   try {
     // 檢查金鑰是否必填
-    const hashKey = (props.formModel as any).hashKey;
+    const hashKey = localForm.hashKey;
     if (!hashKey || !String(hashKey).trim()) {
       await formRef.value?.validateFields(['hashKey']);
       return false;
@@ -80,7 +200,7 @@ defineExpose({
 <template>
   <a-form
     ref="formRef"
-    :model="formModel"
+    :model="localForm"
     layout="horizontal"
     :label-col="{ style: { width: '200px' } }"
     :wrapper-col="{ style: { flex: 1 } }"
@@ -138,11 +258,17 @@ defineExpose({
     >
       <a-input-group compact>
         <a-input-password
-          v-model:value="(formModel as any).hashKey"
+          v-model:value="localForm.hashKey"
           style="width: calc(100% - 100px)"
           placeholder="請輸入金鑰或點擊產生"
+          :disabled="props.isReadonly"
         />
-        <a-button type="default" style="width: 100px" @click="generateHashKeyValue">
+        <a-button
+          v-if="!props.isReadonly"
+          type="default"
+          style="width: 100px"
+          @click="generateHashKeyValue"
+        >
           {{ t('labels.generate') }}
         </a-button>
       </a-input-group>
@@ -154,7 +280,7 @@ defineExpose({
     </a-divider>
 
     <a-form-item label="單一錢包" name="isSingleWallet">
-      <a-checkbox v-model:checked="(formModel as any).isSingleWallet" />
+      <a-checkbox v-model:checked="localForm.isSingleWallet" :disabled="props.isReadonly" />
     </a-form-item>
 
     <a-form-item
@@ -162,8 +288,8 @@ defineExpose({
       name="singleWallerVersion"
     >
       <a-select
-        v-model:value="(formModel as any).singleWallerVersion"
-        :disabled="!(formModel as any).isSingleWallet"
+        v-model:value="localForm.singleWallerVersion"
+        :disabled="props.isReadonly || !localForm.isSingleWallet"
         style="width: 100%"
       >
         <a-select-option :value="1">
@@ -182,7 +308,7 @@ defineExpose({
 
     <a-form-item label="VIP 降級公式" name="vipDowngradeFormula">
       <a-select
-        v-model:value="(formModel as any).vipDowngradeFormula"
+        v-model:value="localForm.vipDowngradeFormula"
         :disabled="true"
         style="width: 100%"
       >
@@ -203,7 +329,8 @@ defineExpose({
 
     <a-form-item label="等級公式" name="levelFormula">
       <a-select
-        v-model:value="(formModel as any).levelFormula"
+        v-model:value="localForm.levelFormula"
+        :disabled="props.isReadonly"
         style="width: 100%"
       >
         <a-select-option :value="0">
@@ -219,22 +346,24 @@ defineExpose({
     </a-form-item>
 
     <a-form-item
-      v-if="(formModel as any).levelFormula === 1"
+      v-if="localForm.levelFormula === 1"
       label="升級所需點數"
       name="levelUpNeedPoint"
     >
       <a-input-number
-        v-model:value="(formModel as any).levelUpNeedPoint"
+        v-model:value="localForm.levelUpNeedPoint"
         :min="1"
         :precision="0"
         style="width: 100%"
         placeholder="請輸入升級所需點數"
+        :disabled="props.isReadonly"
       />
     </a-form-item>
 
     <a-form-item label="活躍值公式" name="activityFormula">
       <a-select
-        v-model:value="(formModel as any).activityFormula"
+        v-model:value="localForm.activityFormula"
+        :disabled="props.isReadonly"
         style="width: 100%"
       >
         <a-select-option :value="1">
@@ -304,7 +433,7 @@ defineExpose({
 
     <a-form-item label="系統內部設定(internalSettings)" name="internalSettings">
       <a-textarea
-        v-model:value="formModel.internalSettings"
+        v-model:value="localForm.internalSettings"
         :rows="10"
         :disabled="true"
         placeholder="請輸入 JSON 格式，例如：{&quot;key&quot;: &quot;value&quot;}"
@@ -313,7 +442,7 @@ defineExpose({
 
     <a-form-item label="遠端設定檔(remoteConfigURLs)" name="remoteConfigURLs">
       <a-textarea
-        v-model:value="formModel.remoteConfigURLs"
+        v-model:value="localForm.remoteConfigURLs"
         :rows="8"
         :disabled="true"
         placeholder="請輸入 JSON 格式，例如：{&quot;key&quot;: &quot;value&quot;}"

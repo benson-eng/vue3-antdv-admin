@@ -88,6 +88,7 @@ const formModel = reactive<{
   name: string;
   website: string;
   currencyCode: string;
+  apiDomain: string;
   roles: number[];
   boSmsAccount: string;
   boSmsPassWord: string;
@@ -158,7 +159,8 @@ const formModel = reactive<{
   account: '',
   name: '',
   website: '',
-  currencyCode: '',
+  currencyCode: 'gold',
+  apiDomain: '',
   roles: [],
   boSmsAccount: '',
   boSmsPassWord: '',
@@ -303,6 +305,7 @@ const loadEditData = (record: Partial<any>) => {
     name: record.name ?? '',
     website: record.website ?? '',
     currencyCode: record.currencies?.[0]?.code ?? '',
+    apiDomain: String(record.apiDomain ?? (record as any)?.apiDomain ?? '').trim(),
     roles: roleIds,
 
     // Firebase 設定
@@ -369,7 +372,6 @@ const loadEditData = (record: Partial<any>) => {
     slot_prizeDecimalPlaces: slotGameSettings?.prizeDecimalPlaces ?? 2,
 
     // Step 8 進階設定欄位（從 record 直接讀取）
-    apiDomain: (record as any)?.apiDomain ?? '',
     whiteIPList: (record as any)?.whiteIPList ?? '',
     cdnList: (record as any)?.cdnList ?? '',
     proxyList: (record as any)?.proxyList ?? '',
@@ -809,6 +811,7 @@ async function nextOriginal() {
         backendKey: generateSecret(),
         agentBackendKey: generateSecret(),
         hashKey: generateHashKey(),
+        apiDomain: formModel.apiDomain ?? '',
         internalSettings,
         remoteConfigURLs,
         isEnabled: true,
@@ -1027,9 +1030,24 @@ const onFinish = async () => {
 };
 
 /**
+ * 計算是否為唯讀模式（Level 4 且為編輯模式）
+ */
+const isReadonly = computed(() => {
+  return userStore.level === 4 && Boolean(props.editRecord);
+});
+
+/**
  * 計算是否顯示「完成」按鈕（編輯模式下，且不在最後一步）
  */
 const shouldShowFinishButton = computed(() => {
+  // Level 4 時不顯示完成按鈕（檢視模式）
+  if (userStore.level === 4 && props.editRecord) {
+    return false;
+  }
+  // Level 4 時不顯示完成按鈕（使用 isReadonly 作為備用檢查）
+  if (isReadonly.value) {
+    return false;
+  }
   // 只在編輯模式下顯示
   if (!props.editRecord) {
     return false;
@@ -1081,6 +1099,11 @@ const getStepStatus = (stepIndex: number): 'wait' | 'process' | 'finish' => {
  * 計算是否顯示「下一步」按鈕
  */
 const shouldShowNextButton = computed(() => {
+  // 檢視模式（Level 4）：Step 1~5 顯示，Step 6 不顯示
+  if (isReadonly.value) {
+    // Step 0~4 顯示下一步，Step 5（最後一步）不顯示
+    return currentStep.value < 5;
+  }
   // Step 0-1 都顯示
   if (currentStep.value < 2) {
     return true;
@@ -1109,6 +1132,10 @@ const shouldShowNextButton = computed(() => {
  * 計算「下一步」按鈕文字
  */
 const getNextButtonText = computed(() => {
+  // 檢視模式下，按鈕文字始終為「下一步」
+  if (isReadonly.value) {
+    return '下一步';
+  }
   if (currentStep.value === 1) {
     return formModel.accountType === 'masterAgent' ? '下一步' : '完成';
   }
@@ -1177,7 +1204,8 @@ const resetWizard = () => {
     account: '',
     name: '',
     website: '',
-    currencyCode: '',
+    currencyCode: 'gold',
+    apiDomain: '',
     shareholderAccount: '',
     roles: [],
     ...getStep3Defaults(),
@@ -1279,7 +1307,7 @@ onBeforeUnmount(() => {
     @cancel="handleClose"
   >
     <template #title>
-      <span>{{ props.editRecord ? '導引式編輯' : '導引式建立' }}</span>
+      <span>{{ props.editRecord && userStore.level === 4 ? '導引式檢視' : (props.editRecord ? '導引式編輯' : '導引式建立') }}</span>
     </template>
     <template #closeIcon>
       <div
@@ -1381,33 +1409,39 @@ onBeforeUnmount(() => {
           :is-edit="Boolean(props.editRecord)"
           :level="userStore.level"
           :edit-record-roles="editRecordRoles"
+          :is-readonly="isReadonly"
           @update:roles="(value) => { formModel.roles = value; }"
         />
         <Step3WalletAndFormula
           v-show="currentStep === 1"
           ref="step3Ref"
-          :form-model="formModel"
+          :form-model="formModel as any"
+          :is-readonly="isReadonly"
         />
         <Step5FirebaseAnalytics
           v-show="currentStep === 2 && formModel.accountType === 'masterAgent'"
           ref="step5Ref"
           :form-model="formModel"
+          :is-readonly="isReadonly"
         />
         <Step8PaymentSettings
           v-show="currentStep === 4 && formModel.accountType === 'masterAgent'"
           ref="step8Ref"
           :form-model="formModel"
+          :is-readonly="isReadonly"
         />
         <Step9SmsSettings
           v-show="currentStep === 5 && formModel.accountType === 'masterAgent'"
           ref="step9Ref"
           :form-model="formModel"
           :level="userStore.level"
+          :is-readonly="isReadonly"
         />
         <Step7CustomerAndSocial
           v-show="currentStep === 3 && formModel.accountType === 'masterAgent'"
           ref="step7Ref"
           :form-model="formModel"
+          :is-readonly="isReadonly"
         />
       </div>
 

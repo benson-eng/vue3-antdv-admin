@@ -37,6 +37,7 @@
   "action": {
     "operation": "操作",
     "edit": "編輯",
+    "view": "檢視",
     "changePassword": "改密碼",
     "disableMaintained": "禁用前台",
     "enableMaintained": "啟用前台",
