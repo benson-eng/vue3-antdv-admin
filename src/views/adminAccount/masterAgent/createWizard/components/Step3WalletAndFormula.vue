@@ -108,29 +108,5 @@ defineExpose({
         placeholder="請輸入押注解鎖倍率"
       />
     </a-form-item>
-
-    <a-form-item
-      label="凍結週期(天)"
-      name="freezeDuration"
-    >
-      <a-input-number
-        v-model:value="formModel.freezeDuration"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-      />
-    </a-form-item>
-
-    <a-form-item
-      label="贈禮交易過期時間(天)"
-      name="orderExpireTime"
-    >
-      <a-input-number
-        v-model:value="formModel.orderExpireTime"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-      />
-    </a-form-item>
   </a-form>
 </template>

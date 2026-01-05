@@ -872,13 +872,13 @@ const columns = ref<TableColumnItem[]>([
       }
 
       return [
+        // {
+        //   label: pt('action.edit'),
+        //   type: 'link',
+        //   onClick: () => openFormModal(record),
+        // },
         {
           label: pt('action.edit'),
-          type: 'link',
-          onClick: () => openFormModal(record),
-        },
-        {
-          label: '編輯2',
           type: 'link',
           onClick: () => openEditWizard(record),
         },
@@ -942,9 +942,9 @@ void Modal;
     >
       <template #toolbar>
         <a-space>
-          <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
+          <!-- <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
             {{ pt('button.add') }}
-          </a-button>
+          </a-button> -->
           <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
             {{ pt('button.createWizard') }}
           </a-button>

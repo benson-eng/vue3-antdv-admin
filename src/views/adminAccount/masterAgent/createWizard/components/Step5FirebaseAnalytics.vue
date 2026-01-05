@@ -25,7 +25,7 @@ const formRef = ref<FormInstance>();
 /**
  * 格式化 JSON（輕量檢查）
  */
-const formatJson = (fieldName: 'firebaseSdkConfig' | 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
+const formatJson = (fieldName: 'firebaseAdminSdkConfig' | 'firebaseConfig') => {
   const value = props.formModel[fieldName];
   if (!value || !value.trim()) {
     message.warning('欄位為空，無法格式化');
@@ -110,7 +110,6 @@ defineExpose({
       key: keyof Props['formModel'];
       label: string;
     }> = [
-      { key: 'firebaseSdkConfig', label: 'Firebase SDK 配置' },
       { key: 'firebaseAdminSdkConfig', label: 'Firebase 管理員 SDK 配置' },
       { key: 'firebaseConfig', label: 'Firebase 設定' },
     ];
@@ -152,28 +151,6 @@ defineExpose({
         placeholder="請輸入 Google Analytics 金鑰（可稍後補）"
       />
     </a-form-item> -->
-
-    <a-form-item
-      label="Firebase SDK 配置"
-      name="firebaseSdkConfig"
-      :rules="[createJsonValidator()]"
-    >
-      <template #extra>
-        <a-button
-          size="small"
-          type="link"
-          style="padding: 0"
-          @click="formatJson('firebaseSdkConfig')"
-        >
-          格式化 JSON
-        </a-button>
-      </template>
-      <a-textarea
-        v-model:value="formModel.firebaseSdkConfig"
-        :rows="5"
-        placeholder="請輸入 Firebase SDK 配置（JSON 格式或文字）"
-      />
-    </a-form-item>
 
     <a-form-item
       label="Firebase 管理員 SDK 配置"

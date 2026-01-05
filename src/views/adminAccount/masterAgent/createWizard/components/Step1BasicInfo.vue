@@ -226,9 +226,5 @@ onMounted(() => {
         style="width: 100%"
       />
     </a-form-item>
-
-    <a-form-item label="允許會員暱稱重複" name="isAllowMemberNicknameDuplicate">
-      <a-checkbox v-model:checked="(formModel as any).isAllowMemberNicknameDuplicate" />
-    </a-form-item>
   </a-form>
 </template>

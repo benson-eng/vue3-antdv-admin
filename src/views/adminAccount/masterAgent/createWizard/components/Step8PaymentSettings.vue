@@ -49,50 +49,6 @@ defineExpose({
       金流設定
     </a-divider>
 
-    <a-form-item label="支付模式" name="paymentMode">
-      <a-select
-        v-model:value="formModel.paymentMode"
-        style="width: 100%"
-      >
-        <a-select-option value="Real">
-          Real
-        </a-select-option>
-        <a-select-option value="Fake">
-          Fake
-        </a-select-option>
-      </a-select>
-    </a-form-item>
-
-    <a-form-item label="儲值比例" name="topUpRate">
-      <a-input-number
-        v-model:value="formModel.topUpRate"
-        :min="0"
-        :precision="0"
-        style="width: 100%"
-        placeholder="請輸入儲值比例"
-      />
-    </a-form-item>
-
-    <a-form-item label="mycard網域" name="myCardWebsite">
-      <a-input
-        v-model:value="formModel.myCardWebsite"
-        placeholder="請輸入 mycard網域"
-      />
-    </a-form-item>
-
-    <a-form-item label="返回的網址" name="myCardRedirectVerifyWebsite">
-      <a-input
-        v-model:value="formModel.myCardRedirectVerifyWebsite"
-        placeholder="請輸入返回的網址"
-      />
-    </a-form-item>
-
-    <a-form-item label="callbackDomain" name="myCardCallbackDomain">
-      <a-input
-        v-model:value="formModel.myCardCallbackDomain"
-        placeholder="請輸入 callbackDomain"
-      />
-    </a-form-item>
     <!-- Level 2 欄位 -->
     <a-form-item label="MyCard FacServiceID" name="myCard_facServiceID">
       <a-input

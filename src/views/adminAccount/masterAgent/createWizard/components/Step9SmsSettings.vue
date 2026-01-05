@@ -45,31 +45,6 @@ defineExpose({
     :label-col="{ style: { width: '200px' } }"
     :wrapper-col="{ style: { flex: 1 } }"
   >
-    <!-- 簡訊服務帳號 -->
-    <a-divider orientation="left">
-      簡訊服務帳號
-    </a-divider>
-
-    <a-form-item label="簡訊帳號" name="smsAccount">
-      <a-input
-        v-model:value="formModel.smsAccount"
-        placeholder="請輸入簡訊帳號"
-      />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">未填寫時，系統將使用預設簡訊設定</span>
-      </template>
-    </a-form-item>
-
-    <a-form-item label="簡訊密碼" name="smsPassWord">
-      <a-input-password
-        v-model:value="formModel.smsPassWord"
-        placeholder="請輸入簡訊密碼"
-      />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">未填寫時，系統將使用預設簡訊設定</span>
-      </template>
-    </a-form-item>
-
     <!-- 三竹簡訊商 -->
     <a-divider orientation="left">
       三竹簡訊商
@@ -80,9 +55,6 @@ defineExpose({
         v-model:value="formModel.boSmsAccount"
         placeholder="請輸入三竹簡訊商帳號"
       />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">未填寫時，系統將使用預設簡訊設定</span>
-      </template>
     </a-form-item>
 
     <a-form-item label="三竹簡訊商密碼" name="boSmsPassWord">
@@ -90,17 +62,14 @@ defineExpose({
         v-model:value="formModel.boSmsPassWord"
         placeholder="請輸入三竹簡訊商密碼"
       />
-      <template #extra>
-        <span style="color: #999; font-size: 12px">未填寫時，系統將使用預設簡訊設定</span>
-      </template>
     </a-form-item>
 
     <!-- OTP 設定 -->
-    <a-divider orientation="left">
+    <!-- <a-divider orientation="left">
       OTP 設定
-    </a-divider>
+    </a-divider> -->
 
-    <a-form-item label="交易 OTP 發送間隔(分鐘)" name="sendSmsOTPIntervals">
+    <!-- <a-form-item label="交易 OTP 發送間隔(分鐘)" name="sendSmsOTPIntervals">
       <a-input-number
         v-model:value="formModel.sendSmsOTPIntervals"
         :min="0"
@@ -108,9 +77,9 @@ defineExpose({
         style="width: 100%"
         placeholder="請輸入 OTP 發送間隔"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item label="交易 OTP 驗證過期時間(分鐘)" name="authExpireTime">
+    <!-- <a-form-item label="交易 OTP 驗證過期時間(分鐘)" name="authExpireTime">
       <a-input-number
         v-model:value="formModel.authExpireTime"
         :min="0"
@@ -118,9 +87,9 @@ defineExpose({
         style="width: 100%"
         placeholder="請輸入 OTP 驗證相關過期時間"
       />
-    </a-form-item>
+    </a-form-item> -->
 
-    <a-form-item
+    <!-- <a-form-item
       label="交易 OTP 模式"
       name="otpMode"
     >
@@ -135,14 +104,14 @@ defineExpose({
           Fake
         </a-select-option>
       </a-select>
-    </a-form-item>
+    </a-form-item> -->
 
     <!-- 其他設定 -->
-    <a-divider orientation="left">
+    <!-- <a-divider orientation="left">
       其他設定
-    </a-divider>
+    </a-divider> -->
 
-    <a-form-item
+    <!-- <a-form-item
       label="簡訊帳號點數不足告警水位"
       name="accountPointsWarningValue"
     >
@@ -153,6 +122,6 @@ defineExpose({
         style="width: 100%"
         placeholder="請輸入簡訊帳號點數不足告警水位"
       />
-    </a-form-item>
+    </a-form-item> -->
   </a-form>
 </template>
