@@ -151,6 +151,11 @@
       .ant-image:hover {
         cursor: zoom-in;
       }
+
+      // 隱藏展開按鈕
+      .ant-table-row-expand-icon {
+        display: none !important;
+      }
     }
   }
 
