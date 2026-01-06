@@ -370,7 +370,7 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
   const filterIsEnabled = 'isEnabled' in searchParams
     ? (searchParams.isEnabled === '' || searchParams.isEnabled === undefined
         ? undefined // 空字串或 undefined 代表「全部」
-        : Boolean(searchParams.isEnabled))
+        : searchParams.isEnabled === 'true' || searchParams.isEnabled === true)
     : undefined;
   const filterDateRange = searchParams.createDatetime as [Dayjs, Dayjs] | undefined;
 
@@ -777,24 +777,20 @@ const _openFormModal = async (record?: Partial<TableListItem>) => {
 /**
  * 計算表格總寬度：所有欄位寬度總和
  * 基礎欄位：account(160) + name(160) + isMaintained(100) + adminMaintained(100) + roles(220) + website(160) + currencies(100) = 1000
- * 管理員額外欄位：isSingleWallet(120) + apiDomain(140) + whiteIPList(140) + cdnList(140) = 540
+ * 管理員額外欄位：已隱藏（isSingleWallet + apiDomain + whiteIPList + cdnList）
  * 共用欄位：createDatetime(180) = 180
  * 操作欄：ACTION(250)
- * 管理員總和：1000 + 540 + 180 + 250 = 1970
+ * 管理員總和：1000 + 180 + 250 = 1430
  * 非管理員總和：1000 + 180 + 250 = 1430
  */
 const calculateTableScrollX = () => {
   /** account + name + isMaintained + adminMaintained + roles + website + currencies */
   const baseColumnsWidth = 1000;
-  /** isSingleWallet + apiDomain + whiteIPList + cdnList */
-  const adminOnlyColumnsWidth = 540;
   /** createDatetime */
   const commonColumnsWidth = 180;
   /** ACTION */
   const actionColumnWidth = 250;
-  const totalWidth = userStore.level === 1
-    ? baseColumnsWidth + adminOnlyColumnsWidth + commonColumnsWidth + actionColumnWidth
-    : baseColumnsWidth + commonColumnsWidth + actionColumnWidth;
+  const totalWidth = baseColumnsWidth + commonColumnsWidth + actionColumnWidth;
   /** 加上一些緩衝空間，確保不會出現跑版 */
   return totalWidth + 50;
 };

@@ -12,7 +12,7 @@ export type TableColumnItem = TableColumn<TableListItem>;
  */
 export const getBaseColumns = (
   pt: (key: string) => string,
-  userLevel: number,
+  _userLevel: number,
 ): TableColumnItem[] => {
   const columns: TableColumnItem[] = [
     {
@@ -48,8 +48,8 @@ export const getBaseColumns = (
         componentProps: {
           options: [
             { label: pt('labels.all'), value: '' }, // 使用空字串代表「全部」，以便 Select 正確顯示為已選中
-            { label: pt('labels.enable'), value: true },
-            { label: pt('labels.disable'), value: false },
+            { label: pt('labels.enable'), value: 'true' },
+            { label: pt('labels.disable'), value: 'false' },
           ],
           allowClear: false, // 移除清除按鈕，因為預設就是「全部」
           placeholder: pt('labels.all'),
@@ -111,37 +111,38 @@ export const getBaseColumns = (
   ];
 
   // 僅管理員 (level === 1) 顯示的欄位
-  if (userLevel === 1) {
-    columns.push(
-      {
-        title: pt('column.isSingleWallet'), // Vue2: adminAccount.column.isSingleWallet = "單一錢包"
-        dataIndex: 'isSingleWallet',
-        width: 120,
-        hideInSearch: true,
-        customRender: ({ record }) => (
-          <span>{record.isSingleWallet ? pt('labels.yes') : pt('labels.no')}</span>
-        ),
-      },
-      {
-        title: pt('column.apiDomain'), // Vue2: adminAccount.column.apiDomain = "API Domain"
-        dataIndex: 'apiDomain',
-        width: 140,
-        hideInSearch: true,
-      },
-      {
-        title: pt('column.whiteIPList'), // Vue2: adminAccount.column.whiteIPList = "白名單"
-        dataIndex: 'whiteIPList',
-        width: 140,
-        hideInSearch: true,
-      },
-      {
-        title: pt('column.cdnList'), // Vue2: adminAccount.column.cdnList = "CDN名單"
-        dataIndex: 'cdnList',
-        width: 140,
-        hideInSearch: true,
-      },
-    );
-  }
+  // 以下欄位已隱藏：單一錢包、API Domain、白名單、CDN名單
+  // if (userLevel === 1) {
+  //   columns.push(
+  //     {
+  //       title: pt('column.isSingleWallet'), // Vue2: adminAccount.column.isSingleWallet = "單一錢包"
+  //       dataIndex: 'isSingleWallet',
+  //       width: 120,
+  //       hideInSearch: true,
+  //       customRender: ({ record }) => (
+  //         <span>{record.isSingleWallet ? pt('labels.yes') : pt('labels.no')}</span>
+  //       ),
+  //     },
+  //     {
+  //       title: pt('column.apiDomain'), // Vue2: adminAccount.column.apiDomain = "API Domain"
+  //       dataIndex: 'apiDomain',
+  //       width: 140,
+  //       hideInSearch: true,
+  //     },
+  //     {
+  //       title: pt('column.whiteIPList'), // Vue2: adminAccount.column.whiteIPList = "白名單"
+  //       dataIndex: 'whiteIPList',
+  //       width: 140,
+  //       hideInSearch: true,
+  //     },
+  //     {
+  //       title: pt('column.cdnList'), // Vue2: adminAccount.column.cdnList = "CDN名單"
+  //       dataIndex: 'cdnList',
+  //       width: 140,
+  //       hideInSearch: true,
+  //     },
+  //   );
+  // }
 
   // 所有用戶都顯示的欄位
   columns.push(
