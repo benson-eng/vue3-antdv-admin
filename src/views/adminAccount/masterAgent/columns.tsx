@@ -18,6 +18,8 @@ export const getBaseColumns = (
     {
       title: pt('column.account'),
       dataIndex: 'account',
+      flexible: true, // 彈性寬度欄位
+      minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
       formItemProps: {
         component: 'Input',
       },
@@ -25,7 +27,8 @@ export const getBaseColumns = (
     {
       title: pt('column.name2'), // Vue2: adminAccount.column.name2 = "網站名稱"
       dataIndex: 'name',
-      width: 160,
+      flexible: true, // 彈性寬度欄位
+      minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
       hideInSearch: true,
     },
     {
@@ -85,7 +88,8 @@ export const getBaseColumns = (
     {
       title: pt('column.website2'), // 統一顯示為「網域」
       dataIndex: 'website',
-      width: 160,
+      flexible: true, // 彈性寬度欄位
+      minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
       hideInSearch: true,
     },
     {
@@ -149,7 +153,8 @@ export const getBaseColumns = (
     {
       title: pt('column.createDatetime'), // Vue2: adminAccount.column.createDatetime = "建立日期"
       dataIndex: 'createDatetime',
-      width: 180,
+      flexible: true, // 彈性寬度欄位
+      minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
       formItemProps: {
         component: 'RangePicker',
         componentProps: {

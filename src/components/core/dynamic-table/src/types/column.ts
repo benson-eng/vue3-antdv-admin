@@ -1,8 +1,8 @@
 import type { ColumnsType } from 'ant-design-vue/es/table';
-import type { FormSchema, GetFieldKeys } from '@/components/core/schema-form';
+import type { DataIndex } from 'ant-design-vue/es/vc-table/interface';
 import type { ActionItem } from './tableAction';
 import type { TableActionType } from '@/components/core/dynamic-table/src/types';
-import type { DataIndex } from 'ant-design-vue/es/vc-table/interface';
+import type { FormSchema, GetFieldKeys } from '@/components/core/schema-form';
 
 export type ColumnType<T> = ColumnsType<T>[number];
 
@@ -49,7 +49,7 @@ export type TableColumn<T extends object = Recordable> = ColumnType<T> & {
      * Object.assign({}, TableColumn.formItemProps, TableColumn.editFormItemProps)
      * ```
      * @defaultValue 默认值为`true`
-     * */
+     */
     extendSearchFormProps?: boolean;
   };
   /** 操作列，一般用于对表格某一行数据进行操作 */
@@ -58,6 +58,10 @@ export type TableColumn<T extends object = Recordable> = ColumnType<T> & {
   editable?: boolean | ((params: CustomRenderParams<T>) => boolean);
   /** 当前单元格是否默认开启编辑，仅 `editableType`为`cell`时有效 */
   defaultEditable?: boolean;
+  /** 欄位是否為彈性寬度（flexible），true 表示該欄位會自動調整寬度以填滿剩餘空間 */
+  flexible?: boolean;
+  /** 欄位最小寬度（px），flexible 欄位必須設定此屬性，避免初始 render 時被壓縮為 0 */
+  minWidth?: number;
 };
 
 export enum ColumnKeyFlag {

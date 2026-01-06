@@ -4,7 +4,7 @@ import type { TableColumnItem, TableListItem } from './columns';
 import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal } from 'ant-design-vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Api from '@/api/backend/adminAccount/masterAgent';
 import { useTable } from '@/components/core/dynamic-table';
@@ -14,6 +14,7 @@ import { useUserStore } from '@/store/modules/user';
 import CreateWizardDialog from '../components/CreateWizardDialog.vue';
 import { getBaseColumns } from './columns';
 import { getMasterAgentSchemas, passwordSchemas } from './formSchemas';
+import { useTableConfig } from './useTableConfig';
 
 defineOptions({ name: 'AdminAccountMasterAgent' });
 
@@ -774,36 +775,27 @@ const _openFormModal = async (record?: Partial<TableListItem>) => {
   }
 };
 
-/**
- * 計算表格總寬度：所有欄位寬度總和
- * 基礎欄位：account(160) + name(160) + isMaintained(100) + adminMaintained(100) + roles(220) + website(160) + currencies(100) = 1000
- * 管理員額外欄位：已隱藏（isSingleWallet + apiDomain + whiteIPList + cdnList）
- * 共用欄位：createDatetime(180) = 180
- * 操作欄：ACTION(250)
- * 管理員總和：1000 + 180 + 250 = 1430
- * 非管理員總和：1000 + 180 + 250 = 1430
- */
-const calculateTableScrollX = () => {
-  /** account + name + isMaintained + adminMaintained + roles + website + currencies */
-  const baseColumnsWidth = 1000;
-  /** createDatetime */
-  const commonColumnsWidth = 180;
-  /** ACTION */
-  const actionColumnWidth = 250;
-  const totalWidth = baseColumnsWidth + commonColumnsWidth + actionColumnWidth;
-  /** 加上一些緩衝空間，確保不會出現跑版 */
-  return totalWidth + 50;
-};
-
-const columns = ref<TableColumnItem[]>([
+// 定義所有欄位（包含操作欄）
+const baseColumnsWithAction = computed<TableColumnItem[]>(() => [
   ...getBaseColumns(pt, userStore.level),
   {
     title: pt('action.operation'),
     dataIndex: 'ACTION',
-    width: 250,
+    width: 320, // 調寬操作欄位，避免按鈕換行
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
+    /**
+     * 防止內容換行
+     */
+    customCell: () => {
+      return {
+        style: {
+          whiteSpace: 'nowrap', // 禁止換行
+        },
+      };
+    },
+
     actions: ({ record }) => {
       // 判斷是否為子行（展開的帳號）
       // 方法1: 檢查 record 是否有 __isChild 標識
@@ -925,39 +917,132 @@ const columns = ref<TableColumnItem[]>([
   },
 ]);
 
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumnsWithAction);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<TableColumnItem[]>(() => {
+  return baseColumnsWithAction.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumnItem = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: TableColumnItem) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
 </script>
 
 <template>
   <div class="master-agent-page">
-    <DynamicTable
-      row-key="id"
-      :header-title="t('masterAgent')"
-      :data-request="loadTableData"
-      :columns="columns"
-      :scroll="{ x: calculateTableScrollX() }"
-      :form-props="{
-        showSubmitButton: true,
-        showResetButton: true,
-        showAdvancedButton: true,
-        submitOnReset: true,
-        submitButtonOptions: {
-          text: pt('queryText'),
-        },
-      }"
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
     >
-      <template #toolbar>
-        <a-space>
-          <!-- <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
+      <DynamicTable
+        row-key="id"
+        :header-title="t('masterAgent')"
+        :data-request="loadTableData"
+        :columns="columns"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :form-props="{
+          showSubmitButton: true,
+          showResetButton: true,
+          showAdvancedButton: true,
+          submitOnReset: true,
+          submitButtonOptions: {
+            text: pt('queryText'),
+          },
+        }"
+      >
+        <template #toolbar>
+          <a-space>
+            <!-- <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
             {{ pt('button.add') }}
           </a-button> -->
-          <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
-            {{ pt('button.createWizard') }}
-          </a-button>
-        </a-space>
-      </template>
-    </DynamicTable>
+            <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
+              {{ pt('button.createWizard') }}
+            </a-button>
+          </a-space>
+        </template>
+      </DynamicTable>
+    </div>
 
     <CreateWizardDialog
       :visible="wizardVisible"
