@@ -61,3 +61,4 @@ export const setPaymentServiceCost = (params: SetPaymentServiceCostParams) =>
     },
     timeout: 0,
   });
+

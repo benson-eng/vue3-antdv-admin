@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/no-mutating-props */
 // 注意：父組件使用 reactive 創建 formModel，此組件作為表單子組件需要直接修改 props
 // 以保持響應式綁定，這是 Vue 3 中 reactive 對象的常見使用模式
 import type { FormInstance } from 'ant-design-vue';
@@ -249,7 +248,9 @@ defineExpose({
     </a-form-item> -->
 
     <!-- reCAPTCHA 金鑰設定 -->
-    <a-divider orientation="left">{{ t('recaptcha.keySettings') }}</a-divider>
+    <a-divider orientation="left">
+      {{ t('recaptcha.keySettings') }}
+    </a-divider>
 
     <a-form-item :label="t('recaptcha.secretKey')" name="reCaptcha_secretKey">
       <a-input
@@ -282,7 +283,9 @@ defineExpose({
     </a-form-item>
 
     <!-- 啟用設定（一直顯示） -->
-    <a-divider orientation="left">{{ t('recaptcha.enableSettings') }}</a-divider>
+    <a-divider orientation="left">
+      {{ t('recaptcha.enableSettings') }}
+    </a-divider>
 
     <a-form-item :label="t('recaptcha.enabled')" name="reCaptcha_enabled">
       <a-switch
@@ -295,4 +298,3 @@ defineExpose({
     </a-form-item>
   </a-form>
 </template>
-

@@ -1,3 +1,85 @@
+<script lang="tsx" setup>
+import { Table } from 'ant-design-vue';
+import { computed, onBeforeMount } from 'vue';
+import { SchemaForm } from '@/components/core/schema-form';
+import { ToolBar } from './components';
+import { dynamicTableEmits, dynamicTableProps } from './dynamic-table';
+import {
+  createTableContext,
+  useColumns,
+  useExportData2Excel,
+  useTableForm,
+  useTableMethods,
+  useTableState,
+} from './hooks';
+
+defineOptions({
+  name: 'DynamicTable',
+  inheritAttrs: false,
+});
+
+const props = defineProps(dynamicTableProps);
+const emit = defineEmits(dynamicTableEmits);
+
+// 表格内部状态
+const tableState = useTableState(props);
+const {
+  tableRef,
+  tableData,
+  isFullscreen,
+  containerElRef,
+  searchFormRef,
+  editTableFormRef,
+  innerPropsRef,
+  getBindValues,
+  editFormModel,
+} = tableState;
+
+// 表格内部方法
+const tableMethods = useTableMethods({ props, emit, tableState });
+const { fetchData, handleSubmit, handleTableChange, handleEditFormValidate } = tableMethods;
+
+// 表格列的配置描述
+const { innerColumns } = useColumns({ props, tableState, tableMethods });
+
+// 搜索表单
+const tableForm = useTableForm({ tableState, tableMethods });
+const { getFormProps, replaceFormSlotKey, getFormSlotKeys } = tableForm;
+
+// 表单导出
+const exportData2ExcelHooks = useExportData2Excel({ props, tableState, tableMethods });
+
+// 当前组件所有的状态和方法
+const dynamicTableContext = {
+  tableProps: props,
+  emit,
+  innerColumns,
+  ...tableState,
+  ...tableForm,
+  ...tableMethods,
+  ...exportData2ExcelHooks,
+};
+
+// 创建表格上下文
+createTableContext(dynamicTableContext);
+
+defineExpose(dynamicTableContext);
+
+const tableProps = computed<Recordable>(() => {
+  const { getExpandOption } = tableMethods;
+  return {
+    ...getBindValues.value,
+    ...getExpandOption.value,
+  };
+});
+
+onBeforeMount(() => {
+  if (props.immediate) {
+    fetchData();
+  }
+});
+</script>
+
 <template>
   <div>
     <Teleport to="body" :disabled="!isFullscreen">
@@ -5,7 +87,7 @@
         <SchemaForm
           v-if="innerPropsRef.search"
           ref="searchFormRef"
-          class="bg-white dark:bg-black mb-16px !pt-24px pr-24px"
+          class="mb-16px bg-white pr-24px dark:bg-black !pt-24px"
           submit-on-reset
           v-bind="getFormProps"
           :table-instance="dynamicTableContext"
@@ -57,109 +139,27 @@
   </div>
 </template>
 
-<script lang="tsx" setup>
-  import { computed, onBeforeMount } from 'vue';
-  import { Table } from 'ant-design-vue';
-  import {
-    useTableMethods,
-    createTableContext,
-    useExportData2Excel,
-    useTableForm,
-    useTableState,
-    useColumns,
-  } from './hooks';
-  import { ToolBar } from './components';
-  import { dynamicTableProps, dynamicTableEmits } from './dynamic-table';
-  import { SchemaForm } from '@/components/core/schema-form';
-
-  defineOptions({
-    name: 'DynamicTable',
-    inheritAttrs: false,
-  });
-
-  const props = defineProps(dynamicTableProps);
-  const emit = defineEmits(dynamicTableEmits);
-
-  // 表格内部状态
-  const tableState = useTableState(props);
-  const {
-    tableRef,
-    tableData,
-    isFullscreen,
-    containerElRef,
-    searchFormRef,
-    editTableFormRef,
-    innerPropsRef,
-    getBindValues,
-    editFormModel,
-  } = tableState;
-
-  // 表格内部方法
-  const tableMethods = useTableMethods({ props, emit, tableState });
-  const { fetchData, handleSubmit, handleTableChange, handleEditFormValidate } = tableMethods;
-
-  // 表格列的配置描述
-  const { innerColumns } = useColumns({ props, tableState, tableMethods });
-
-  // 搜索表单
-  const tableForm = useTableForm({ tableState, tableMethods });
-  const { getFormProps, replaceFormSlotKey, getFormSlotKeys } = tableForm;
-
-  // 表单导出
-  const exportData2ExcelHooks = useExportData2Excel({ props, tableState, tableMethods });
-
-  // 当前组件所有的状态和方法
-  const dynamicTableContext = {
-    tableProps: props,
-    emit,
-    innerColumns,
-    ...tableState,
-    ...tableForm,
-    ...tableMethods,
-    ...exportData2ExcelHooks,
-  };
-
-  // 创建表格上下文
-  createTableContext(dynamicTableContext);
-
-  defineExpose(dynamicTableContext);
-
-  const tableProps = computed<Recordable>(() => {
-    const { getExpandOption } = tableMethods;
-    return {
-      ...getBindValues.value,
-      ...getExpandOption.value,
-    };
-  });
-
-  onBeforeMount(() => {
-    if (props.immediate) {
-      fetchData();
-    }
-  });
-</script>
-
 <style lang="less" scoped>
   :deep(.ant-table-wrapper) {
-    padding: 0 6px 6px;
+  padding: 0 6px 6px;
 
-    .ant-table {
-      .ant-table-title {
-        display: flex;
-      }
+  .ant-table {
+    .ant-table-title {
+      display: flex;
+    }
 
-      .ant-image:hover {
-        cursor: zoom-in;
-      }
+    .ant-image:hover {
+      cursor: zoom-in;
+    }
 
-      // 隱藏展開按鈕
-      .ant-table-row-expand-icon {
-        display: none !important;
-      }
+    // 隱藏展開按鈕
+    .ant-table-row-expand-icon {
+      display: none !important;
     }
   }
+}
 
-  .actions > * {
-    margin-right: 10px;
-  }
+.actions > * {
+  margin-right: 10px;
+}
 </style>
