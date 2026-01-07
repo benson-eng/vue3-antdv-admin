@@ -1,11 +1,11 @@
-import { h } from 'vue';
 import type { FormSchema } from '@/components/core/schema-form/';
-import { IconPicker, Icon } from '@/components/basic/icon';
-import { asyncRoutes } from '@/router/asyncModules';
+import { h } from 'vue';
 import Api from '@/api/';
+import { Icon, IconPicker } from '@/components/basic/icon';
+import { asyncRoutes } from '@/router/asyncModules';
 import { findPath, str2tree } from '@/utils/common';
 
-/** 菜单类型 0: 目录 | 1: 菜单 | 2: 按钮 */
+/** 菜單類型 0: 目錄 | 1: 菜單 | 2: 按鈕 */
 const isDir = (type: API.MenuDto['type']) => type === 0;
 const isMenu = (type: API.MenuDto['type']) => type === 1;
 const isButton = (type: API.MenuDto['type']) => type === 2;
@@ -14,21 +14,21 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'type',
     component: 'RadioGroup',
-    label: '菜单类型',
+    label: '菜單類型',
     defaultValue: 0,
     rules: [{ required: true, type: 'number' }],
     componentProps: {
       options: [
         {
-          label: '目录',
+          label: '目錄',
           value: 0,
         },
         {
-          label: '菜单',
+          label: '菜單',
           value: 1,
         },
         {
-          label: '权限',
+          label: '權限',
           value: 2,
         },
       ],
@@ -37,13 +37,13 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'name',
     component: 'Input',
-    label: ({ formModel }) => (isButton(formModel['type']) ? '权限名称' : '节点名称'),
+    label: ({ formModel }) => (isButton(formModel.type) ? '權限名稱' : '節點名稱'),
     rules: [{ required: true, type: 'string' }],
   },
   {
     field: 'parentId',
     component: 'TreeSelect',
-    label: '上级节点',
+    label: '上級節點',
     componentProps: {
       fieldNames: {
         label: 'name',
@@ -52,10 +52,10 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
       request: async ({ schema, formModel }) => {
         const menuTree = await Api.systemMenu.menuList({});
         const treeDefaultExpandedKeys = [-1].concat(
-          findPath(menuTree, formModel['parentId']) || [],
+          findPath(menuTree, formModel.parentId) || [],
         );
         schema.value.componentProps.treeDefaultExpandedKeys = treeDefaultExpandedKeys;
-        return [{ id: -1, name: '根目录', children: menuTree }];
+        return [{ id: -1, name: '根目錄', children: menuTree }];
       },
       getPopupContainer: () => document.body,
     },
@@ -65,27 +65,28 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
     field: 'path',
     component: 'Input',
     label: '路由地址',
-    vIf: ({ formModel }) => !isButton(formModel['type']),
+    label: '路由地址',
+    vIf: ({ formModel }) => !isButton(formModel.type),
     rules: [{ required: true, type: 'string' }],
   },
   {
     field: 'permission',
     component: 'Input',
-    label: '权限',
-    helpMessage: `对应控制器中定义的权限字符，如：@Perm('system:menu:list'))`,
-    vIf: ({ formModel }) => !isDir(formModel['type']),
+    label: '權限',
+    helpMessage: `對應控制器中定義的權限字符，如：@Perm('system:menu:list'))`,
+    vIf: ({ formModel }) => !isDir(formModel.type),
     required: ({ formModel }) => isButton(formModel.type),
     afterSlot: ({ schema, formInstance, formModel }) => {
       if (schema.value.component === 'Input') {
         return h(Icon, {
           icon: 'ant-design:folder-open-outlined',
-          title: '选择权限',
+          title: '選擇權限',
           class: 'ml-[12px] cursor-pointer',
           onclick: async () => {
             const data = await Api.systemMenu.menuGetPermissions();
-            if (typeof formModel['permission'] === 'string') {
+            if (typeof formModel.permission === 'string') {
               // @ts-ignore
-              formModel['permission'] = formModel['permission'].split(':');
+              formModel.permission = formModel.permission.split(':');
             }
             formInstance.updateSchema({
               field: 'permission',
@@ -97,14 +98,15 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
             });
           },
         });
-      } else {
+      }
+      else {
         return h(Icon, {
           icon: 'ant-design:edit-outlined',
-          title: '手动输入',
+          title: '手動輸入',
           class: 'ml-[12px] cursor-pointer',
           onclick: () => {
-            if (Array.isArray(formModel['permission'])) {
-              formModel['permission'] = formModel['permission'].join(':');
+            if (Array.isArray(formModel.permission)) {
+              formModel.permission = formModel.permission.join(':');
             }
             formInstance.updateSchema({
               field: 'permission',
@@ -118,8 +120,8 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'component',
     component: 'Cascader',
-    label: '文件路径',
-    vIf: ({ formModel }) => isMenu(formModel['type']) && !formModel['isExt'],
+    label: '文件路徑',
+    vIf: ({ formModel }) => isMenu(formModel.type) && !formModel.isExt,
     componentProps: {
       options: Object.keys(asyncRoutes).reduce(
         (prev, curr) => (str2tree(curr, prev, '/'), prev),
@@ -131,13 +133,13 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'icon',
     component: () => IconPicker,
-    label: '节点图标',
-    vIf: ({ formModel }) => !isButton(formModel['type']),
+    label: '節點圖標',
+    vIf: ({ formModel }) => !isButton(formModel.type),
   },
   {
     field: 'orderNo',
     component: 'InputNumber',
-    label: '排序号',
+    label: '排序號',
     defaultValue: 255,
     componentProps: {
       style: {
@@ -148,9 +150,9 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'isExt',
     component: 'RadioGroup',
-    label: '是否外链',
+    label: '是否外鍊',
     defaultValue: false,
-    helpMessage: '选择是外链则路由地址需要以`http(s)://`开头',
+    helpMessage: '選擇是外鏈則路由地址需要以`http(s)://`開頭',
     colProps: {
       span: 12,
     },
@@ -162,14 +164,14 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
         { label: '否', value: false },
       ],
     },
-    vIf: ({ formModel }) => !isButton(formModel['type']),
+    vIf: ({ formModel }) => !isButton(formModel.type),
   },
   {
     field: 'extOpenMode',
     component: 'RadioGroup',
-    label: '打开方式',
+    label: '打開方式',
     defaultValue: 1,
-    vIf: ({ formModel }) => !isButton(formModel['type']) && formModel['isExt'],
+    vIf: ({ formModel }) => !isButton(formModel.type) && formModel.isExt,
     colProps: {
       span: 12,
     },
@@ -178,11 +180,11 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
       buttonStyle: 'solid',
       options: [
         {
-          label: '新窗口打开',
+          label: '新窗口打開',
           value: 1,
         },
         {
-          label: '内嵌页打开',
+          label: '內嵌頁打開',
           value: 2,
         },
       ],
@@ -191,9 +193,9 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'keepAlive',
     component: 'RadioGroup',
-    label: '是否缓存',
+    label: '是否緩存',
     defaultValue: 0,
-    vIf: ({ formModel }) => isMenu(formModel['type']),
+    vIf: ({ formModel }) => isMenu(formModel.type),
     colProps: {
       span: 12,
     },
@@ -209,12 +211,12 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
   {
     field: 'show',
     component: 'RadioGroup',
-    label: '是否显示',
+    label: '是否顯示',
     defaultValue: 1,
     colProps: {
       span: 12,
     },
-    helpMessage: '会生成路由,但左侧菜单不可见',
+    helpMessage: '會生成路由,但左側菜單不可見',
     componentProps: {
       optionType: 'button',
       buttonStyle: 'solid',
@@ -223,32 +225,33 @@ export const useMenuSchemas = (): FormSchema<API.MenuDto>[] => [
         { label: '否', value: 0 },
       ],
     },
-    vIf: ({ formModel }) => !isButton(formModel['type']),
+    vIf: ({ formModel }) => !isButton(formModel.type),
   },
   {
     field: 'activeMenu',
     component: 'Input',
-    label: '高亮菜单项',
+    label: '高亮菜單項',
     colProps: {
       span: 12,
     },
-    helpMessage: '值为某个的节点的路由地址(可设置当前路由高亮的菜单项，多用于详情页)',
+    helpMessage: '值為某個的節點的路由地址(可設置當前路由高亮的菜單項，多用於詳情頁)',
     componentProps: {
-      placeholder: '需要高亮的菜单项(节点名称)',
+      placeholder: '需要高亮的菜單項(節點名稱)',
     },
-    vIf: ({ formModel }) => !formModel['show'] && !isButton(formModel['type']),
+    vIf: ({ formModel }) => !formModel.show && !isButton(formModel.type),
   },
   {
     field: 'status',
-    label: '状态',
+    label: '狀態',
     component: 'RadioGroup',
     defaultValue: 1,
-    helpMessage: '不会生成路由,同时左侧菜单不可见',
+    helpMessage: '不會生成路由,同時左側菜單不可見',
     componentProps: {
       optionType: 'button',
       buttonStyle: 'solid',
       options: [
-        { label: '启用', value: 1 },
+        { label: '啟用', value: 1 },
+        { label: '禁用', value: 0 },
         { label: '禁用', value: 0 },
       ],
     },

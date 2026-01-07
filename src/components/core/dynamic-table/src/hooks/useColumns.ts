@@ -32,11 +32,11 @@ export const useColumns = (payload: UseColumnsPayload) => {
     // @ts-ignore
     const columns = innerProps!.columns!.filter((n) => !n.hideInTable);
 
-    // 是否添加序号列
+    // 是否添加序號列
     if (innerProps?.showIndex) {
       columns.unshift({
         dataIndex: ColumnKeyFlag.INDEX,
-        title: '序号',
+        title: '序號',
         width: 60,
         align: 'center',
         fixed: 'left',

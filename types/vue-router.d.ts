@@ -1,6 +1,6 @@
 import type { RouteMeta as VRouteMeta } from 'vue-router';
-import type { PermissionType } from '@/permission/permCode/';
 import type { LocaleType } from '@/locales/config';
+import type { PermissionType } from '@/permission/permCode/';
 
 declare global {
   type Title18n = {
@@ -10,44 +10,45 @@ declare global {
 
 declare module 'vue-router' {
   interface RouteMeta extends VRouteMeta {
-    /** 标题 */
+    /** 標題 */
     title: string | Title18n;
-    /** 当前菜单类型 0: 目录 | 1: 菜单 | 2: 权限 */
+    /** 當前菜單類型 0: 目錄 | 1: 菜單 | 2: 權限 */
     type?: 0 | 1 | 2;
-    /** 当前路由权限 */
+    /** 當前路由權限 */
     perms?: PermissionType[];
-    /** 是否需要缓存 */
+    /** 是否需要緩存 */
     keepAlive?: boolean;
-    /** 当前路由namePath 祖先name集合 */
+    /** 當前路由namePath 祖先name集合 */
     namePath?: string[];
-    /** 当前路由所在的完整路径 */
+    /** 當前路由所在的完整路徑 */
     fullPath?: string;
-    /** 是否固定在标签栏 */
+    /** 是否固定在標籤欄 */
     affix?: boolean;
-    /** 菜单图标 */
+    /** 菜單圖標 */
     icon?: string;
-    /** 当前页面切换动画 */
+    /** 當前頁面切換動畫 */
     transitionName?: string | false;
-    /** @name 在菜单中隐藏子节点 */
+    /** @name 在菜單中隱藏子節點 */
     hideChildrenInMenu?: boolean;
-    /** 不在菜单中显示 */
+    /** 不在菜單中顯示 */
     hideInMenu?: boolean;
-    /** 不在面包屑导航中显示 */
+    /** 不在麵包屑導航中顯示 */
     hideInBreadcrumb?: boolean;
-    /** 不在tab标签页中显示 */
+    /** 不在tab標籤頁中顯示 */
     hideInTabs?: boolean;
-    /** 设置当前路由高亮的菜单项，值为route fullPath或route name,一般用于详情页 */
+    /** 設置當前路由高亮的菜單項，值為route fullPath或route name,一般用於詳情頁 */
     activeMenu?: string;
-    /** 菜单排序号 */
+    /** 菜單排序號 */
     orderNo?: number;
-    /** 是否外链 */
+    /** 是否外鏈 */
     isExt?: boolean;
-    /** 外链打开方式
-     * 1: 新窗口打开
-     * 2: 内嵌 iframe
+    /**
+     * 外鏈打開方式
+     * 1: 新窗口打開
+     * 2: 內嵌 iframe
      */
     extOpenMode?: 1 | 2;
-    /** 是否隐藏页面加载进度条 */
+    /** 是否隱藏頁面加載進度條 */
     hideProgressBar?: boolean;
   }
 }
