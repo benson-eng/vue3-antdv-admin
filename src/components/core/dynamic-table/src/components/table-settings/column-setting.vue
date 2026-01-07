@@ -83,9 +83,56 @@ const handleBorderedCheckChange = (e) => {
   setProps({ bordered: e.target.checked });
 };
 
-const handleColumnFixed = (columItem, direction: 'left' | 'right') => {
-  columItem.fixed = columItem.fixed === direction ? false : direction;
+const handleColumnFixed = (item: TableColumn, dir: 'left' | 'right') => {
+  const key = getColumnKey(item);
+
+  const toggled = toggleFixedOnly(
+    tableColumns.value,
+    key,
+    dir,
+  );
+
+  tableColumns.value = sortByFixedZones(toggled);
 };
+
+function sortByFixedZones(columns: TableColumn[]) {
+  const left: TableColumn[] = [];
+  const normal: TableColumn[] = [];
+  const right: TableColumn[] = [];
+
+  columns.forEach((col) => {
+    if (col.fixed === 'left') {
+      left.push(col);
+    }
+    else if (col.fixed === 'right') {
+      right.push(col);
+    }
+    else {
+      normal.push(col);
+    }
+  });
+
+  return [...left, ...normal, ...right];
+}
+function toggleFixedOnly(
+  columns: TableColumn[],
+  targetKey: string,
+  dir: 'left' | 'right',
+) {
+  return columns.map((col) => {
+    if (getColumnKey(col) !== targetKey) {
+      return col;
+    }
+
+    // 點同一方向 = 取消 fixed
+    if (col.fixed === dir) {
+      return { ...col, fixed: undefined };
+    }
+
+    // 切換成指定方向
+    return { ...col, fixed: dir };
+  });
+}
 
 async function handleVisibleChange() {
   if (inited) { return; }
@@ -98,14 +145,21 @@ async function handleVisibleChange() {
     handle: '.table-column-drag-icon',
     onEnd: (evt) => {
       const { oldIndex, newIndex } = evt;
+      if (oldIndex === newIndex) { return; }
 
-      if (isNil(oldIndex) || isNil(newIndex) || oldIndex === newIndex) {
-        return;
-      }
-      // Sort column
-      const columns = tableColumns.value;
-      columns.splice(newIndex, 0, columns.splice(oldIndex, 1)[0]);
+      const columns = [...tableColumns.value];
+
+      const moved = {
+        ...columns[oldIndex],
+        fixed: undefined, // ✅ 關鍵：拖曳 = 取消 fixed
+      };
+
+      columns.splice(oldIndex, 1);
+      columns.splice(newIndex, 0, moved);
+
+      tableColumns.value = columns;
     },
+
   });
   initSortable();
   inited = true;
