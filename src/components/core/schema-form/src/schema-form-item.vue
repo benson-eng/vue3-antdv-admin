@@ -445,7 +445,7 @@ watch(
           :ref="setItemRef(schema.field)"
           v-bind="getComponentProps"
           v-model:[modelValueType]="modelValue"
-          :allow-clear="true"
+          :allow-clear="getComponentProps.allowClear !== false"
           :disabled="getDisable"
           :loading="schema.loading"
           v-on="componentEvents"

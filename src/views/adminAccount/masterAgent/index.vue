@@ -1064,7 +1064,7 @@ void Modal;
         :columns="columns"
         :scroll="{ x: tableConfig.scrollX.value }"
         :form-props="{
-          showSubmitButton: true,
+          showSubmitButton: false,
           showResetButton: true,
           showAdvancedButton: true,
           submitOnReset: true,
@@ -1080,58 +1080,12 @@ void Modal;
       >
         <template #toolbar>
           <a-space>
-            <!-- <a-button type="primary" :disabled="!canCreate" @click="openFormModal()">
-            {{ pt('button.add') }}
-          </a-button> -->
             <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
               {{ pt('button.createWizard') }}
             </a-button>
           </a-space>
         </template>
       </DynamicTable>
-
-      <!-- 過濾區塊 -->
-      <div v-if="showTableFilter" class="table-filter-block">
-        <a-form layout="inline" :model="tableFilter">
-          <a-form-item :label="pt('column.account')">
-            <a-input
-              v-model:value="tableFilter.account"
-              :placeholder="pt('labels.input')"
-              style="width: 200px"
-              allow-clear
-            />
-          </a-form-item>
-          <a-form-item :label="pt('column.adminMaintained')">
-            <a-select
-              v-model:value="tableFilter.isEnabled"
-              :placeholder="pt('labels.all')"
-              style="width: 120px"
-            >
-              <a-select-option value="">
-                {{ pt('labels.all') }}
-              </a-select-option>
-              <a-select-option value="true">
-                {{ pt('labels.enable') }}
-              </a-select-option>
-              <a-select-option value="false">
-                {{ pt('labels.disable') }}
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item :label="pt('column.createDatetime')">
-            <a-range-picker
-              v-model:value="tableFilter.createDatetime"
-              format="YYYY-MM-DD"
-              style="width: 240px"
-            />
-          </a-form-item>
-          <a-form-item>
-            <a-button @click="resetTableFilter">
-              重置
-            </a-button>
-          </a-form-item>
-        </a-form>
-      </div>
     </div>
 
     <CreateWizardDialog

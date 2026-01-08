@@ -1,6 +1,6 @@
 import type { AgentItem } from '@/api/backend/adminAccount/agent';
 import type { TableColumn } from '@/components/core/dynamic-table';
-import { Space, Tag } from 'ant-design-vue';
+import { Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 export type TableListItem = AgentItem;
@@ -10,68 +10,58 @@ export const getBaseColumns = (pt: (key: string) => string): TableColumnItem[] =
   {
     title: pt('column.account'),
     dataIndex: 'account',
-    width: 140,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
-    hideInSearch: true,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    formItemProps: {
+      component: 'Input',
+    },
   },
   {
     title: pt('column.name'),
     dataIndex: 'name',
-    width: 140,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
   },
   {
     title: pt('column.prefix'),
     dataIndex: 'prefix',
     width: 130,
-    ellipsis: true,
-    align: 'center',
     hideInSearch: true,
   },
   {
     title: pt('column.roles'),
     dataIndex: 'roles',
     width: 220,
-    align: 'center',
     hideInSearch: true,
-    customRender: ({ record }) => {
-      const roles = Array.isArray(record.roles) ? record.roles : [];
-      if (!roles.length) {
-        return '-';
-      }
-      return (
-        <Space size={4} wrap>
-          {roles.map((r: any) => (
-            <Tag key={r.id} color="blue" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {r?.name ? `${r.name}(${r.id})` : String(r?.id ?? '')}
-            </Tag>
-          ))}
-        </Space>
-      );
-    },
+    customRender: ({ record }) => (
+      <span>
+        {Array.isArray(record.roles) && record.roles.length > 0
+          ? record.roles.map((role: any) => (
+              <Tag key={role.key || role.id} style={{ margin: '3px 5px', maxWidth: '200px' }}>
+                {role.name}
+                (
+                {role.id}
+                )
+              </Tag>
+            ))
+          : '-'}
+      </span>
+    ),
   },
   {
     title: pt('column.website'),
     dataIndex: 'website',
-    width: 200,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
     customRender: ({ record }) => record.website || '-',
   },
   {
     title: pt('column.apiDomain'),
     dataIndex: 'apiDomain',
-    width: 200,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 200, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
     customRender: ({ record }) => record.apiDomain || '-',
   },
@@ -79,34 +69,39 @@ export const getBaseColumns = (pt: (key: string) => string): TableColumnItem[] =
     title: pt('column.whiteIPList'),
     dataIndex: 'whiteIPList',
     width: 220,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
     hideInSearch: true,
     customRender: ({ record }) => record.whiteIPList || '-',
   },
   {
     title: pt('column.createDatetime'),
     dataIndex: 'createDatetime',
-    width: 180,
-    ellipsis: true,
-    align: 'center',
-    sorter: true,
-    hideInSearch: true,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    formItemProps: {
+      component: 'RangePicker',
+      componentProps: {
+        allowClear: true,
+        format: 'YYYY-MM-DD',
+        style: { width: '100%' },
+      },
+    },
     customRender: ({ record }) => {
-      if (!record.createDatetime) return '-';
+      if (!record.createDatetime) {
+        return '-';
+      }
       return dayjs(record.createDatetime).format('YYYY-MM-DD HH:mm:ss');
     },
   },
   {
     title: pt('column.lastLoginDatetime'),
     dataIndex: 'lastLoginDatetime',
-    width: 180,
-    ellipsis: true,
-    align: 'center',
+    flexible: true, // 彈性寬度欄位
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
     customRender: ({ record }) => {
-      if (!record.lastLoginDatetime) return '-';
+      if (!record.lastLoginDatetime) {
+        return '-';
+      }
       return dayjs(record.lastLoginDatetime).format('YYYY-MM-DD HH:mm:ss');
     },
   },

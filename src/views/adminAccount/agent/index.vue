@@ -4,20 +4,20 @@ import type { TableColumnItem, TableListItem } from './columns';
 import type { AgentFormValues } from './formSchemas';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal, Switch, Tag } from 'ant-design-vue';
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import AgentApi from '@/api/backend/adminAccount/agent';
 import MasterAgentApi from '@/api/backend/adminAccount/masterAgent';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useFormModal } from '@/hooks/useModal';
 import { useUserStore } from '@/store/modules/user';
+import { useTableConfig } from '../masterAgent/useTableConfig';
 import { getBaseColumns } from './columns';
 import { getAgentSchemas, getPasswordSchemas, loadRolesOnce } from './formSchemas';
 
 defineOptions({ name: 'AdminAccountAgent' });
 
 const { t } = useI18n('page.adminAccount');
-const { t: tCommon } = useI18n();
 const userStore = useUserStore();
 const canCreate = computed(() => userStore.level === 2 || userStore.level === 4);
 const canEditApiSettings = computed(() => userStore.level <= 2);
@@ -30,9 +30,6 @@ const [showModal] = useFormModal();
 
 const masterAgentOptions = ref<{ label: string; value: string }[]>([]);
 const selectedMasterAgent = ref<string>(userStore.level >= 4 ? String(userStore.masterAgent || '') : '');
-
-const searchKeyword = ref<string>('');
-const searchDateRange = ref<[Dayjs, Dayjs] | undefined>(undefined);
 
 interface TableListResponse {
   items: TableListItem[];
@@ -157,53 +154,8 @@ const persistAgentApiSettings = async (args: {
   });
 };
 
-const loadMasterAgentOptions = async () => {
-  if (!canSelectMasterAgent.value) {
-    return;
-  }
-  try {
-    const list = await MasterAgentApi.getMasterAgentAccountList({});
-    masterAgentOptions.value = (Array.isArray(list) ? list : [])
-      .map((i: any) => String(i?.account ?? '').trim())
-      .filter(Boolean)
-      .map(account => ({ label: account, value: account }));
-
-    // 自動帶入第一個選項
-    if (masterAgentOptions.value.length > 0 && !selectedMasterAgent.value) {
-      selectedMasterAgent.value = masterAgentOptions.value[0].value;
-      // 自動觸發表格重新載入
-      tableInstance?.reload();
-    }
-  }
-  catch (e) {
-    console.error(e);
-    masterAgentOptions.value = [];
-  }
-};
-
-onMounted(async () => {
-  await loadMasterAgentOptions();
-});
-
-const onMasterAgentChanged = () => {
-  tableInstance?.reload();
-};
-
-const calculateTableScrollX = () => {
-  /** 帳號 + 名稱 + 前綴 + 角色 + Website + API Domain + White IP List */
-  const baseColumnsWidth = 140 + 140 + 130 + 220 + 200 + 200 + 220;
-  /** 建立時間 + 最後登入時間 + 最後登入 IP */
-  const datetimeColumnsWidth = 180 + 180 + 160;
-  /** 啟用 + 狀態 */
-  const statusColumnsWidth = 120 + 120;
-  /** 操作 */
-  const actionColumnWidth = 200;
-  const totalWidth = baseColumnsWidth + datetimeColumnsWidth + statusColumnsWidth + actionColumnWidth;
-  /** 加上一些緩衝空間，確保不會出現跑版 */
-  return totalWidth + 50;
-};
-
-const loadTableData = async (params: LoadDataParams): Promise<TableListResponse> => {
+const loadTableData = async (params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  // 使用 selectedMasterAgent 作為唯一來源（page-level 狀態）
   const masterAgent = String(selectedMasterAgent.value || '').trim();
   if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
@@ -245,42 +197,52 @@ const loadTableData = async (params: LoadDataParams): Promise<TableListResponse>
     ...a,
     ...(apiMap[a.account] ?? { website: '', apiDomain: '', whiteIPList: '', hashKey: '' }),
   }));
-
-  const keyword = searchKeyword.value.trim().toLowerCase();
-  const range = searchDateRange.value;
-  const start = range?.[0]?.startOf?.('day')?.valueOf?.();
-  const end = range?.[1]?.endOf?.('day')?.valueOf?.();
-
-  const filtered = merged.filter((i: any) => {
-    if (keyword) {
-      const acc = String(i?.account ?? '').toLowerCase();
-      const name = String(i?.name ?? '').toLowerCase();
-      if (!acc.includes(keyword) && !name.includes(keyword)) {
-        return false;
-      }
-    }
-    if (start != null && end != null) {
-      const ts = i?.createDatetime ? new Date(i.createDatetime).getTime() : Number.NaN;
-      if (Number.isFinite(ts)) {
-        if (ts < start || ts > end) {
-          return false;
-        }
-      }
-    }
-    return true;
-  });
-
-  const page = Number(params.page ?? 1);
-  const limit = Number(params.limit ?? 20);
-  const totalItems = filtered.length;
-  const startIdx = (page - 1) * limit;
-  const endIdx = startIdx + limit;
-
   return {
-    items: filtered.slice(startIdx, endIdx),
-    meta: { totalItems },
+    items: merged,
+    meta: {
+      totalItems: merged.length,
+    },
   };
 };
+
+const loadMasterAgentOptions = async () => {
+  if (!canSelectMasterAgent.value) {
+    return;
+  }
+  try {
+    const list = await MasterAgentApi.getMasterAgentAccountList({});
+    masterAgentOptions.value = (Array.isArray(list) ? list : [])
+      .map((i: any) => String(i?.account ?? '').trim())
+      .filter(Boolean)
+      .map(account => ({ label: account, value: account }));
+
+    // 自動帶入第一個選項
+    if (masterAgentOptions.value.length > 0 && !selectedMasterAgent.value) {
+      selectedMasterAgent.value = masterAgentOptions.value[0].value;
+      // 自動載入資料
+      await loadTableData({ page: 1, limit: 20 });
+      tableInstance?.reload();
+    }
+  }
+  catch (e) {
+    console.error(e);
+    masterAgentOptions.value = [];
+  }
+};
+
+onMounted(async () => {
+  await loadMasterAgentOptions();
+});
+
+const onMasterAgentChanged = async () => {
+  // masterAgent 切換時載入資料
+  await loadTableData({ page: 1, limit: 20 });
+  // 觸發表格更新（因為使用 data-source，需要手動觸發）
+  tableInstance?.reload();
+};
+
+// 注意：過濾邏輯已移至 loadTableData 中，與 masterAgent/index.vue 保持一致
+// 不再需要 filteredItems computed，因為過濾在 loadTableData 中完成
 
 const buildUpdatePayload = (record: Partial<TableListItem>, overrides: Record<string, any> = {}) => {
   const roleIds = Array.isArray(record.roles)
@@ -528,113 +490,217 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
   }
 };
 
-const columns = ref<TableColumnItem[]>([
-  ...getBaseColumns(t),
-  {
-    title: t('labels.enable'),
-    dataIndex: 'isEnabled',
-    width: 120,
-    align: 'center',
-    hideInSearch: true,
-    customRender: ({ record }) => (
-      <Switch
-        checked={Boolean(record.isEnabled)}
-        checkedChildren={t('labels.enable')}
-        unCheckedChildren={t('labels.disable')}
-        onChange={checked => toggleEnabled(record, Boolean(checked))}
-      />
-    ),
-  },
-  {
-    title: t('column.accountStatus'),
-    dataIndex: 'statusTag',
-    width: 120,
-    align: 'center',
-    hideInSearch: true,
-    customRender: ({ record }) => (
-      <Tag color={record.isEnabled ? 'green' : 'red'}>
-        {record.isEnabled ? t('labels.enable') : t('labels.disable')}
-      </Tag>
-    ),
-  },
-  {
-    title: t('action.operation'),
-    dataIndex: 'ACTION',
-    width: 200,
-    align: 'center',
-    fixed: 'right',
-    hideInSearch: true,
-    actions: ({ record }) => [
-      {
-        label: t('action.edit'),
-        type: 'link',
-        onClick: () => openFormModal(record),
+// 定義所有欄位（包含操作欄）
+// 注意：masterAgent 已從搜尋 schema 中移除，改為 page-level 控制元件
+const baseColumnsWithAction = computed<TableColumnItem[]>(() => {
+  return [
+    ...getBaseColumns(t),
+    {
+      title: t('labels.enable'),
+      dataIndex: 'isEnabled',
+      width: 100,
+      hideInSearch: true,
+      customRender: ({ record }) => (
+        <Switch
+          checked={Boolean(record.isEnabled)}
+          checkedChildren={t('labels.enable')}
+          unCheckedChildren={t('labels.disable')}
+          onChange={checked => toggleEnabled(record, Boolean(checked))}
+        />
+      ),
+    },
+    {
+      title: t('column.accountStatus'),
+      dataIndex: 'statusTag',
+      width: 100,
+      hideInSearch: true,
+      customRender: ({ record }) => (
+        <Tag color={record.isEnabled ? 'green' : 'red'}>
+          {record.isEnabled ? t('labels.enable') : t('labels.disable')}
+        </Tag>
+      ),
+    },
+    {
+      title: t('action.operation'),
+      dataIndex: 'ACTION',
+      width: 320, // 調寬操作欄位，避免按鈕換行
+      align: 'center',
+      fixed: 'right',
+      hideInSearch: true,
+      /**
+       * 防止內容換行
+       */
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
       },
-      {
-        label: t('action.changePassword'),
-        type: 'link',
-        onClick: () => openPasswordModal(record),
-      },
-    ],
+      actions: ({ record }) => [
+        {
+          label: t('action.edit'),
+          type: 'link',
+          onClick: () => openFormModal(record),
+        },
+        {
+          label: t('action.changePassword'),
+          type: 'link',
+          onClick: () => openPasswordModal(record),
+        },
+      ],
+    },
+  ];
+});
+
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumnsWithAction);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<TableColumnItem[]>(() => {
+  return baseColumnsWithAction.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumnItem = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
   },
-]);
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: TableColumnItem) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * 處理查詢按鈕點擊：重新載入資料
+ * 對齊 masterAgent/index.vue 的 handleQueryClick 邏輯
+ */
+const handleQueryClick = () => {
+  // 使用 tableInstance.reload(true) 觸發表單提交和資料重新載入
+  // 這樣可以確保表單的查詢條件也會被正確傳遞
+  tableInstance?.reload(true);
+};
+
+// 注意：過濾條件現在通過表單的 getFieldsValue 直接傳遞到 loadTableData 的 params 中
+// 不再需要手動同步表單值到額外的 ref，因為過濾邏輯在 loadTableData 中處理
 
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
 </script>
 
 <template>
-  <DynamicTable
-    row-key="id"
-    :header-title="t('page.agentManagement')"
-    :data-request="loadTableData"
-    :columns="columns"
-    :scroll="{ x: calculateTableScrollX() }"
-    :form-props="{ schemas: [] }"
-  >
-    <template #form-formHeader>
-      <a-col :span="24">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="6">
-            <a-form-item :label="t('page.masterAgent')" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-select
-                v-if="canSelectMasterAgent"
-                v-model:value="selectedMasterAgent"
-                :options="masterAgentOptions"
-                :allow-clear="false"
-                :placeholder="t('page.selectMasterAgent')"
-                @change="onMasterAgentChanged"
-              />
-              <a-input v-else v-model:value="selectedMasterAgent" disabled />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="6">
-            <a-form-item :label="t('column.account')" class="mb-0" :label-col="{ span: 7 }" :wrapper-col="{ span: 17 }">
-              <a-input v-model:value="searchKeyword" :placeholder="t('labels.input')" />
-            </a-form-item>
-          </a-col>
-
-          <a-col :span="6">
-            <a-form-item :label="t('column.createDatetime')" class="mb-0" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-              <a-range-picker
-                v-model:value="searchDateRange"
-                style="width: 100%"
-                :allow-clear="true"
-                :placeholder="[tCommon('startTime'), tCommon('dueTime')]"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
-      </a-col>
-    </template>
-
-    <template #toolbar>
-      <a-space>
-        <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
-          {{ t('button.add') }}
-        </a-button>
-      </a-space>
-    </template>
-  </DynamicTable>
+  <div class="agent-page">
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
+    >
+      <DynamicTable
+        row-key="id"
+        :header-title="t('page.agentManagement')"
+        :data-request="loadTableData"
+        :columns="columns"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :form-props="{
+          showSubmitButton: true,
+          showResetButton: true,
+          showAdvancedButton: true,
+          submitOnReset: false,
+          // submitButtonOptions: {
+          //   text: t('queryText'),
+          //   onClick: handleQueryClick,
+          // },
+        }"
+      >
+        <template #afterHeaderTitle>
+          <div style="display: flex; align-items: center; gap: 8px; margin-left: 16px;">
+            <span>{{ t('page.masterAgent') }}：</span>
+            <a-select
+              v-model:value="selectedMasterAgent"
+              :options="masterAgentOptions"
+              :placeholder="t('page.selectMasterAgent')"
+              :disabled="!canSelectMasterAgent"
+              :allow-clear="false"
+              style="width: 200px"
+              @change="onMasterAgentChanged"
+            />
+          </div>
+        </template>
+        <template #toolbar>
+          <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
+            {{ t('button.add') }}
+          </a-button>
+        </template>
+      </DynamicTable>
+    </div>
+  </div>
 </template>
