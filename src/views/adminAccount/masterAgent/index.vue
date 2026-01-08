@@ -4,7 +4,7 @@ import type { TableColumnItem, TableListItem } from './columns';
 import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal } from 'ant-design-vue';
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Api from '@/api/backend/adminAccount/masterAgent';
 import { useTable } from '@/components/core/dynamic-table';
@@ -36,6 +36,20 @@ const wizardVisible = ref<boolean>(false);
 const editWizardVisible = ref<boolean>(false);
 const editWizardRecord = ref<Partial<TableListItem> | null>(null);
 const rawListCache = ref<any[] | null>(null);
+
+// 過濾功能相關狀態
+const showTableFilter = ref<boolean>(false);
+const tableFilter = reactive<{
+  account: string;
+  isEnabled: string | undefined;
+  createDatetime: [Dayjs, Dayjs] | undefined;
+}>({
+  account: '',
+  isEnabled: '', // 預設值為「全部」（空字串）
+  createDatetime: undefined,
+});
+// 儲存所有已載入的資料（用於前端過濾）
+const allTableData = ref<TableListItem[]>([]);
 const goCreateWizard = () => {
   wizardVisible.value = true;
 };
@@ -348,6 +362,7 @@ const buildUpdatePayload = (record: Partial<MasterAgentItem>, overrides: Record<
 
 const loadTableData = async (params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
   console.log('[loadTableData params]', params);
+  console.log('[loadTableData rawListCache]', rawListCache.value);
   if (!rawListCache.value) {
     const list = await Api.getMasterAgentAccountList({});
     rawListCache.value = Array.isArray(list) ? list : [];
@@ -452,6 +467,9 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
 
   // 資料格式化
   const formatted = markChildRows(filtered);
+
+  // 儲存所有資料供前端過濾使用
+  allTableData.value = formatted;
 
   // 分頁處理
   const page = Number(params.page ?? 1);
@@ -1005,6 +1023,30 @@ const containerOverflowX = computed(() => {
   return 'hidden';
 });
 
+const toggleTableFilter = () => {
+  showTableFilter.value = !showTableFilter.value;
+  tableInstance?.reload(true); // 重新走 loadTableData
+};
+
+const resetTableFilter = () => {
+  tableFilter.account = '';
+  tableFilter.isEnabled = ''; // 重置為「全部」（空字串）
+  tableFilter.createDatetime = undefined;
+  tableInstance?.reload(true);
+};
+
+/**
+ * 處理查詢按鈕點擊：清除緩存並重新載入資料
+ */
+const handleQueryClick = () => {
+  // 清除緩存，強制重新抓取資料
+  // 設置為 null 而不是 []，因為空數組是 truthy，![] 為 false，不會觸發重新抓取
+  rawListCache.value = null;
+  // 使用 tableInstance.reload(true) 觸發表單提交和資料重新載入
+  // 這樣可以確保表單的查詢條件也會被正確傳遞
+  tableInstance?.reload(true);
+};
+
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
 </script>
@@ -1026,8 +1068,13 @@ void Modal;
           showResetButton: true,
           showAdvancedButton: true,
           submitOnReset: true,
+          showFilterButton: true,
           submitButtonOptions: {
             text: pt('queryText'),
+            onClick: handleQueryClick,
+          },
+          filterButtonOptions: {
+            onClick: toggleTableFilter,
           },
         }"
       >
@@ -1042,6 +1089,49 @@ void Modal;
           </a-space>
         </template>
       </DynamicTable>
+
+      <!-- 過濾區塊 -->
+      <div v-if="showTableFilter" class="table-filter-block">
+        <a-form layout="inline" :model="tableFilter">
+          <a-form-item :label="pt('column.account')">
+            <a-input
+              v-model:value="tableFilter.account"
+              :placeholder="pt('labels.input')"
+              style="width: 200px"
+              allow-clear
+            />
+          </a-form-item>
+          <a-form-item :label="pt('column.adminMaintained')">
+            <a-select
+              v-model:value="tableFilter.isEnabled"
+              :placeholder="pt('labels.all')"
+              style="width: 120px"
+            >
+              <a-select-option value="">
+                {{ pt('labels.all') }}
+              </a-select-option>
+              <a-select-option value="true">
+                {{ pt('labels.enable') }}
+              </a-select-option>
+              <a-select-option value="false">
+                {{ pt('labels.disable') }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item :label="pt('column.createDatetime')">
+            <a-range-picker
+              v-model:value="tableFilter.createDatetime"
+              format="YYYY-MM-DD"
+              style="width: 240px"
+            />
+          </a-form-item>
+          <a-form-item>
+            <a-button @click="resetTableFilter">
+              重置
+            </a-button>
+          </a-form-item>
+        </a-form>
+      </div>
     </div>
 
     <CreateWizardDialog
@@ -1059,3 +1149,13 @@ void Modal;
     />
   </div>
 </template>
+
+<style scoped lang="less">
+.table-filter-block {
+  padding: 16px;
+  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+</style>

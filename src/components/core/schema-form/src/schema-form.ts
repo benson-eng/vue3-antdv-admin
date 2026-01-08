@@ -98,6 +98,11 @@ export const schemaFormProps = {
   /** 确认按钮配置 */
   submitButtonOptions: Object as PropType<Partial<ButtonProps>>,
 
+  /** 显示过滤按钮 */
+  showFilterButton: { type: Boolean as PropType<boolean>, default: false },
+  /** 过滤按钮配置 */
+  filterButtonOptions: Object as PropType<Partial<ButtonProps>>,
+
   /** 自定义重置函数 */
   resetFunc: Function as PropType<() => Promise<void>>,
   submitFunc: Function as PropType<() => Promise<void>>,
