@@ -16,5 +16,11 @@
   "back": "Back",
 
   "light": "Light",
-  "dark": "Dark"
+  "dark": "Dark",
+  "action": {
+    "enable": "Enable",
+    "disable": "Disable",
+    "edit": "Edit",
+    "changePassword": "Change Password"
+  }
 }

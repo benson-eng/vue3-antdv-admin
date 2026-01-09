@@ -1,35 +1,41 @@
 <script setup lang="tsx">
-import type { Dayjs } from 'dayjs';
 import type { TableColumnItem, TableListItem } from './columns';
 import type { AgentFormValues } from './formSchemas';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
-import { message, Modal, Switch, Tag } from 'ant-design-vue';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { message, Modal, Tag } from 'ant-design-vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 import AgentApi from '@/api/backend/adminAccount/agent';
-import MasterAgentApi from '@/api/backend/adminAccount/masterAgent';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useFormModal } from '@/hooks/useModal';
 import { useUserStore } from '@/store/modules/user';
 import { useTableConfig } from '../masterAgent/useTableConfig';
 import { getBaseColumns } from './columns';
+import { MASTER_AGENT_SELECT_KEY } from './constants';
 import { getAgentSchemas, getPasswordSchemas, loadRolesOnce } from './formSchemas';
 
 defineOptions({ name: 'AdminAccountAgent' });
 
 const { t } = useI18n('page.adminAccount');
+const commonT = useI18n('common').t;
 const userStore = useUserStore();
 const canCreate = computed(() => userStore.level === 2 || userStore.level === 4);
 const canEditApiSettings = computed(() => userStore.level <= 2);
-const canSelectMasterAgent = computed(() => userStore.level < 4);
 
 const [DynamicTable, tableInstance] = useTable({
   search: true, // 保留搜尋區容器
 });
 const [showModal] = useFormModal();
 
-const masterAgentOptions = ref<{ label: string; value: string }[]>([]);
-const selectedMasterAgent = ref<string>(userStore.level >= 4 ? String(userStore.masterAgent || '') : '');
+// 從 Layout 根元件 provide 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
 
 interface TableListResponse {
   items: TableListItem[];
@@ -154,8 +160,9 @@ const persistAgentApiSettings = async (args: {
   });
 };
 
-const loadTableData = async (params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
-  // 使用 selectedMasterAgent 作為唯一來源（page-level 狀態）
+const loadTableData = async (_params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  // 使用從 LayoutBreadcrumb provide 取得的站長值
+  console.log('[loadTableData] selectedMasterAgent =', selectedMasterAgent.value);
   const masterAgent = String(selectedMasterAgent.value || '').trim();
   if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
@@ -205,42 +212,6 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
   };
 };
 
-const loadMasterAgentOptions = async () => {
-  if (!canSelectMasterAgent.value) {
-    return;
-  }
-  try {
-    const list = await MasterAgentApi.getMasterAgentAccountList({});
-    masterAgentOptions.value = (Array.isArray(list) ? list : [])
-      .map((i: any) => String(i?.account ?? '').trim())
-      .filter(Boolean)
-      .map(account => ({ label: account, value: account }));
-
-    // 自動帶入第一個選項
-    if (masterAgentOptions.value.length > 0 && !selectedMasterAgent.value) {
-      selectedMasterAgent.value = masterAgentOptions.value[0].value;
-      // 自動載入資料
-      await loadTableData({ page: 1, limit: 20 });
-      tableInstance?.reload();
-    }
-  }
-  catch (e) {
-    console.error(e);
-    masterAgentOptions.value = [];
-  }
-};
-
-onMounted(async () => {
-  await loadMasterAgentOptions();
-});
-
-const onMasterAgentChanged = async () => {
-  // masterAgent 切換時載入資料
-  await loadTableData({ page: 1, limit: 20 });
-  // 觸發表格更新（因為使用 data-source，需要手動觸發）
-  tableInstance?.reload();
-};
-
 // 注意：過濾邏輯已移至 loadTableData 中，與 masterAgent/index.vue 保持一致
 // 不再需要 filteredItems computed，因為過濾在 loadTableData 中完成
 
@@ -272,6 +243,29 @@ const toggleEnabled = async (record: TableListItem, checked: boolean) => {
     message.error(t('message.updateFailed'));
     tableInstance?.reload();
   }
+};
+
+const handleToggleAccount = (record: TableListItem) => {
+  // 檢查角色：row.roles 不存在或為空陣列
+  const roles = record.roles || [];
+  if (!Array.isArray(roles) || roles.length === 0) {
+    message.warning('此帳號尚未設定角色，請先更新角色後再進行變更');
+    return;
+  }
+
+  // 有角色時，顯示確認視窗
+  const isEnabled = Boolean(record.isEnabled);
+  const action = isEnabled ? t('labels.disable') : t('labels.enable');
+  
+  Modal.confirm({
+    title: t('confirm.enableAccount', {
+      action,
+      account: record.account,
+    }),
+    onOk: async () => {
+      await toggleEnabled(record, !isEnabled);
+    },
+  });
 };
 
 const openPasswordModal = async (record: Partial<TableListItem>) => {
@@ -496,26 +490,12 @@ const baseColumnsWithAction = computed<TableColumnItem[]>(() => {
   return [
     ...getBaseColumns(t),
     {
-      title: t('labels.enable'),
-      dataIndex: 'isEnabled',
-      width: 100,
-      hideInSearch: true,
-      customRender: ({ record }) => (
-        <Switch
-          checked={Boolean(record.isEnabled)}
-          checkedChildren={t('labels.enable')}
-          unCheckedChildren={t('labels.disable')}
-          onChange={checked => toggleEnabled(record, Boolean(checked))}
-        />
-      ),
-    },
-    {
       title: t('column.accountStatus'),
       dataIndex: 'statusTag',
       width: 100,
       hideInSearch: true,
       customRender: ({ record }) => (
-        <Tag color={record.isEnabled ? 'green' : 'red'}>
+        <Tag color={record.isEnabled ? 'success' : 'error'}>
           {record.isEnabled ? t('labels.enable') : t('labels.disable')}
         </Tag>
       ),
@@ -537,18 +517,30 @@ const baseColumnsWithAction = computed<TableColumnItem[]>(() => {
           },
         };
       },
-      actions: ({ record }) => [
-        {
-          label: t('action.edit'),
-          type: 'link',
-          onClick: () => openFormModal(record),
-        },
-        {
-          label: t('action.changePassword'),
-          type: 'link',
-          onClick: () => openPasswordModal(record),
-        },
-      ],
+      actions: ({ record }) => {
+        const isEnabled = Boolean(record.isEnabled);
+        return [
+          {
+            label: isEnabled ? commonT('action.disable') : commonT('action.enable'),
+            type: 'link',
+            /** 停用按鈕使用 danger 樣式 */
+            danger: isEnabled,
+            onClick: () => {
+              handleToggleAccount(record);
+            },
+          },
+          {
+            label: commonT('action.edit'),
+            type: 'link',
+            onClick: () => openFormModal(record),
+          },
+          {
+            label: commonT('action.changePassword'),
+            type: 'link',
+            onClick: () => openPasswordModal(record),
+          },
+        ];
+      },
     },
   ];
 });
@@ -642,12 +634,11 @@ const containerOverflowX = computed(() => {
 });
 
 /**
- * 處理查詢按鈕點擊：重新載入資料
- * 對齊 masterAgent/index.vue 的 handleQueryClick 邏輯
+ * 處理表單提交（查詢按鈕）
+ * 強制重新載入表格資料，使用當前選取的站長值
  */
-const handleQueryClick = () => {
-  // 使用 tableInstance.reload(true) 觸發表單提交和資料重新載入
-  // 這樣可以確保表單的查詢條件也會被正確傳遞
+const handleFormSubmit = () => {
+  console.log('[submit] selectedMasterAgent =', selectedMasterAgent.value);
   tableInstance?.reload(true);
 };
 
@@ -675,26 +666,9 @@ void Modal;
           showResetButton: true,
           showAdvancedButton: true,
           submitOnReset: false,
-          // submitButtonOptions: {
-          //   text: t('queryText'),
-          //   onClick: handleQueryClick,
-          // },
         }"
+        @search="handleFormSubmit"
       >
-        <template #afterHeaderTitle>
-          <div style="display: flex; align-items: center; gap: 8px; margin-left: 16px;">
-            <span>{{ t('page.masterAgent') }}：</span>
-            <a-select
-              v-model:value="selectedMasterAgent"
-              :options="masterAgentOptions"
-              :placeholder="t('page.selectMasterAgent')"
-              :disabled="!canSelectMasterAgent"
-              :allow-clear="false"
-              style="width: 200px"
-              @change="onMasterAgentChanged"
-            />
-          </div>
-        </template>
         <template #toolbar>
           <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
             {{ t('button.add') }}

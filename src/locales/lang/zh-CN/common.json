@@ -20,5 +20,11 @@
   "saveText": "儲存",
   "searchText": "搜尋",
   "startTime": "開始時間",
-  "dueTime": "結束時間"
+  "dueTime": "結束時間",
+  "action": {
+    "enable": "启用",
+    "disable": "停用",
+    "edit": "编辑",
+    "changePassword": "改密码"
+  }
 }

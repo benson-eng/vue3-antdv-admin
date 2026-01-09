@@ -30,15 +30,17 @@
 </template>
 
 <script lang="ts" setup>
-  import { ref, computed } from 'vue';
+  import { ref, computed, onMounted, provide } from 'vue';
   import { storeToRefs } from 'pinia';
   import { Layout } from 'ant-design-vue';
+  import MasterAgentApi from '@/api/backend/adminAccount/masterAgent';
   import Logo from './logo/index.vue';
   import { TabsView } from './tabs';
   import AsideMenu from './menu/menu.vue';
   import PageHeader from './header/index.vue';
   import PageFooter from './footer';
   import { useLayoutSettingStore } from '@/store/modules/layoutSetting';
+  import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
 
   const layoutSettingStore = useLayoutSettingStore();
   const { layoutSetting } = storeToRefs(layoutSettingStore);
@@ -46,6 +48,41 @@
   // 自定义侧边栏菜单收缩和展开时的宽度
   const asiderWidth = computed(() => (collapsed.value ? 80 : 220));
   const getTheme = computed(() => (layoutSetting.value.navTheme === 'light' ? 'light' : 'dark'));
+
+  // 站長選單狀態管理（provide 給所有子元件使用）
+  const selectedMasterAgent = ref<string>();
+  const masterAgentOptions = ref<{ label: string; value: string }[]>([]);
+  const canSelectMasterAgent = computed(() => true);
+
+  const loadMasterAgentOptions = async () => {
+    try {
+      const list = await MasterAgentApi.getMasterAgentAccountList({});
+      masterAgentOptions.value = (Array.isArray(list) ? list : [])
+        .map((i: any) => String(i?.account ?? '').trim())
+        .filter(Boolean)
+        .map(account => ({ label: account, value: account }));
+
+      // 預設選第一個
+      if (!selectedMasterAgent.value && masterAgentOptions.value.length > 0) {
+        selectedMasterAgent.value = masterAgentOptions.value[0].value;
+      }
+    }
+    catch (err) {
+      console.error('[loadMasterAgentOptions]', err);
+      masterAgentOptions.value = [];
+    }
+  };
+
+  onMounted(() => {
+    loadMasterAgentOptions();
+  });
+
+  // Provide 站長選單狀態給所有子元件（LayoutBreadcrumb 和 agent/index.vue）
+  provide(MASTER_AGENT_SELECT_KEY, {
+    masterAgentOptions,
+    selectedMasterAgent,
+    canSelectMasterAgent,
+  });
 </script>
 
 <style lang="less" scoped>
