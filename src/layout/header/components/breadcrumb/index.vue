@@ -25,6 +25,8 @@ const masterAgentCtx = inject<{
   masterAgentOptions: { value: { label: string; value: string }[] };
   selectedMasterAgent: { value: string | undefined };
   canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
 } | undefined>(MASTER_AGENT_SELECT_KEY);
 
 const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value);
@@ -35,8 +37,8 @@ const canSelectMasterAgent = computed(() => masterAgentCtx?.canSelectMasterAgent
  * 處理站長選單變更
  */
 const handleMasterAgentChange = (value: string) => {
-  if (masterAgentCtx?.selectedMasterAgent) {
-    masterAgentCtx.selectedMasterAgent.value = value;
+  if (masterAgentCtx?.onMasterAgentChanged) {
+    masterAgentCtx.onMasterAgentChanged(value);
   }
 };
 

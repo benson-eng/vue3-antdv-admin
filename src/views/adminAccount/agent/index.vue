@@ -32,10 +32,14 @@ const masterAgentCtx = inject<{
   masterAgentOptions: { value: { label: string; value: string }[] };
   selectedMasterAgent: { value: string | undefined };
   canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
 } | undefined>(MASTER_AGENT_SELECT_KEY);
 
 // 使用 computed 取得當前選取的站長值
 const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 interface TableListResponse {
   items: TableListItem[];
@@ -162,7 +166,6 @@ const persistAgentApiSettings = async (args: {
 
 const loadTableData = async (_params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
   // 使用從 LayoutBreadcrumb provide 取得的站長值
-  console.log('[loadTableData] selectedMasterAgent =', selectedMasterAgent.value);
   const masterAgent = String(selectedMasterAgent.value || '').trim();
   if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
@@ -256,7 +259,7 @@ const handleToggleAccount = (record: TableListItem) => {
   // 有角色時，顯示確認視窗
   const isEnabled = Boolean(record.isEnabled);
   const action = isEnabled ? t('labels.disable') : t('labels.enable');
-  
+
   Modal.confirm({
     title: t('confirm.enableAccount', {
       action,
@@ -638,9 +641,24 @@ const containerOverflowX = computed(() => {
  * 強制重新載入表格資料，使用當前選取的站長值
  */
 const handleFormSubmit = () => {
-  console.log('[submit] selectedMasterAgent =', selectedMasterAgent.value);
   tableInstance?.reload(true);
 };
+
+/**
+ * 監聽 contextVersion 變更，當站長切換時自動重置並刷新表格
+ */
+watch(
+  () => contextVersion.value,
+  () => {
+    // 重置 DynamicTable 查詢條件
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+    }
+    // 清空表格資料並自動重新載入
+    tableInstance?.reload(true);
+  },
+);
 
 // 注意：過濾條件現在通過表單的 getFieldsValue 直接傳遞到 loadTableData 的 params 中
 // 不再需要手動同步表單值到額外的 ref，因為過濾邏輯在 loadTableData 中處理
