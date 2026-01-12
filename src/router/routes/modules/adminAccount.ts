@@ -70,6 +70,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.agent'),
           icon: 'ant-design:UserSwitch-outlined',
+          showMasterAgent: true,
         },
       },
       // {
@@ -97,6 +98,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.subaccountChildren'),
           icon: 'ant-design:User-outlined',
+          showMasterAgent: true,
         },
       },
       {

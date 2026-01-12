@@ -42,8 +42,8 @@ const handleMasterAgentChange = (value: string) => {
   }
 };
 
-// 檢查是否為代理商管理頁面
-const isAgentPage = computed(() => route.name === 'AdminAccountAgent');
+// 檢查是否為 Context Consumer UI（站長選單顯示頁面）
+const isAgentPage = computed(() => route.meta?.showMasterAgent === true);
 
 /**
  * 点击菜单

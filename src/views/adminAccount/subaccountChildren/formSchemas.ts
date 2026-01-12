@@ -8,7 +8,51 @@ export interface SubaccountChildFormValues {
   allowRedemptionCode?: boolean;
 }
 
-export const getSubaccountChildSchemas = (): FormSchema<SubaccountChildFormValues>[] => {
+// ========== Roles 快取機制 ==========
+interface RoleOption {
+  label: string;
+  value: number;
+}
+
+let cachedRoles: RoleOption[] | null = null;
+let loadingPromise: Promise<RoleOption[]> | null = null;
+
+/**
+ * 載入角色清單（只打一次 API，後續走快取）
+ */
+export async function loadRolesOnce(): Promise<RoleOption[]> {
+  // 如果已有快取，直接回傳
+  if (cachedRoles !== null) {
+    return cachedRoles;
+  }
+
+  // 如果正在載入中，等待載入完成
+  if (loadingPromise !== null) {
+    return await loadingPromise;
+  }
+
+  // 第一次載入
+  loadingPromise = (async () => {
+    try {
+      const res = await RolesApi.getlocalRoles({});
+      const roles = res?.roles ?? [];
+      cachedRoles = roles.map((r: any) => ({
+        label: r.name ? `${r.name}(${r.id})` : String(r.id),
+        value: Number(r.id),
+      }));
+      return cachedRoles;
+    }
+    catch (error) {
+      // 載入失敗時清除 loadingPromise，允許重試
+      loadingPromise = null;
+      throw error;
+    }
+  })();
+
+  return await loadingPromise;
+}
+
+export const getSubaccountChildSchemas = (rolesOptions?: RoleOption[]): FormSchema<SubaccountChildFormValues>[] => {
   return [
     {
       field: 'account',
@@ -33,11 +77,7 @@ export const getSubaccountChildSchemas = (): FormSchema<SubaccountChildFormValue
       componentProps: {
         mode: 'multiple',
         placeholder: '請選擇角色',
-        request: async () => {
-          const res = await RolesApi.getlocalRoles({});
-          const roles = res?.roles ?? [];
-          return roles.map((r: any) => ({ label: r.name, value: r.id }));
-        },
+        ...(rolesOptions ? { options: rolesOptions } : { request: loadRolesOnce }),
       },
     },
     {

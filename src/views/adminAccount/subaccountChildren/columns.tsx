@@ -1,6 +1,7 @@
 import type { SubaccountItem } from '@/api/backend/adminAccount/subaccount';
 import type { TableColumn } from '@/components/core/dynamic-table';
 import { Space, Tag } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
 export type TableListItem = SubaccountItem;
 export type TableColumnItem = TableColumn<TableListItem>;
@@ -9,13 +10,20 @@ export const baseColumns: TableColumnItem[] = [
   {
     title: '帳號',
     dataIndex: 'account',
-    width: 140,
-    hideInSearch: true,
+    flexible: true,
+    minWidth: 140,
+    formItemProps: {
+      component: 'Input',
+      componentProps: {
+        placeholder: '請輸入帳號或名稱',
+      },
+    },
   },
   {
     title: '名稱',
     dataIndex: 'name',
-    width: 140,
+    flexible: true,
+    minWidth: 140,
     hideInSearch: true,
     customRender: ({ record }) => record.name || '-',
   },
@@ -43,16 +51,52 @@ export const baseColumns: TableColumnItem[] = [
   {
     title: '建立時間',
     dataIndex: 'createDatetime',
-    width: 180,
-    hideInSearch: true,
-    customRender: ({ record }) => record.createDatetime || '-',
+    flexible: true,
+    minWidth: 180,
+    formItemProps: {
+      component: 'RangePicker',
+      componentProps: {
+        allowClear: true,
+        format: 'YYYY-MM-DD',
+        style: { width: '100%' },
+      },
+    },
+    customRender: ({ record }) => {
+      if (!record.createDatetime) {
+        return '-';
+      }
+      return dayjs(record.createDatetime).format('YYYY-MM-DD HH:mm:ss');
+    },
+  },
+  {
+    title: '啟用狀態',
+    dataIndex: 'isEnabled',
+    width: 120,
+    formItemProps: {
+      component: 'Select',
+      componentProps: {
+        placeholder: '全部',
+        allowClear: true,
+        options: [
+          { label: '啟用', value: 'true' },
+          { label: '停用', value: 'false' },
+        ],
+      },
+    },
+    hideInTable: true,
   },
   {
     title: '最後登入時間',
     dataIndex: 'lastLoginDatetime',
-    width: 180,
+    flexible: true,
+    minWidth: 180,
     hideInSearch: true,
-    customRender: ({ record }) => record.lastLoginDatetime || '-',
+    customRender: ({ record }) => {
+      if (!record.lastLoginDatetime) {
+        return '-';
+      }
+      return dayjs(record.lastLoginDatetime).format('YYYY-MM-DD HH:mm:ss');
+    },
   },
   {
     title: '最後登入 IP',
