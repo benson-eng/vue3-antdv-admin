@@ -128,70 +128,47 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  // 從表單 params 獲取 account 參數（即使為空也要傳空字串）
-  const accountParam = String(params.account || '').trim();
-
-  const listRaw = await SubaccountApi.getAdminSubaccountList({
-    filter: {
-      account: accountParam,
-      masterAccount: `${masterAgent}agent`,
-    },
-  });
-  const list = normalizeList(listRaw as any);
-
   // 從表單 params 獲取查詢條件
-  const account = String(params.account || '').trim().toLowerCase();
-  const isEnabled = params.isEnabled;
+  const accountParam = String(params.account || '').trim();
   const createDatetime = params.createDatetime;
 
   // 處理日期範圍
-  let start: number | null = null;
-  let end: number | null = null;
+  let startDate: Date | undefined = undefined;
+  let dueDate: Date | undefined = undefined;
   if (Array.isArray(createDatetime) && createDatetime.length === 2) {
-    const startDate = createDatetime[0];
-    const endDate = createDatetime[1];
-    if (startDate && endDate) {
-      start = dayjs(startDate).startOf('day').valueOf();
-      end = dayjs(endDate).endOf('day').valueOf();
+    const start = createDatetime[0];
+    const end = createDatetime[1];
+    if (start && end) {
+      startDate = dayjs(start).startOf('day').toDate();
+      dueDate = dayjs(end).endOf('day').toDate();
     }
   }
 
-  const filtered = list.filter((i: any) => {
-    // 帳號/名稱搜尋
-    if (account) {
-      const acc = String(i?.account ?? '').toLowerCase();
-      const name = String(i?.name ?? '').toLowerCase();
-      if (!acc.includes(account) && !name.includes(account)) {
-        return false;
-      }
-    }
-    // 啟用狀態篩選
-    if (isEnabled !== undefined && isEnabled !== null && isEnabled !== '') {
-      const enabledValue = isEnabled === 'true' || isEnabled === true;
-      if (Boolean(i?.isEnabled) !== enabledValue) {
-        return false;
-      }
-    }
-    // 建立時間範圍篩選
-    if (start != null && end != null) {
-      const ts = i?.createDatetime ? new Date(i.createDatetime).getTime() : Number.NaN;
-      if (Number.isFinite(ts)) {
-        if (ts < start || ts > end) {
-          return false;
-        }
-      }
-    }
-    return true;
-  });
+  // 構建 API payload（保留既有 Breadcrumb 站長相關參數）
+  const payload = {
+    filter: {
+      account: accountParam || undefined,
+      masterAccount: `${masterAgent}agent`,
+      ...(startDate && { startDate }),
+      ...(dueDate && { dueDate }),
+    },
+  };
 
+  // 暫時加入 console.log 確認點擊【查詢】時參數是否正確帶出
+  console.log('loadTableData payload:', payload);
+
+  const listRaw = await SubaccountApi.getAdminSubaccountList(payload);
+  const list = normalizeList(listRaw as any);
+
+  // 分頁處理
   const page = Number(params.page ?? 1);
   const limit = Number(params.limit ?? 20);
-  const totalItems = filtered.length;
+  const totalItems = list.length;
   const startIdx = (page - 1) * limit;
   const endIdx = startIdx + limit;
 
   return {
-    items: filtered.slice(startIdx, endIdx),
+    items: list.slice(startIdx, endIdx),
     meta: { totalItems },
   };
 };

@@ -8,7 +8,7 @@ export type TableColumnItem = TableColumn<TableListItem>;
 
 export const baseColumns: TableColumnItem[] = [
   {
-    title: '帳號',
+    title: '後台帳戶',
     dataIndex: 'account',
     flexible: true,
     minWidth: 140,
@@ -49,7 +49,7 @@ export const baseColumns: TableColumnItem[] = [
     },
   },
   {
-    title: '建立時間',
+    title: '建立日期',
     dataIndex: 'createDatetime',
     flexible: true,
     minWidth: 180,
@@ -67,23 +67,6 @@ export const baseColumns: TableColumnItem[] = [
       }
       return dayjs(record.createDatetime).format('YYYY-MM-DD HH:mm:ss');
     },
-  },
-  {
-    title: '啟用狀態',
-    dataIndex: 'isEnabled',
-    width: 120,
-    formItemProps: {
-      component: 'Select',
-      componentProps: {
-        placeholder: '全部',
-        allowClear: true,
-        options: [
-          { label: '啟用', value: 'true' },
-          { label: '停用', value: 'false' },
-        ],
-      },
-    },
-    hideInTable: true,
   },
   {
     title: '最後登入時間',
