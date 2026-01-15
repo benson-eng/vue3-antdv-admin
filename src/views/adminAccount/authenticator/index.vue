@@ -34,8 +34,8 @@ const canEditAuthenticator = computed(() => authLevel.value <= 2);
 const canSave = computed(() => canEditAuthenticator.value && changes.size > 0);
 
 const filterLevelOptions = [
-  { label: '站長', value: '3' },
-  { label: '族長', value: '4' },
+  { label: '站長', value: '4' },
+  { label: '族長', value: '5' },
 ];
 
 const showLevelFilter = computed(() => {
@@ -351,8 +351,3 @@ onMounted(reload);
     </a-modal>
   </div>
 </template>
-
-
-
-
-

@@ -3,7 +3,7 @@ import type { Dayjs } from 'dayjs';
 import type { TableColumnItem, TableListItem } from './columns';
 import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
-import { message, Modal } from 'ant-design-vue';
+import { message, Modal, Tag } from 'ant-design-vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Api from '@/api/backend/adminAccount/masterAgent';
@@ -17,6 +17,9 @@ import { getMasterAgentSchemas, passwordSchemas } from './formSchemas';
 import { useTableConfig } from './useTableConfig';
 
 defineOptions({ name: 'AdminAccountMasterAgent' });
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 const routeI18n = useI18n('routes.adminAccount');
 const pageI18n = useI18n('page.adminAccount');
@@ -1028,7 +1031,7 @@ const toggleTableFilter = () => {
   tableInstance?.reload(true); // 重新走 loadTableData
 };
 
-const resetTableFilter = () => {
+const _resetTableFilter = () => {
   tableFilter.account = '';
   tableFilter.isEnabled = ''; // 重置為「全部」（空字串）
   tableFilter.createDatetime = undefined;
@@ -1046,6 +1049,40 @@ const handleQueryClick = () => {
   // 這樣可以確保表單的查詢條件也會被正確傳遞
   tableInstance?.reload(true);
 };
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - account、isEnabled、createDatetime：所有過濾都在前端進行
+ * - 資料從後端 API 獲取，但沒有傳遞過濾參數，所有過濾都在前端完成
+ * 因此為 FRONTEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 嘗試獲取搜尋表單的值
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (!searchFormRef) {
+    return 'FRONTEND';
+  }
+
+  try {
+    // 所有過濾都在前端進行，因此無論是否有搜尋條件，都顯示為 FRONTEND
+    return 'FRONTEND';
+  }
+  catch {
+    return 'FRONTEND';
+  }
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
 
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
@@ -1078,6 +1115,14 @@ void Modal;
           },
         }"
       >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>{{ t('masterAgent') }}</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
+        </template>
         <template #toolbar>
           <a-space>
             <a-button type="primary" ghost :disabled="!canCreate" @click="goCreateWizard">
