@@ -16,6 +16,9 @@ import { getSubaccountChildSchemas, loadRolesOnce, passwordSchemas } from './for
 
 defineOptions({ name: 'AdminAccountSubaccountChildren' });
 
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
 const userStore = useUserStore();
 const canEdit = computed(() => userStore.level < 4);
 const canCreate = computed(() => userStore.level < 4);
@@ -561,6 +564,45 @@ const containerOverflowX = computed(() => {
   return 'hidden';
 });
 
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - account：後端 API 查詢（filter.account）
+ * - createDatetime：後端 API 查詢（filter.startDate、filter.dueDate）
+ * - masterAgent：後端 API 查詢（filter.masterAccount）
+ * 所有搜尋條件都通過後端 API 查詢，因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 嘗試獲取搜尋表單的值
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (!searchFormRef) {
+    return 'BACKEND';
+  }
+
+  try {
+    const formValues = searchFormRef.getFieldsValue();
+    const hasAccount = Boolean(formValues?.account?.trim());
+    const hasDateRange = Boolean(formValues?.createDatetime && Array.isArray(formValues.createDatetime) && formValues.createDatetime.length === 2);
+
+    // 所有搜尋條件都通過後端 API 查詢，因此無論是否有搜尋條件，都顯示為 BACKEND
+    return 'BACKEND';
+  }
+  catch {
+    return 'BACKEND';
+  }
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
 </script>
@@ -573,7 +615,6 @@ void Modal;
     >
       <DynamicTable
         row-key="id"
-        header-title="家族管理"
         :data-request="loadTableData"
         :columns="columns"
         :scroll="{ x: tableConfig.scrollX.value }"
@@ -585,6 +626,14 @@ void Modal;
         }"
         @search="handleFormSubmit"
       >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>家族管理</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
+        </template>
         <template #toolbar>
           <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
             新增

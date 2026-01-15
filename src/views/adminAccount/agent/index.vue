@@ -16,6 +16,9 @@ import { getAgentSchemas, getPasswordSchemas, loadRolesOnce } from './formSchema
 
 defineOptions({ name: 'AdminAccountAgent' });
 
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
 const { t } = useI18n('page.adminAccount');
 const commonT = useI18n('common').t;
 const userStore = useUserStore();
@@ -663,6 +666,47 @@ watch(
 // 注意：過濾條件現在通過表單的 getFieldsValue 直接傳遞到 loadTableData 的 params 中
 // 不再需要手動同步表單值到額外的 ref，因為過濾邏輯在 loadTableData 中處理
 
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - masterAgent：後端 API 參數（Context Selector）
+ * - account、createDatetime：搜尋表單欄位，但目前未在 loadTableData 中使用
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 嘗試獲取搜尋表單的值
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (!searchFormRef) {
+    return 'BACKEND';
+  }
+
+  try {
+    const formValues = searchFormRef.getFieldsValue();
+    const hasAccount = Boolean(formValues?.account?.trim());
+    const hasDateRange = Boolean(formValues?.createDatetime && Array.isArray(formValues.createDatetime) && formValues.createDatetime.length === 2);
+    const hasSearchConditions = hasAccount || hasDateRange;
+
+    // 目前搜尋條件未在 API 中使用，也未實現前端過濾
+    // 因此無論是否有搜尋條件，都顯示為 BACKEND
+    // 如果未來實現了前端過濾或後端查詢，可以根據實際情況調整
+    return 'BACKEND';
+  }
+  catch {
+    return 'BACKEND';
+  }
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
 // 避免 antd table 內被 tree-shake 的 import
 void Modal;
 </script>
@@ -675,7 +719,6 @@ void Modal;
     >
       <DynamicTable
         row-key="id"
-        :header-title="t('page.agentManagement')"
         :data-request="loadTableData"
         :columns="columns"
         :scroll="{ x: tableConfig.scrollX.value }"
@@ -687,6 +730,14 @@ void Modal;
         }"
         @search="handleFormSubmit"
       >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>{{ t('page.agentManagement') }}</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
+        </template>
         <template #toolbar>
           <a-button type="primary" :disabled="!canCreate || !selectedMasterAgent" @click="openFormModal()">
             {{ t('button.add') }}
