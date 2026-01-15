@@ -64,16 +64,16 @@ const routes: RouteRecordRaw[] = [
       //   },
       // },
       // 2026-01-12 備註人:shang 移除顯示但為對照頁面，目前用戶不會使用到
-      {
-        path: 'agent',
-        name: 'AdminAccountAgent',
-        component: () => import('@/views/adminAccount/agent/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.agent'),
-          icon: 'ant-design:UserSwitch-outlined',
-          showMasterAgent: true,
-        },
-      },
+      // {
+      //   path: 'agent',
+      //   name: 'AdminAccountAgent',
+      //   component: () => import('@/views/adminAccount/agent/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.agent'),
+      //     icon: 'ant-design:UserSwitch-outlined',
+      //     showMasterAgent: true,
+      //   },
+      // },
       // {
       //   path: 'agentSettings',
       //   name: 'AdminAccountAgentSettings',
@@ -83,16 +83,6 @@ const routes: RouteRecordRaw[] = [
       //     icon: 'ant-design:Setting-outlined',
       //   },
       // },
-      {
-        path: 'subaccount',
-        name: 'AdminAccountSubaccount',
-        component: () => import('@/views/adminAccount/subaccount/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.subaccount'),
-          icon: 'ant-design:User-outlined',
-          showMasterAgent: true,
-        },
-      },
       {
         path: 'subaccountChildren',
         name: 'AdminAccountSubaccountChildren',
@@ -104,23 +94,35 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        path: 'currency',
-        name: 'AdminAccountCurrency',
-        component: () => import('@/views/adminAccount/currency/index.vue'),
+        path: 'subaccount',
+        name: 'AdminAccountSubaccount',
+        component: () => import('@/views/adminAccount/subaccount/index.vue'),
         meta: {
-          title: t('routes.adminAccount.currency'),
-          icon: 'ant-design:PayCircle-outlined',
+          title: t('routes.adminAccount.subaccount'),
+          icon: 'ant-design:User-outlined',
+          showMasterAgent: true,
         },
       },
-      {
-        path: 'token',
-        name: 'AdminAccountToken',
-        component: () => import('@/views/adminAccount/token/index.vue'),
-        meta: {
-          title: t('routes.adminAccount.token'),
-          icon: 'ant-design:PayCircle-outlined',
-        },
-      },
+      // 2026-01-15 備註人:shang 移除貨幣管理，目前用戶不會使用到
+      // {
+      //   path: 'currency',
+      //   name: 'AdminAccountCurrency',
+      //   component: () => import('@/views/adminAccount/currency/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.currency'),
+      //     icon: 'ant-design:PayCircle-outlined',
+      //   },
+      // },
+      // 2026-01-15 備註人:shang 移除代幣管理頁面，目前用戶不會使用到
+      // {
+      //   path: 'token',
+      //   name: 'AdminAccountToken',
+      //   component: () => import('@/views/adminAccount/token/index.vue'),
+      //   meta: {
+      //     title: t('routes.adminAccount.token'),
+      //     icon: 'ant-design:PayCircle-outlined',
+      //   },
+      // },
       {
         path: 'roles',
         name: 'AdminAccountRoles',
