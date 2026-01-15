@@ -31,6 +31,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.masterAgent'),
           icon: 'ant-design:UserSwitch-outlined',
+          showMasterAgent: true,
         },
       },
       // {
@@ -130,6 +131,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.roles'),
           icon: 'ant-design:SafetyCertificate-outlined',
+          showMasterAgent: true,
         },
       },
       {
@@ -139,6 +141,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.authenticator'),
           icon: 'ant-design:SafetyCertificate-outlined',
+          showMasterAgent: true,
         },
       },
     ],
