@@ -1,55 +1,47 @@
-<script setup lang="ts">
-import { message, Modal } from 'ant-design-vue';
-import { computed, onMounted, reactive, ref } from 'vue';
+<script setup lang="tsx">
+/**
+ * 【Page Context Declaration｜頁面與站長 Context 關係】
+ *
+ * 頁面類型：C（Context Ignorer）
+ * - 定義：本頁不需要站長參數，也不依賴站長
+ * - 行為：站長僅 UI 顯示，不參與本頁任何查詢/狀態
+ * - API payload 需帶入 masterAgent：否
+ * - 來源：既有系統值（userStore.masterAgent），僅用於前端過濾邏輯
+ * - 切換站長不觸發本頁 reload：是
+ *
+ * 約束：
+ * - 不得修改 Layout / Breadcrumb / Context Provider
+ * - 不得使用 MutationObserver 或任何 DOM 監聽方式追蹤 Breadcrumb
+ * - 不得新增 watch / computed 來追蹤站長切換
+ */
+import type { TableColumnItem, TableListItem } from './columns';
+import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal, Tag } from 'ant-design-vue';
+import { computed, reactive, ref, watch } from 'vue';
 import AuthenticatorApi from '@/api/backend/adminAccount/authenticator';
+import { useTable } from '@/components/core/dynamic-table';
+import { useTableConfig } from '../masterAgent/useTableConfig';
+import { baseColumns } from './columns';
 import { useUserStore } from '@/store/modules/user';
 
 defineOptions({ name: 'AdminAccountAuthenticator' });
 
-interface ViewItem {
-  id: number;
-  account: string;
-  backendKey?: string;
-  authenticator: boolean;
-  originalAuthenticator: boolean;
-  hierarchyLevel?: number;
-  masterAgent?: string;
-  canReset: boolean;
-  style?: string;
-  otpauth?: string;
-  qrcodeUrl?: string;
-}
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 const userStore = useUserStore();
-const loading = ref(false);
 const saving = ref(false);
 
-const list = ref<ViewItem[]>([]);
-const filterLevel = ref<string | undefined>(undefined);
+const [DynamicTable, tableInstance] = useTable({
+  search: true,
+});
 
+const list = ref<TableListItem[]>([]);
 const changes = reactive(new Map<number, { id: number; account: string; authenticator: boolean }>());
 
 const authLevel = computed(() => Number(userStore.level ?? -1));
 const canEditAuthenticator = computed(() => authLevel.value <= 2);
 const canSave = computed(() => canEditAuthenticator.value && changes.size > 0);
-
-const filterLevelOptions = [
-  { label: '站長', value: '4' },
-  { label: '族長', value: '5' },
-];
-
-const showLevelFilter = computed(() => {
-  // 沒有沿用 Vue2 的 isDistributionPlatform 判斷，改為「有 3/4 層級資料就顯示」
-  return list.value.some(i => i.hierarchyLevel === 3 || i.hierarchyLevel === 4);
-});
-
-const filteredList = computed(() => {
-  if (!filterLevel.value) {
-    return list.value;
-  }
-  const lv = Number(filterLevel.value);
-  return list.value.filter(i => Number(i.hierarchyLevel) === lv);
-});
 
 const toBase32 = (bytes: Uint8Array) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -85,20 +77,6 @@ const buildQrUrl = (otpauth: string) => {
   return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(otpauth)}&size=150x150`;
 };
 
-const computeStyle = (hierarchyLevel?: number) => {
-  switch (Number(hierarchyLevel)) {
-    case 1:
-      return 'text-shadow:2px 3px 5px #ff0000';
-    case 2:
-      return 'text-shadow:2px 3px 5px #ffa500';
-    case 3:
-      return 'text-shadow:2px 3px 5px #008000';
-    case 4:
-      return 'text-shadow:2px 3px 5px #0000ff';
-    default:
-      return '';
-  }
-};
 
 const resolveUserId = (all: any[]) => {
   const level = authLevel.value;
@@ -139,11 +117,11 @@ const computeCanReset = (item: any) => {
   return true;
 };
 
-const normalize = (raw: any[]): ViewItem[] => {
+const normalize = (raw: any[]): TableListItem[] => {
   const all = Array.isArray(raw) ? raw : [];
   const userId = resolveUserId(all);
 
-  const re: ViewItem[] = [];
+  const re: TableListItem[] = [];
   for (const item of all) {
     // Vue2：if (getAuthLevel <= item.hierarchyLevel) ... 再做 canInList
     if (authLevel.value > Number(item?.hierarchyLevel ?? 999)) {
@@ -167,7 +145,6 @@ const normalize = (raw: any[]): ViewItem[] => {
       hierarchyLevel: Number(item?.hierarchyLevel),
       masterAgent: String(item?.masterAgent ?? ''),
       canReset: computeCanReset(item),
-      style: computeStyle(item?.hierarchyLevel),
       otpauth: otpauth || undefined,
       qrcodeUrl: otpauth ? buildQrUrl(otpauth) : undefined,
     });
@@ -176,26 +153,56 @@ const normalize = (raw: any[]): ViewItem[] => {
   return re;
 };
 
-const reload = async () => {
-  loading.value = true;
+/**
+ * 處理表單提交（查詢按鈕）
+ * 強制重新載入表格資料（不使用快取）
+ */
+const handleFormSubmit = () => {
+  tableInstance?.reload(true);
+};
+
+const loadTableData = async (_params: LoadDataParams) => {
   try {
     const raw = await AuthenticatorApi.getAllAccount();
-    list.value = normalize(raw as any);
-    changes.clear();
-    if (filterLevel.value && !showLevelFilter.value) {
-      filterLevel.value = undefined;
+    const allItems = normalize(raw as any);
+    
+    // 獲取搜尋表單的值
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    const formValues = searchFormRef?.getFieldsValue?.() || {};
+    
+    // 應用搜尋過濾
+    let filtered = allItems;
+    
+    // 帳號搜尋
+    if (formValues.account) {
+      const accountKeyword = String(formValues.account).toLowerCase();
+      filtered = filtered.filter(item => 
+        item.account.toLowerCase().includes(accountKeyword)
+      );
     }
+    
+    // 層級篩選
+    if (formValues.hierarchyLevel) {
+      const level = Number(formValues.hierarchyLevel);
+      filtered = filtered.filter(item => Number(item.hierarchyLevel) === level);
+    }
+    
+    list.value = filtered;
+    changes.clear();
+    
+    return {
+      items: filtered,
+      meta: { totalItems: filtered.length },
+    };
   }
   catch (e) {
     console.error(e);
     message.error('載入失敗');
-  }
-  finally {
-    loading.value = false;
+    return { items: [], meta: { totalItems: 0 } };
   }
 };
 
-const onToggleAuthenticator = (record: ViewItem, checked: boolean) => {
+const onToggleAuthenticator = (record: TableListItem, checked: boolean) => {
   record.authenticator = Boolean(checked);
   if (record.authenticator === record.originalAuthenticator) {
     changes.delete(record.id);
@@ -218,7 +225,7 @@ const save = async () => {
     }));
     await AuthenticatorApi.bulkUpdateBackendKeyAndAuthenticator({ settings });
     message.success('儲存成功');
-    await reload();
+    tableInstance?.reload();
   }
   catch (e) {
     console.error(e);
@@ -229,7 +236,7 @@ const save = async () => {
   }
 };
 
-const resetBackendKey = async (record: ViewItem) => {
+const resetBackendKey = async (record: TableListItem) => {
   if (!record?.id || !record?.account) {
     return;
   }
@@ -244,7 +251,7 @@ const resetBackendKey = async (record: ViewItem) => {
         settings: [{ id: record.id, account: record.account, backendKey }],
       });
       message.success('重置成功');
-      await reload();
+      tableInstance?.reload();
     },
   });
 };
@@ -254,89 +261,246 @@ const qrModalTitle = ref('');
 const qrModalUrl = ref('');
 const qrModalOtplink = ref('');
 
-const openQr = (record: ViewItem) => {
+const openQr = (record: TableListItem) => {
   qrModalTitle.value = record.account;
   qrModalUrl.value = record.qrcodeUrl || '';
   qrModalOtplink.value = record.otpauth || '';
   qrModalOpen.value = true;
 };
 
-onMounted(reload);
+const handleToggleAuthenticator = (record: TableListItem) => {
+  const isEnabled = Boolean(record.authenticator);
+  const action = isEnabled ? '停用' : '啟用';
+  
+  // 直接更新本地狀態，等待批量保存
+  onToggleAuthenticator(record, !isEnabled);
+};
+
+// 定義所有欄位（包含狀態欄位和操作欄）
+const baseColumnsWithAction = computed<TableColumnItem[]>(() => {
+  return [
+    ...baseColumns,
+    {
+      title: '啟用狀態',
+      dataIndex: 'authenticator',
+      width: 120,
+      hideInSearch: true,
+      customRender: ({ record }) => (
+        <Tag color={record.authenticator ? 'success' : 'error'}>
+          {record.authenticator ? '啟用' : '停用'}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作',
+      dataIndex: 'ACTION',
+      width: 320, // 調寬操作欄位，避免按鈕換行
+      align: 'center',
+      fixed: 'right',
+      hideInSearch: true,
+      /**
+       * 防止內容換行
+       */
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
+      },
+      actions: ({ record }) => {
+        const actions: any[] = [];
+        
+        // 只有權限足夠時才顯示「啟用/停用」按鈕
+        if (canEditAuthenticator.value) {
+          const isEnabled = Boolean(record.authenticator);
+          actions.push({
+            label: isEnabled ? '停用' : '啟用',
+            type: 'link',
+            /** 停用按鈕使用 danger 樣式 */
+            danger: isEnabled,
+            onClick: () => handleToggleAuthenticator(record),
+          });
+        }
+        
+        // QRcode 按鈕
+        actions.push({
+          label: 'QRcode',
+          type: 'link',
+          disabled: !record.qrcodeUrl,
+          onClick: () => openQr(record),
+        });
+        
+        // 重置按鈕
+        actions.push({
+          label: '重置',
+          type: 'link',
+          danger: true,
+          disabled: !record.canReset,
+          popConfirm: {
+            title: `確定要重置：${record.account}？`,
+            onConfirm: () => resetBackendKey(record),
+          },
+        });
+        
+        return actions;
+      },
+    },
+  ];
+});
+
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumnsWithAction);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<TableColumnItem[]>(() => {
+  const visibleKeys = tableConfig.visibleColumnKeys.value;
+  // Guard: 如果 visibleColumnKeys 尚未初始化完成（空或無效），不應用 hideInTable（維持全部顯示）
+  // 僅在 visibleColumnKeys 為有效集合時才套用 hideInTable
+  const hasValidVisibleKeys = Array.isArray(visibleKeys) && visibleKeys.length > 0;
+
+  return baseColumnsWithAction.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    // 僅在 visibleColumnKeys 有效時才檢查可見性，否則預設顯示
+    const isVisible = hasValidVisibleKeys ? visibleKeys.includes(key) : true;
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumnItem = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: TableColumnItem) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true },
+);
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - 先調用 API 獲取所有資料
+ * - 然後在前端根據搜尋表單的值進行過濾
+ * 因此為 FRONTEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'FRONTEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
 </script>
 
 <template>
-  <div class="app-container">
-    <a-space style="margin-bottom: 12px; width: 100%; justify-content: space-between">
-      <a-space>
-        <a-select
-          v-if="showLevelFilter"
-          v-model:value="filterLevel"
-          style="width: 200px"
-          allow-clear
-          placeholder="篩選層級"
-        >
-          <a-select-option v-for="opt in filterLevelOptions" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
-          </a-select-option>
-        </a-select>
-      </a-space>
-
-      <a-space>
-        <a-button :loading="loading" @click="reload">
-          重新整理
-        </a-button>
-        <a-button type="primary" :disabled="!canSave" :loading="saving" @click="save">
-          儲存
-        </a-button>
-      </a-space>
-    </a-space>
-
-    <a-table
-      :data-source="filteredList"
-      :loading="loading"
-      :pagination="{ pageSize: 20, showSizeChanger: true }"
-      :row-key="r => r.id"
-      bordered
+  <div class="agent-page">
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
     >
-      <a-table-column title="ID" data-index="id" :width="100" />
-
-      <a-table-column title="帳號" data-index="account">
-        <template #default="{ record }">
-          <span :style="record.style">{{ record.account }}</span>
+      <DynamicTable
+        row-key="id"
+        :data-request="loadTableData"
+        :columns="columns"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :form-props="{
+          showSubmitButton: true,
+          showResetButton: true,
+          showAdvancedButton: true,
+          submitOnReset: false,
+        }"
+        bordered
+        @search="handleFormSubmit"
+      >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>Authenticator 管理</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
         </template>
-      </a-table-column>
-
-      <a-table-column title="BackendKey" data-index="backendKey" />
-
-      <a-table-column v-if="canEditAuthenticator" key="authenticator" title="啟用" :width="120">
-        <template #default="{ record }">
-          <a-switch
-            :checked="Boolean(record.authenticator)"
-            :disabled="!canEditAuthenticator"
-            @change="checked => onToggleAuthenticator(record, checked)"
-          />
+        <template #toolbar>
+          <a-button type="primary" :disabled="!canSave" :loading="saving" @click="save">
+            儲存
+          </a-button>
         </template>
-      </a-table-column>
-
-      <a-table-column key="actions" title="操作" :width="220">
-        <template #default="{ record }">
-          <a-space>
-            <a-button size="small" :disabled="!record.qrcodeUrl" @click="openQr(record)">
-              QRcode
-            </a-button>
-            <a-button
-              size="small"
-              type="primary"
-              danger
-              :disabled="!record.canReset"
-              @click="resetBackendKey(record)"
-            >
-              重置
-            </a-button>
-          </a-space>
-        </template>
-      </a-table-column>
-    </a-table>
+      </DynamicTable>
+    </div>
 
     <a-modal v-model:open="qrModalOpen" title="QRcode" :footer="null" :destroy-on-close="true">
       <div style="text-align: center">
