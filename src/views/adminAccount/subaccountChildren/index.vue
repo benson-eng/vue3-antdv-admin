@@ -133,8 +133,8 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
   const createDatetime = params.createDatetime;
 
   // 處理日期範圍
-  let startDate: Date | undefined = undefined;
-  let dueDate: Date | undefined = undefined;
+  let startDate: Date | undefined;
+  let dueDate: Date | undefined;
   if (Array.isArray(createDatetime) && createDatetime.length === 2) {
     const start = createDatetime[0];
     const end = createDatetime[1];

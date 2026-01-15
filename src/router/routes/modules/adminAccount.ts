@@ -64,16 +64,16 @@ const routes: RouteRecordRaw[] = [
       //   },
       // },
       // 2026-01-12 備註人:shang 移除顯示但為對照頁面，目前用戶不會使用到
-      // {
-      //   path: 'agent',
-      //   name: 'AdminAccountAgent',
-      //   component: () => import('@/views/adminAccount/agent/index.vue'),
-      //   meta: {
-      //     title: t('routes.adminAccount.agent'),
-      //     icon: 'ant-design:UserSwitch-outlined',
-      //     showMasterAgent: true,
-      //   },
-      // },
+      {
+        path: 'agent',
+        name: 'AdminAccountAgent',
+        component: () => import('@/views/adminAccount/agent/index.vue'),
+        meta: {
+          title: t('routes.adminAccount.agent'),
+          icon: 'ant-design:UserSwitch-outlined',
+          showMasterAgent: true,
+        },
+      },
       // {
       //   path: 'agentSettings',
       //   name: 'AdminAccountAgentSettings',
@@ -90,6 +90,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.adminAccount.subaccount'),
           icon: 'ant-design:User-outlined',
+          showMasterAgent: true,
         },
       },
       {

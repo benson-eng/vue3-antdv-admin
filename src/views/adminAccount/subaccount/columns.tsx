@@ -1,6 +1,7 @@
 import type { SubaccountItem } from '@/api/backend/adminAccount/subaccount';
 import type { TableColumn } from '@/components/core/dynamic-table';
 import { Space, Tag } from 'ant-design-vue';
+import dayjs from 'dayjs';
 
 export type TableListItem = SubaccountItem;
 export type TableColumnItem = TableColumn<TableListItem>;
@@ -9,13 +10,15 @@ export const baseColumns: TableColumnItem[] = [
   {
     title: '帳號',
     dataIndex: 'account',
-    width: 140,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
   },
   {
     title: '名稱',
     dataIndex: 'name',
-    width: 140,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
     customRender: ({ record }) => record.name || '-',
   },
@@ -43,16 +46,28 @@ export const baseColumns: TableColumnItem[] = [
   {
     title: '建立時間',
     dataIndex: 'createDatetime',
-    width: 180,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
-    customRender: ({ record }) => record.createDatetime || '-',
+    customRender: ({ record }) => {
+      if (!record.createDatetime) {
+        return '-';
+      }
+      return dayjs(record.createDatetime).format('YYYY-MM-DD HH:mm:ss');
+    },
   },
   {
     title: '最後登入時間',
     dataIndex: 'lastLoginDatetime',
-    width: 180,
+    flexible: true, // 彈性寬度欄位
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     hideInSearch: true,
-    customRender: ({ record }) => record.lastLoginDatetime || '-',
+    customRender: ({ record }) => {
+      if (!record.lastLoginDatetime) {
+        return '-';
+      }
+      return dayjs(record.lastLoginDatetime).format('YYYY-MM-DD HH:mm:ss');
+    },
   },
   {
     title: '最後登入 IP',
