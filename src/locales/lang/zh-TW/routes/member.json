@@ -1,5 +1,6 @@
 {
   "member": "會員管理",
+  "index": "會員管理",
   "data": "會員資料",
   "memberPersonalInfo": "會員個資管理",
   "vipSetting": "VIP特權設定",
@@ -525,6 +526,115 @@
       "member": "會員",
       "platform": "平台",
       "account": "帳號"
+    }
+  },
+  "indexPage": {
+    "filters": {
+      "masterAgent": "總代理",
+      "agent": "代理",
+      "member": "會員",
+      "phoneNumber5code": "請輸入至少5碼電話號碼",
+      "masterAgentRequired": "請先選擇總代理",
+      "agentRequired": "請先選擇總代理/代理",
+      "memberHint": "請輸入至少2個字元進行搜索"
+    },
+    "search": "查詢",
+    "success": "成功",
+    "error": "錯誤",
+    "cancel": "取消",
+    "confirm": "確認",
+    "warning": "警告",
+    "postfinish": "操作完成",
+    "notify": {
+      "idLength": "會員ID必須為8位數字",
+      "notInt": "會員ID必須為數字",
+      "isNotNumber": "電話號碼必須為數字",
+      "phoneNumberLength": "電話號碼至少需要5碼",
+      "hintText2": "提示：可輸入會員ID（8位數字）或電話號碼（至少5碼）進行查詢",
+      "createMemberAccountSuccess": "成功創建會員帳號：{0}",
+      "updateMemberAccountSuccess": "成功更新會員帳號：{0}",
+      "accountAlreadyExists": "帳號已存在",
+      "clickKickAllGame": "確定要踢出所有遊戲嗎？"
+    },
+    "columns": {
+      "authProvider": "登入方式",
+      "accountID": "會員ID",
+      "vipName": "VIP名稱",
+      "nickName": "暱稱",
+      "guildName": "公會名稱",
+      "phoneNumber": "電話號碼",
+      "unbindPhoneNumber": "解除手機綁定",
+      "registDatetime": "註冊時間",
+      "lastLoginDevice": "最後登入裝置",
+      "lastLoginDatetime": "最後登入時間",
+      "lastLoginIP": "最後登入IP",
+      "suspension": "停權狀態",
+      "status": "狀態",
+      "kickAllGame": "踢出所有遊戲",
+      "enableAccount": "啟用帳號",
+      "viewPack": "查看背包",
+      "viewWallets": "查看錢包",
+      "account": "帳號",
+      "memberVipRecordMonth": "月份",
+      "memberVipRecordVipLevel": "VIP等級"
+    },
+    "labels": {
+      "password": "密碼",
+      "unbindPhoneNumber": "解除手機綁定"
+    },
+    "datePicker": {
+      "startDate": "開始日期",
+      "dueDate": "結束日期"
+    },
+    "dialog": {
+      "editMemberAccount": "編輯會員帳號",
+      "createMemberAccount": "創建會員帳號"
+    },
+    "suspension": {
+      "normal": "正常",
+      "platformSuspension": "平台停權",
+      "chatRoomBan": "聊天室禁言",
+      "giftBan": "禁止贈禮"
+    },
+    "enable": "啟用",
+    "disable": "停用",
+    "vip": {
+      "memberVipRecord": "會員VIP記錄"
+    },
+    "pack": {
+      "title": "背包"
+    },
+    "packColumns": {
+      "treasureItemID": "道具ID",
+      "itemType": "道具類型",
+      "itemName": "道具名稱",
+      "iconUrl": "圖示",
+      "isVipExclusive": "VIP專屬",
+      "sourceTypeStr": "來源類型",
+      "noteStr": "備註",
+      "sendedAt": "發送時間",
+      "firstUseTime": "首次使用時間",
+      "validFrom": "有效開始時間",
+      "validUntil": "有效結束時間"
+    },
+    "packSourceType": {
+      "forceBingo": "強制中獎",
+      "Mission": "任務",
+      "userBought": "用戶購買",
+      "Event": "活動",
+      "LobbyGame": "大廳遊戲",
+      "OpenMail": "開啟郵件",
+      "Redeem": "兌換",
+      "badge": "徽章",
+      "purchase": "購買",
+      "levelUp": "升級"
+    },
+    "wallet": {
+      "title": "錢包"
+    },
+    "walletColumns": {
+      "currencyType": "幣別",
+      "balance": "餘額"
     }
   }
 }

@@ -178,6 +178,32 @@ export const removeFixedVipMember = (params: { memberID: string }) =>
     timeout: 0,
   });
 
+export interface IMemberVipInfo {
+  memberID: string;
+  vip: number;
+  vipName: string;
+  lastMonthVip: number | null;
+}
+
+export interface IGetMembersVipResult {
+  data: IMemberVipInfo[];
+}
+
+/**
+ * 對齊 Vue2：getMembersVip -> /AdminSystem/api/action/memberVip-getByMemberIDList
+ */
+export const getMembersVip = (params: { memberID: string | string[] }) =>
+  request<IGetMembersVipResult>({
+    url: '/AdminSystem/api/action/memberVip-getByMemberIDList',
+    method: 'post',
+    data: {
+      server,
+      actionName: 'memberVip/getByMemberIDList',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
 export default {
   listByMasterAgent,
   createVipSetting,
@@ -188,6 +214,7 @@ export default {
   getFixedVipMemberList,
   setFixedVipMember,
   removeFixedVipMember,
+  getMembersVip,
 };
 
 

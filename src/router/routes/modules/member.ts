@@ -5,13 +5,22 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/member',
     name: 'Member',
-    redirect: '/member/data',
+    redirect: '/member/index',
     meta: {
       title: t('routes.member.member'),
       icon: 'ant-design:user-outlined',
       orderNo: 1,
     },
     children: [
+      {
+        path: 'index',
+        name: 'MemberIndex',
+        component: () => import('@/views/member/index.vue'),
+        meta: {
+          title: t('routes.member.index'),
+          icon: 'ant-design:user-outlined',
+        },
+      },
       {
         path: 'data',
         name: 'MemberData',

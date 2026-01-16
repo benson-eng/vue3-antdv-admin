@@ -289,5 +289,197 @@ export const setOTPSmsTemplateMember = (params: SetOTPSmsTemplateMemberParams) =
     timeout: 0,
   });
 
+/**
+ * =========================================
+ * Member Account API (對齊 Vue2 admin-web/src/api/member.ts)
+ * =========================================
+ */
+
+export interface IAccountInfo {
+  account: string;
+  prefix: string;
+  nickName: string;
+  agentID: string;
+  activationDate?: {
+    startTime: Date | string;
+    dueTime: Date | string;
+  };
+  registerTime?: Date | string;
+  lastLoginTime?: Date | string;
+  lastLoginIP?: string;
+  accountStatus: number;
+  tags?: string;
+  accountID: string;
+  phoneNumber?: string;
+  authProvider?: string;
+  email?: string;
+  vip?: number;
+  vipName?: string;
+  lastMonthVip?: number | null;
+  memberID?: string;
+  accountStatusSwitch?: boolean;
+  suspension?: string;
+  guildName?: string;
+  lastLoginDevice?: string;
+}
+
+export interface IQueryAccountParams {
+  page?: number;
+  limit?: number;
+  agentID: string;
+  account?: string;
+  nickName?: string;
+  tags?: string;
+  isPersonalInfo?: boolean;
+  phoneNumber?: number | string;
+  searchTime?: {
+    startTime?: Date;
+    dueTime?: Date;
+  };
+}
+
+export interface IQueryAccountResult {
+  data: {
+    result: IAccountInfo[];
+    count: number;
+  };
+}
+
+/**
+ * 對齊 Vue2：getMemberAccount -> /AdminSystem/api/action/queryAccountAction
+ */
+export const getMemberAccount = (params: IQueryAccountParams) => {
+  const query = { ...params };
+  if (query.searchTime?.dueTime) {
+    const dueTime = new Date(query.searchTime.dueTime);
+    dueTime.setHours(23, 59, 59, 999);
+    query.searchTime.dueTime = dueTime;
+  }
+  return request<IQueryAccountResult>({
+    url: '/AdminSystem/api/action/queryAccountAction',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'queryAccountAction',
+      query: JSON.stringify(query),
+    },
+    timeout: 0,
+  });
+};
+
+export interface ICreateAccountParams {
+  account: string;
+  nickName: string;
+  password: string;
+  agentID: string;
+  accountActivationDate?: {
+    startTime?: Date;
+    dueTime?: Date;
+  };
+  tags?: string;
+  infos?: any;
+}
+
+export interface IVueResponse {
+  error?: {
+    code?: string | number;
+    message?: string;
+  };
+  data?: any;
+}
+
+/**
+ * 對齊 Vue2：createMemberAccount -> /AdminSystem/api/action/registerAccountAction
+ */
+export const createMemberAccount = (params: ICreateAccountParams) =>
+  request<IVueResponse>({
+    url: '/AdminSystem/api/action/registerAccountAction',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'registerAccountAction',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface IEditAccountParams {
+  memberID: string;
+  newPassword?: string;
+  newNickname?: string;
+  newAccountStatus?: number;
+  newActivationDate?: {
+    startTime?: Date | string;
+    dueTime?: Date | string;
+  };
+  newTags?: string;
+}
+
+/**
+ * 對齊 Vue2：updateMemberAccount -> /AdminSystem/api/action/editAccountAction
+ */
+export const updateMemberAccount = (params: IEditAccountParams) =>
+  request<IVueResponse>({
+    url: '/AdminSystem/api/action/editAccountAction',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'editAccountAction',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+export interface IUnbindPhoneNumberParams {
+  memberID: string;
+}
+
+/**
+ * 對齊 Vue2：unbindPhoneNumber -> /AdminSystem/api/action/unbindPhoneNumber
+ */
+export const unbindPhoneNumber = (params: IUnbindPhoneNumberParams) =>
+  request<IVueResponse>({
+    url: '/AdminSystem/api/action/unbindPhoneNumber',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'unbindPhoneNumber',
+      query: JSON.stringify(params),
+    },
+    timeout: 0,
+  });
+
+/**
+ * 對齊 Vue2：queryAccountBaseInfo 用於根據 accountID 查詢 memberID
+ * Vue2 使用 IDs 參數，但後端實際接收 accounts
+ */
+export interface IQueryAccountBaseInfoByIDsParams {
+  masterAgent: string;
+  IDs?: string[];
+  accounts?: string[];
+}
+
+export interface IQueryAccountBaseInfoByIDsResult {
+  data: AccountBaseInfoItem[];
+}
+
+export const queryAccountBaseInfoByIDs = (params: IQueryAccountBaseInfoByIDsParams) => {
+  // 對齊 Vue2：如果提供 IDs，轉換為 accounts
+  const queryParams = {
+    masterAgent: params.masterAgent,
+    accounts: params.accounts || params.IDs || [],
+  };
+  return request<IQueryAccountBaseInfoByIDsResult>({
+    url: '/AdminSystem/api/action/queryAccountBaseInfo',
+    method: 'post',
+    data: {
+      server: 'accountSystem',
+      actionName: 'queryAccountBaseInfo',
+      query: JSON.stringify(queryParams),
+    },
+    timeout: 0,
+  });
+};
+
 
 
