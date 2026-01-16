@@ -1,14 +1,20 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
 import type { AlignType } from 'ant-design-vue/es/vc-table/interface';
-import { message, Modal, notification } from 'ant-design-vue';
+import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal, notification, Tag } from 'ant-design-vue';
 import { cloneDeep } from 'lodash-es';
 import { computed, nextTick, onMounted, ref } from 'vue';
 import RolesApi from '@/api/backend/adminAccount/roles';
+import { useTable } from '@/components/core/dynamic-table';
 import { transformI18n } from '@/hooks/useI18n';
 import routeModules from '@/router/routes/modules';
 import { useUserStore } from '@/store/modules/user';
 import { uniqueSlash } from '@/utils/urlUtils';
+import { useTableConfig } from '../masterAgent/useTableConfig';
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 defineOptions({ name: 'AdminAccountRoles' });
 
@@ -48,6 +54,11 @@ interface TreeNode {
 const SUPER_ROLE_KEY = '5478c9d5-1078-4607-9624-4a6dbcae92e7';
 
 const userStore = useUserStore();
+
+const [DynamicTable, tableInstance] = useTable({
+  search: false, // 本階段不啟用搜尋區
+});
+// tableInstance 用於 CRUD 操作後重新載入資料
 
 const loading = ref(false);
 const rolesList = ref<RoleItem[]>([]);
@@ -95,7 +106,8 @@ const authLevel = computed(() => userStore.level);
  * 表格欄位（保留 Vue2 行為：欄位/操作/禁用條件）
  * =========================================
  */
-const columns = computed(() => [
+// 基礎欄位定義（用於 tableConfig）
+const baseColumns = [
   {
     title: 'ID',
     dataIndex: 'id',
@@ -118,14 +130,89 @@ const columns = computed(() => [
   {
     title: '描述',
     dataIndex: 'description',
+    flexible: true, // 彈性寬度欄位，對齊 agent 頁面策略
+    minWidth: 200, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     align: 'left' as AlignType,
   },
   {
     title: '操作',
-    key: 'operations',
+    key: 'ACTION',
+    dataIndex: 'ACTION',
+    width: 320,
     align: 'center' as AlignType,
+    fixed: 'right' as const,
+    hideInSearch: true,
+    /**
+     * 防止內容換行
+     */
+    customCell: () => {
+      return {
+        style: {
+          whiteSpace: 'nowrap', // 禁止換行
+        },
+      };
+    },
+    // actions 將在 columns computed 中動態添加（因為需要訪問 onEditClick/onDeleteClick）
   },
-]);
+];
+
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumns);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 若 visibleColumnKeys 尚未初始化完成（空或無效），不得套用 hideInTable（維持全部顯示）
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed(() => {
+  const visibleKeys = tableConfig.visibleColumnKeys.value;
+  // Guard: 若 visibleColumnKeys 為空或無效，維持全部顯示
+  const hasValidVisibleKeys = Array.isArray(visibleKeys) && visibleKeys.length > 0;
+
+  return baseColumns.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = hasValidVisibleKeys ? visibleKeys.includes(key) : true;
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: any = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    // 為操作欄位添加 actions 配置（使用文字連結，對齊 agent 頁面）
+    if (key === 'ACTION' || processedCol.dataIndex === 'ACTION') {
+      processedCol.actions = ({ record }: any) => {
+        const roleRecord = record as RoleItem;
+        return [
+          {
+            label: '編輯',
+            type: 'link',
+            disabled: userAccount.value !== roleRecord.creatorAccount,
+            onClick: () => onEditClick(roleRecord),
+          },
+          {
+            label: '刪除',
+            type: 'link',
+            danger: true,
+            disabled: roleRecord.id <= 2 || userAccount.value !== roleRecord.creatorAccount,
+            onClick: () => onDeleteClick(roleRecord),
+          },
+        ];
+      };
+    }
+
+    return processedCol;
+  });
+});
 
 /**
  * =========================================
@@ -491,6 +578,29 @@ const updateView = async () => {
 
 /**
  * =========================================
+ * DynamicTable data-request adapter
+ * =========================================
+ */
+interface TableListResponse {
+  items: RoleItem[];
+  meta: { totalItems: number };
+}
+
+const loadTableData = async (_params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  // DynamicTable 會自動調用 data-request
+  // 每次調用時都重新載入資料（支援 reload 功能）
+  await updateView();
+  // 返回 DynamicTable 需要的格式
+  return {
+    items: rolesList.value,
+    meta: {
+      totalItems: rolesList.value.length,
+    },
+  };
+};
+
+/**
+ * =========================================
  * UI actions（CRUD）
  * =========================================
  */
@@ -541,8 +651,9 @@ const handleDelete = (record: RoleItem) => {
       const resp = await RolesApi.deletelocalRoles({ key: record.key });
       const status = resp?.status;
       if (status) {
-        rolesList.value = rolesList.value.filter(r => r.key !== record.key);
         message.success('刪除成功');
+        // 重新載入表格資料
+        tableInstance?.reload();
       }
       else {
         throw new Error('刪除失敗（需補資料：請確認 /AdminSystem/api/deleteRole 回傳 status）');
@@ -559,7 +670,10 @@ const onDeleteClick = (record: any) => handleDelete(record as RoleItem);
 
 const confirmRole = async () => {
   // ✅ 確保送出前 Form 內的 serviceRoutes 一定是乾淨值（validator 只吃 value）
-  formRef.value?.setFieldsValue?.({ serviceRoutes: tempRoleData.value.serviceRoutes || [] });
+  // ✅ Bug Fix: 確保 tempRoleData.serviceRoutes 與 checkedKeys 同步（UI 狀態為準）
+  const validCheckedKeys = checkedKeys.value.map(v => String(v).trim()).filter(Boolean);
+  tempRoleData.value.serviceRoutes = validCheckedKeys;
+  formRef.value?.setFieldsValue?.({ serviceRoutes: validCheckedKeys });
 
   console.log('================ [Roles][confirmRole] ================');
   console.log('[Roles][confirmRole] tempRoleData.serviceRoutes =', tempRoleData.value.serviceRoutes);
@@ -603,7 +717,6 @@ const confirmRole = async () => {
     };
     console.log('[Roles][confirmRole] updatelocalRole payload =', payload);
     await RolesApi.updatelocalRole(payload);
-    await updateView();
   }
   else {
     const payload = {
@@ -614,7 +727,6 @@ const confirmRole = async () => {
     };
     console.log('[Roles][confirmRole] createlocalRole payload =', payload);
     await RolesApi.createlocalRole(payload);
-    await updateView();
   }
 
   dialogVisible.value = false;
@@ -622,51 +734,97 @@ const confirmRole = async () => {
     message: '成功',
     description: `角色「${tempRoleData.value.name}」已儲存`,
   });
+  // 重新載入表格資料（DynamicTable 會自動調用 loadTableData）
+  tableInstance?.reload();
 };
 
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * =========================================
+ * SearchMode 狀態顯示（僅狀態標示，不影響功能邏輯）
+ * =========================================
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - 直接調用後端 API RolesApi.getlocalRoles({}) 獲取所有資料
+ * - 沒有搜尋表單或前端過濾邏輯
+ * - 所有資料都從後端獲取
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
+// 注意：roles 頁面已升級為 DynamicTable
+// 本階段僅做引擎替換，不啟用 column setting 等新功能
+
 onMounted(async () => {
-  await updateView();
+  // DynamicTable 的 data-request 會自動調用 loadTableData，loadTableData 會調用 updateView
+  // 這裡不需要手動調用，避免重複載入
 });
 </script>
 
 <template>
-  <div class="app-container">
-    <a-button type="primary" :disabled="!canCreateRole" @click="handleCreateRole">
-      新增角色
-    </a-button>
-
-    <a-table
-      class="roles-table"
-      :data-source="rolesList"
-      :columns="columns"
-      :loading="loading"
-      :row-key="(record) => record.key || record.id"
-      bordered
-      :pagination="false"
+  <div class="roles-page">
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
     >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'operations'">
-          <a-space>
-            <a-button
-              type="primary"
-              size="small"
-              :disabled="userAccount !== record.creatorAccount"
-              @click="onEditClick(record)"
-            >
-              編輯
-            </a-button>
-            <a-button
-              danger
-              size="small"
-              :disabled="record.id <= 2 || userAccount !== record.creatorAccount"
-              @click="onDeleteClick(record)"
-            >
-              刪除
-            </a-button>
-          </a-space>
+      <DynamicTable
+        :row-key="(record: RoleItem) => record.key || record.id"
+        :data-request="loadTableData"
+        :columns="columns"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :pagination="false"
+        :show-tool-bar="true"
+        :show-table-setting="true"
+      >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>角色管理</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
         </template>
-      </template>
-    </a-table>
+        <template #toolbar>
+          <a-button type="primary" :disabled="!canCreateRole" @click="handleCreateRole">
+            新增角色
+          </a-button>
+        </template>
+      </DynamicTable>
+    </div>
 
     <a-modal
       v-model:open="dialogVisible"
@@ -725,10 +883,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.roles-table {
-  margin-top: 30px;
-}
-
 .permission-tree {
   margin-bottom: 10px;
   max-height: 420px;
