@@ -480,6 +480,3 @@ export const queryAccountBaseInfoByIDs = (params: IQueryAccountBaseInfoByIDsPara
     timeout: 0,
   });
 };
-
-
-

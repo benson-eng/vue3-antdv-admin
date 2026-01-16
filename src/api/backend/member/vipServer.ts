@@ -216,8 +216,3 @@ export default {
   removeFixedVipMember,
   getMembersVip,
 };
-
-
-
-
-

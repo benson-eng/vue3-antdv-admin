@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'index',
         name: 'MemberIndex',
-        component: () => import('@/views/member/index.vue'),
+        component: () => import('@/views/member/memberList/index.vue'),
         meta: {
           title: t('routes.member.index'),
           icon: 'ant-design:user-outlined',
