@@ -159,6 +159,114 @@ const baseColumns = [
 // 使用表格配置 Hook
 const tableConfig = useTableConfig(baseColumns);
 
+/**
+ * =========================================
+ * Route utils（提前定義以便在 handleEdit 中使用）
+ * =========================================
+ */
+const isHidden = (route: AppRoute) => {
+  return Boolean(route.meta?.hidden || route.meta?.hideInMenu || route.meta?.show === 0);
+};
+
+const reshapeRoutes = (routes: AppRoute[], _basePath = '/', insert?: boolean) => {
+  const rtReshapedRoutes: AppRoute[] = [];
+  for (const route of routes) {
+    if (isHidden(route)) {
+      continue;
+    }
+
+    if (insert) {
+      rtReshapedRoutes.push({ path: route.path, meta: route.meta });
+    }
+    /**
+     * ✅ 修正：Roles 的權限樹需要保留階層，不做「只有一個子節點就折疊」的 sidebar 策略
+     * 否則像「後台帳戶」會被折疊成 leaf，children 直接消失
+     */
+
+    const data: AppRoute = {
+      path: route.path,
+      meta: {
+        title: route.meta?.title,
+      },
+    };
+    if (route.children?.length) {
+      data.children = reshapeRoutes(route.children, data.path);
+    }
+    rtReshapedRoutes.push(data);
+  }
+  return rtReshapedRoutes;
+};
+
+const flattenRoutes = (routes: AppRoute[]) => {
+  let data: AppRoute[] = [];
+  routes.forEach((route) => {
+    data.push(route);
+    if (route.children?.length) {
+      const temp = flattenRoutes(route.children);
+      if (temp.length) {
+        data = [...data, ...temp];
+      }
+    }
+  });
+  return data;
+};
+
+/**
+ * =========================================
+ * UI actions（CRUD）- 提前定義以便在 columns 中使用
+ * =========================================
+ */
+const handleEdit = (record: RoleItem) => {
+  oriRulesPage.value = [];
+  delRulesPage.value = [];
+  dialogType.value = 'edit';
+  dialogVisible.value = true;
+  checkStrictly.value = true;
+  tempRoleData.value = { ...cloneDeep(record), serviceRoutes: [] };
+
+  nextTick(() => {
+    formRef.value?.resetFields?.();
+
+    const selectedRoutes = reshapeRoutes(cloneDeep(tempRoleData.value.routes || []));
+    const flatKeys = Array.from(new Set(flattenRoutes(selectedRoutes).map(r => r.path)));
+
+    checkedKeys.value = flatKeys;
+    oriRulesPage.value = [...flatKeys];
+    tempRoleData.value.serviceRoutes = [...flatKeys];
+    formRef.value?.setFieldsValue?.({ serviceRoutes: tempRoleData.value.serviceRoutes });
+
+    // element-ui：先 strict，再放開避免父子互相影響
+    checkStrictly.value = false;
+  });
+};
+
+const handleDelete = (record: RoleItem) => {
+  Modal.confirm({
+    title: '警告',
+    content: `確定要刪除角色「${record.name}」？`,
+    okText: '確認',
+    cancelText: '取消',
+    async onOk() {
+      const resp = await RolesApi.deletelocalRoles({ key: record.key });
+      const status = resp?.status;
+      if (status) {
+        message.success('刪除成功');
+        // 重新載入表格資料
+        tableInstance?.reload();
+      }
+      else {
+        throw new Error('刪除失敗（需補資料：請確認 /AdminSystem/api/deleteRole 回傳 status）');
+      }
+    },
+  });
+};
+
+/**
+ * template slot 的 record 推導為 Record<string, any>，這裡做一次薄包裝轉型
+ */
+const onEditClick = (record: any) => handleEdit(record as RoleItem);
+const onDeleteClick = (record: any) => handleDelete(record as RoleItem);
+
 // 根據 visibleColumnKeys 設置欄位的 hideInTable
 // 若 visibleColumnKeys 尚未初始化完成（空或無效），不得套用 hideInTable（維持全部顯示）
 // 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
@@ -216,6 +324,24 @@ const columns = computed(() => {
 
 /**
  * =========================================
+ * Route utils（對齊 roles.vue 的 reshape/flatten/generateTree）
+ * =========================================
+ */
+const generateTree = (routes: AppRoute[], _basePath = '/', selectedKeys: string[]) => {
+  const res: AppRoute[] = [];
+  for (const route of routes) {
+    if (route.children?.length) {
+      route.children = generateTree(route.children, route.path, selectedKeys);
+    }
+    if (selectedKeys.includes(route.path) || (route.children && route.children.length >= 1)) {
+      res.push(route);
+    }
+  }
+  return res;
+};
+
+/**
+ * =========================================
  * 表單 rules（保留：name/description 必填 + menus 必選）
  * =========================================
  */
@@ -263,6 +389,45 @@ const rules: Record<string, Rule[]> = {
  * - antdv checkStrictly=true 時 checkedKeys 需要 object
  * =========================================
  */
+const generateTreeData = (routes: AppRoute[]): TreeNode[] => {
+  // ✅ 保證 key 唯一且穩定（避免空 path / 重複 key 導致 tree 行為異常）
+  const seen = new Set<string>();
+
+  const walk = (list: AppRoute[], parentKey = ''): TreeNode[] => {
+    const out: TreeNode[] = [];
+    list.forEach((route) => {
+      const titleRaw = route.meta?.title;
+      const title = titleRaw ? transformI18n(titleRaw) : route.path;
+
+      const rawKey = String(route.path ?? '').trim();
+      let key = rawKey || uniqueSlash(`${parentKey}/__index`);
+
+      // 若仍發生重複，追加父層資訊（保持穩定）
+      if (seen.has(key)) {
+        key = uniqueSlash(`${parentKey}/${key}`);
+      }
+      seen.add(key);
+
+      const node: TreeNode = {
+        title: String(title),
+        key,
+        children: [],
+      };
+
+      if (route.children?.length) {
+        node.children = walk(route.children, key);
+      }
+      else {
+        delete node.children;
+      }
+      out.push(node);
+    });
+    return out;
+  };
+
+  return walk(routes);
+};
+
 const antdCheckedKeys = computed(() => {
   if (checkStrictly.value) {
     return { checked: checkedKeys.value, halfChecked: [] as string[] };
@@ -310,7 +475,9 @@ const handleTreeCheck = (keys: any) => {
 const hasPermission = (roles: string[], route: AppRoute) => {
   const metaRoles: string[] | undefined = route.meta?.roles;
   if (metaRoles) {
-    if (route.path === '*') { return true; }
+    if (route.path === '*') {
+      return true;
+    }
     return roles.some(role => metaRoles.includes(role));
   }
   return true;
@@ -375,10 +542,6 @@ const normalizeRoutes = (routes: any[], parentPath = ''): AppRoute[] => {
   });
 };
 
-const isHidden = (route: AppRoute) => {
-  return Boolean(route.meta?.hidden || route.meta?.hideInMenu || route.meta?.show === 0);
-};
-
 /**
  * NOTE: Roles 權限樹不使用 sidebar 的折疊策略，保留但避免 lint 告警
  */
@@ -398,96 +561,6 @@ const onlyOneShowingChild = (children: AppRoute[] = [], parent: AppRoute) => {
 };
 void onlyOneShowingChild;
 
-const reshapeRoutes = (routes: AppRoute[], basePath = '/', insert?: boolean) => {
-  const rtReshapedRoutes: AppRoute[] = [];
-  for (let route of routes) {
-    if (isHidden(route)) { continue; }
-
-    if (insert) {
-      rtReshapedRoutes.push({ path: route.path, meta: route.meta });
-    }
-    /**
-     * ✅ 修正：Roles 的權限樹需要保留階層，不做「只有一個子節點就折疊」的 sidebar 策略
-     * 否則像「後台帳戶」會被折疊成 leaf，children 直接消失
-     */
-
-    const data: AppRoute = {
-      path: route.path,
-      meta: {
-        title: route.meta?.title,
-      },
-    };
-    if (route.children?.length) {
-      data.children = reshapeRoutes(route.children, data.path);
-    }
-    rtReshapedRoutes.push(data);
-  }
-  return rtReshapedRoutes;
-};
-
-const flattenRoutes = (routes: AppRoute[]) => {
-  let data: AppRoute[] = [];
-  routes.forEach((route) => {
-    data.push(route);
-    if (route.children?.length) {
-      const temp = flattenRoutes(route.children);
-      if (temp.length) { data = [...data, ...temp]; }
-    }
-  });
-  return data;
-};
-
-const generateTreeData = (routes: AppRoute[]): TreeNode[] => {
-  // ✅ 保證 key 唯一且穩定（避免空 path / 重複 key 導致 tree 行為異常）
-  const seen = new Set<string>();
-
-  const walk = (list: AppRoute[], parentKey = ''): TreeNode[] => {
-    const out: TreeNode[] = [];
-    list.forEach((route) => {
-      const titleRaw = route.meta?.title;
-      const title = titleRaw ? transformI18n(titleRaw) : route.path;
-
-      const rawKey = String(route.path ?? '').trim();
-      let key = rawKey || uniqueSlash(`${parentKey}/__index`);
-
-      // 若仍發生重複，追加父層資訊（保持穩定）
-      if (seen.has(key)) {
-        key = uniqueSlash(`${parentKey}/${key}`);
-      }
-      seen.add(key);
-
-      const node: TreeNode = {
-        title: String(title),
-        key,
-        children: [],
-      };
-
-      if (route.children?.length) {
-        node.children = walk(route.children, key);
-      }
-      else {
-        delete node.children;
-      }
-      out.push(node);
-    });
-    return out;
-  };
-
-  return walk(routes);
-};
-
-const generateTree = (routes: AppRoute[], basePath = '/', selectedKeys: string[]) => {
-  const res: AppRoute[] = [];
-  for (const route of routes) {
-    if (route.children?.length) {
-      route.children = generateTree(route.children, route.path, selectedKeys);
-    }
-    if (selectedKeys.includes(route.path) || (route.children && route.children.length >= 1)) {
-      res.push(route);
-    }
-  }
-  return res;
-};
 
 const checkRoutesPathUnique = (routes: AppRoute[]) => {
   const allPaths: string[] = [];
@@ -497,7 +570,9 @@ const checkRoutesPathUnique = (routes: AppRoute[]) => {
         throw new Error(`Duplicate route path: ${r.path}`);
       }
       allPaths.push(r.path);
-      if (r.children?.length) { walk(r.children); }
+      if (r.children?.length) {
+        walk(r.children);
+      }
     });
   };
   walk(routes);
@@ -616,57 +691,6 @@ const handleCreateRole = () => {
     formRef.value?.clearValidate?.();
   });
 };
-
-const handleEdit = (record: RoleItem) => {
-  oriRulesPage.value = [];
-  delRulesPage.value = [];
-  dialogType.value = 'edit';
-  dialogVisible.value = true;
-  checkStrictly.value = true;
-  tempRoleData.value = { ...cloneDeep(record), serviceRoutes: [] };
-
-  nextTick(() => {
-    formRef.value?.resetFields?.();
-
-    const selectedRoutes = reshapeRoutes(cloneDeep(tempRoleData.value.routes || []));
-    const flatKeys = Array.from(new Set(flattenRoutes(selectedRoutes).map(r => r.path)));
-
-    checkedKeys.value = flatKeys;
-    oriRulesPage.value = [...flatKeys];
-    tempRoleData.value.serviceRoutes = [...flatKeys];
-    formRef.value?.setFieldsValue?.({ serviceRoutes: tempRoleData.value.serviceRoutes });
-
-    // element-ui：先 strict，再放開避免父子互相影響
-    checkStrictly.value = false;
-  });
-};
-
-const handleDelete = (record: RoleItem) => {
-  Modal.confirm({
-    title: '警告',
-    content: `確定要刪除角色「${record.name}」？`,
-    okText: '確認',
-    cancelText: '取消',
-    async onOk() {
-      const resp = await RolesApi.deletelocalRoles({ key: record.key });
-      const status = resp?.status;
-      if (status) {
-        message.success('刪除成功');
-        // 重新載入表格資料
-        tableInstance?.reload();
-      }
-      else {
-        throw new Error('刪除失敗（需補資料：請確認 /AdminSystem/api/deleteRole 回傳 status）');
-      }
-    },
-  });
-};
-
-/**
- * template slot 的 record 推導為 Record<string, any>，這裡做一次薄包裝轉型
- */
-const onEditClick = (record: any) => handleEdit(record as RoleItem);
-const onDeleteClick = (record: any) => handleDelete(record as RoleItem);
 
 const confirmRole = async () => {
   // ✅ 確保送出前 Form 內的 serviceRoutes 一定是乾淨值（validator 只吃 value）
@@ -892,4 +916,3 @@ onMounted(async () => {
   border-radius: 6px;
 }
 </style>
-
