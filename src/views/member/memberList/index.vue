@@ -1298,11 +1298,12 @@ onMounted(async () => {
   if (masterAgent) {
     await fetchAgents(masterAgent);
     // 預設選第一個 agent（但不自動查詢）
-    if (userStore.level >= 5) {
-      query.value.agent = userStore.agent || '';
+    // Level 5 以上優先使用 userStore.agent，如果為空則選擇第一個
+    if (userStore.level >= 5 && userStore.agent) {
+      query.value.agent = userStore.agent;
     }
     else if (agentRawList.value.length > 0) {
-      query.value.agent = agentRawList.value[0].account;
+      query.value.agent = String(agentRawList.value[0]?.account ?? '');
     }
 
     // 同步預設 agent 到搜尋表單（不觸發 submit）
