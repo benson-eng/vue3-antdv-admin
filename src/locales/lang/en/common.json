@@ -21,6 +21,7 @@
     "enable": "Enable",
     "disable": "Disable",
     "edit": "Edit",
-    "changePassword": "Change Password"
+    "changePassword": "Change Password",
+    "operation": "Operation"
   }
 }

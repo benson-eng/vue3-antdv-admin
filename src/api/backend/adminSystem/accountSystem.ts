@@ -307,20 +307,23 @@ export interface IAccountInfo {
   registerTime?: Date | string;
   lastLoginTime?: Date | string;
   lastLoginIP?: string;
+  lastLoginDevice?: string;
   accountStatus: number;
   tags?: string;
   accountID: string;
+  infos?: any | null;
+  maxChangeNicknameCount?: number;
+  changeNicknameCount?: number;
+  guildName?: string;
+  email?: string;
   phoneNumber?: string;
   authProvider?: string;
-  email?: string;
   vip?: number;
   vipName?: string;
   lastMonthVip?: number | null;
   memberID?: string;
   accountStatusSwitch?: boolean;
   suspension?: string;
-  guildName?: string;
-  lastLoginDevice?: string;
 }
 
 export interface IQueryAccountParams {

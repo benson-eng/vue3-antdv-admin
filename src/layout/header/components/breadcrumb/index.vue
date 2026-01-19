@@ -43,6 +43,7 @@ const handleMasterAgentChange = (value: string) => {
 };
 
 // 檢查是否為 Context Consumer UI（站長選單顯示頁面）
+// 只依據當前 route.meta 宣告，不做 route.name 白名單判斷
 const isAgentPage = computed(() => route.meta?.showMasterAgent === true);
 
 /**
@@ -121,9 +122,9 @@ const getSelectKeys = (rotueIndex: number) => {
           <template v-else>
             <TitleI18n :title="routeItem?.meta?.title" class="cursor-pointer" />
           </template>
-          <template v-if="routeItem?.children?.length" #overlay>
+          <template v-if="(routeItem as any)?.children?.length" #overlay>
             <a-menu :selected-keys="getSelectKeys(rotueIndex)">
-              <template v-for="childItem in routeItem?.children" :key="childItem.name">
+              <template v-for="childItem in (routeItem as any)?.children" :key="childItem.name">
                 <a-menu-item
                   v-if="!childItem.meta?.hideInMenu && !childItem.meta?.hideInBreadcrumb"
                   :key="childItem.name"

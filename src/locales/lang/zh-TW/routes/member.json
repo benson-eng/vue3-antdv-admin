@@ -529,6 +529,7 @@
     }
   },
   "indexPage": {
+    "index": "會員管理",
     "filters": {
       "masterAgent": "總代理",
       "agent": "代理",
@@ -554,7 +555,7 @@
       "createMemberAccountSuccess": "成功創建會員帳號：{0}",
       "updateMemberAccountSuccess": "成功更新會員帳號：{0}",
       "accountAlreadyExists": "帳號已存在",
-      "clickKickAllGame": "確定要踢出所有遊戲嗎？"
+      "clickKickAllGame": "確定要踢出遊戲嗎？"
     },
     "columns": {
       "authProvider": "登入方式",
@@ -570,7 +571,7 @@
       "lastLoginIP": "最後登入IP",
       "suspension": "停權狀態",
       "status": "狀態",
-      "kickAllGame": "踢出所有遊戲",
+      "kickAllGame": "踢出遊戲",
       "enableAccount": "啟用帳號",
       "viewPack": "查看背包",
       "viewWallets": "查看錢包",
@@ -633,7 +634,7 @@
       "title": "錢包"
     },
     "walletColumns": {
-      "currencyType": "幣別",
+      "currencyType": "幣別代碼",
       "balance": "餘額"
     }
   }

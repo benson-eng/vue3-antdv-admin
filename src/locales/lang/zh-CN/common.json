@@ -25,6 +25,7 @@
     "enable": "启用",
     "disable": "停用",
     "edit": "编辑",
-    "changePassword": "改密码"
+    "changePassword": "改密码",
+    "operation": "操作"
   }
 }
