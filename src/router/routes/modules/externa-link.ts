@@ -1,4 +1,5 @@
-import { RouterView, type RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router';
+import { RouterView } from 'vue-router';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -10,6 +11,7 @@ const routes: Array<RouteRecordRaw> = [
       icon: 'ant-design:link-outlined',
       isExt: true,
       extOpenMode: 1,
+      hideInMenu: true,
     },
   },
 ];

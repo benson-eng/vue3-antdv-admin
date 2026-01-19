@@ -1,6 +1,6 @@
-import outsideLayout from './outsideLayout';
-import basic from './basic';
 import type { RouteRecordRaw } from 'vue-router';
+import basic from './basic';
+import outsideLayout from './outsideLayout';
 
 export const rootRoute: RouteRecordRaw = {
   path: '/',
