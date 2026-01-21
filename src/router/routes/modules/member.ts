@@ -59,8 +59,6 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.member.transactionMemberSetting'),
           icon: 'ant-design:star-outlined',
-          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
-          showMasterAgent: true,
         },
       },
       {
@@ -70,6 +68,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.member.fixedVipMemberSetting'),
           icon: 'ant-design:star-outlined',
+          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+          showMasterAgent: true,
         },
       },
       {
