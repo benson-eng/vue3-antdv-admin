@@ -3,7 +3,7 @@ import type { MemberIdentityItem } from '@/api/backend/activitySystem';
 import type { AccountBaseInfoItem, FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
 import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-table';
 
-import { message, Modal } from 'ant-design-vue';
+import { message, Modal, Tag } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
 import { computed, h, inject, ref, watch } from 'vue';
 import {
@@ -28,6 +28,9 @@ defineOptions({
 
 const i18n = useI18n('routes.member.identityMemberSettingPage');
 const t = i18n.t;
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 // 從 Layout 根元件 provide 取得站長選單狀態
 const masterAgentCtx = inject<{
@@ -624,6 +627,20 @@ watch(
     fetchNowIdentity(memberIDValue);
   },
 );
+
+/**
+ * SearchMode 狀態顯示（僅標示，不影響任何行為）
+ * 本頁資料直接從後端依站長查詢，不做前端過濾，因此為 BACKEND
+ */
+const searchMode = computed<SearchMode>(() => 'BACKEND');
+const searchModeConfig = computed(() => {
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[searchMode.value];
+});
 </script>
 
 <template>
@@ -634,12 +651,19 @@ watch(
     >
       <DynamicTable
         row-key="memberID"
-        :header-title="t('title')"
         :data-request="loadTableData"
         :columns="columns"
         :scroll="{ x: tableConfig.scrollX.value }"
         :pagination="false"
       >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>{{ t('title') }}</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
+          </div>
+        </template>
         <template #toolbar>
           <a-button type="primary" :disabled="!selectedMasterAgent || tableLoading" @click="openModal('add')">
             {{ t('add') }}
