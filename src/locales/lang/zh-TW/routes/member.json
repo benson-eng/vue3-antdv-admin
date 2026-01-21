@@ -281,6 +281,8 @@
     },
     "columns": {
       "memberID": "會員",
+      "accountID": "帳戶ID",
+      "nickName": "暱稱",
       "identity": "身分",
       "operation": "操作"
     }

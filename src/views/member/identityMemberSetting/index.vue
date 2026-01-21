@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { MemberIdentityItem } from '@/api/backend/activitySystem';
-import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
+import type { AccountBaseInfoItem, FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
 import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-table';
 
 import { message, Modal } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, h, inject, ref, watch } from 'vue';
 import {
   getMemberActivity,
   IdentityType,
@@ -14,13 +14,13 @@ import {
   removeMemberIdentity,
   setMemberIdentity,
 } from '@/api/backend/activitySystem';
-import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
+import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 
 import { useTable } from '@/components/core/dynamic-table';
 
 import { useI18n } from '@/hooks/useI18n';
-import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 
 defineOptions({
   name: 'IdentityMemberSetting',
@@ -28,11 +28,29 @@ defineOptions({
 
 const i18n = useI18n('routes.member.identityMemberSettingPage');
 const t = i18n.t;
-const userStore = useUserStore();
 
-const masterAgent = ref<string>('');
+// 從 Layout 根元件 provide 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
+
+// 擴展資料類型，包含會員顯示資訊
+interface ExtendedMemberIdentityItem extends MemberIdentityItem {
+  accountID?: string;
+  nickName?: string;
+}
+
 const tableLoading = ref(false);
-const currentList = ref<MemberIdentityItem[]>([]);
+const currentList = ref<ExtendedMemberIdentityItem[]>([]);
 
 const [DynamicTable, tableInstance] = useTable({
   search: false,
@@ -56,7 +74,13 @@ const formatIdentityLabel = (identity: unknown) => {
   return String(identity ?? '');
 };
 
-const form = ref<{ memberID: string; identity: IdentityType | undefined; nowIdentityLabel: string }>({
+// STEP C: 使用 label-in-value 結構
+interface MemberFormValue {
+  value: string;
+  label: string;
+}
+
+const form = ref<{ memberID: MemberFormValue | string; identity: IdentityType | undefined; nowIdentityLabel: string }>({
   memberID: '',
   identity: IdentityType.FRAUDULENT_OR_REFUND,
   nowIdentityLabel: '',
@@ -77,7 +101,10 @@ const memberPageSize = 20;
 const mapMemberOptions = (list: FuzzyQueryUserItem[]) =>
   (list || []).map((item) => {
     const value = `${item.account}@${item.agentID}`;
-    const disabled = unselectableSet.value.has(value) && form.value.memberID !== value;
+    // 取得當前表單的 memberID 值（處理 label-in-value 結構）
+    const currentMemberID = form.value.memberID;
+    const currentValue = typeof currentMemberID === 'string' ? currentMemberID : currentMemberID?.value || '';
+    const disabled = unselectableSet.value.has(value) && currentValue !== value;
     return {
       raw: item,
       value,
@@ -89,7 +116,8 @@ const mapMemberOptions = (list: FuzzyQueryUserItem[]) =>
 const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLastQueryText.value = queryText;
 
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     message.error(t('notify.masterAgentRequired'));
     return;
   }
@@ -102,7 +130,7 @@ const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLoading.value = true;
   try {
     const res = await fuzzyQueryUser({
-      masterAgent: masterAgent.value,
+      masterAgent,
       queryText,
       limit: memberPageSize,
       lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
@@ -142,26 +170,94 @@ const onMemberPopupScroll = async (e: UIEvent) => {
 // =========================
 
 const loadTableData = async (_params: LoadDataParams) => {
-  if (!masterAgent.value) {
+  // 使用從 LayoutBreadcrumb provide 取得的站長值
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     currentList.value = [];
     return { items: [], meta: { totalItems: 0 } };
   }
 
   tableLoading.value = true;
   try {
-    const list = await queryMemberIdentities({ masterAgent: masterAgent.value });
+    const list = await queryMemberIdentities({ masterAgent });
     const items = Array.isArray(list) ? list : [];
-    currentList.value = items;
-    return { items, meta: { totalItems: items.length } };
+
+    // STEP B: 合併會員資料
+    // 依 memberID 批次取得帳戶ID與暱稱（對齊 fixedVipMemberSetting 方式）
+    const accounts = Array.from(
+      new Set(
+        items
+          .map(i => String(i.memberID || '').split('@')[0])
+          .filter(Boolean),
+      ),
+    );
+
+    let accountInfoMap: Record<string, { id?: string; nickName?: string }> = {};
+    let accountOnlyMap: Record<string, { id?: string; nickName?: string }> = {};
+    if (accounts.length) {
+      try {
+        const baseRes = await queryAccountBaseInfo({ masterAgent, accounts });
+        const baseListRaw = baseRes as { data?: AccountBaseInfoItem[] } | AccountBaseInfoItem[] | undefined;
+        const baseList = Array.isArray(baseListRaw) ? baseListRaw : baseListRaw?.data ?? [];
+        accountInfoMap = baseList.reduce((acc, cur) => {
+          const key = `${cur.account}@${cur.agentID}`;
+          acc[key] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+        accountOnlyMap = baseList.reduce((acc, cur) => {
+          acc[cur.account] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+      }
+      catch (error) {
+        // 會員資料查詢失敗不影響表格顯示，但記錄錯誤以便調試
+        console.warn('Failed to fetch member data', error);
+      }
+    }
+
+    // 合併資料
+    const extendedItems: ExtendedMemberIdentityItem[] = items.map((item) => {
+      const info = accountInfoMap[item.memberID] || accountOnlyMap[String(item.memberID || '').split('@')[0]] || {};
+      return {
+        ...item,
+        accountID: info.id || '',
+        nickName: info.nickName || '',
+      };
+    });
+
+    currentList.value = extendedItems;
+    return { items: extendedItems, meta: { totalItems: extendedItems.length } };
   }
   finally {
     tableLoading.value = false;
   }
 };
 
-const columns = ref<TableColumn<MemberIdentityItem>[]>([
+const baseColumns = ref<TableColumn<ExtendedMemberIdentityItem>[]>([
   { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
-  { title: t('columns.memberID'), dataIndex: 'memberID', hideInSearch: true },
+  {
+    title: t('columns.memberID'),
+    dataIndex: 'memberID',
+    flexible: true, // 彈性寬度欄位，對齊 agent 頁面行為
+    minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    hideInSearch: true,
+  },
+  {
+    title: t('columns.accountID'),
+    dataIndex: 'accountID',
+    flexible: true,
+    minWidth: 120,
+    hideInSearch: true,
+    customRender: ({ text }) => text || '-',
+  },
+  {
+    title: t('columns.nickName'),
+    dataIndex: 'nickName',
+    flexible: true,
+    minWidth: 120,
+    hideInSearch: true,
+    customRender: ({ text }) => text || '-',
+  },
   {
     title: t('columns.identity'),
     dataIndex: 'identity',
@@ -176,7 +272,17 @@ const columns = ref<TableColumn<MemberIdentityItem>[]>([
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
-    actions: ({ record }) => [
+    /**
+     * 防止內容換行
+     */
+    customCell: () => {
+      return {
+        style: {
+          whiteSpace: 'nowrap', // 禁止換行
+        },
+      };
+    },
+    actions: ({ record }: { record: ExtendedMemberIdentityItem }) => [
       {
         label: t('edit'),
         type: 'link',
@@ -192,17 +298,90 @@ const columns = ref<TableColumn<MemberIdentityItem>[]>([
   },
 ]);
 
+// 使用表格配置 Hook
+// 使用類型斷言，因為 useTableConfig 期望 TableColumnItem，但我們使用的是 TableColumn<MemberIdentityItem>
+// 兩者在運行時結構相同，只是類型定義不同
+// @ts-expect-error - useTableConfig 期望 TableColumnItem，但我們使用的是 TableColumn<MemberIdentityItem>，運行時結構相同
+const tableConfig = useTableConfig(baseColumns);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+const columns = computed<TableColumn<ExtendedMemberIdentityItem>[]>(() => {
+  const visibleKeys = tableConfig.visibleColumnKeys.value;
+  // Guard: 如果 visibleColumnKeys 尚未初始化完成（為空或無效），不設置 hideInTable
+  // 確保初始載入時所有欄位都顯示，符合 STEP 3 定型結果
+  const isInitialized = visibleKeys.length > 0;
+
+  return baseColumns.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+
+    // 如果 visibleColumnKeys 尚未初始化，保持所有欄位可見（不設置 hideInTable）
+    if (!isInitialized) {
+      return col;
+    }
+
+    const isVisible = visibleKeys.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumn<ExtendedMemberIdentityItem> = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
 type ModalMode = 'add' | 'edit';
 
 const modalOpen = ref(false);
 const modalSubmitting = ref(false);
 const modalMode = ref<ModalMode>('add');
 const originalIdentity = ref<number | undefined>(undefined);
+// STEP D: 編輯準備狀態，確保 Modal 開啟時已有正確的 label
+const isEditReady = ref(false);
 
 const modalTitle = computed(() => (modalMode.value === 'edit' ? t('titleEdit') : t('titleAdd')));
 
 const fetchNowIdentity = async (memberID: string) => {
   if (!memberID) {
+    form.value.nowIdentityLabel = '';
+    return;
+  }
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     form.value.nowIdentityLabel = '';
     return;
   }
@@ -215,10 +394,10 @@ const fetchNowIdentity = async (memberID: string) => {
   }
 };
 
-async function openModal(mode: ModalMode, record?: MemberIdentityItem) {
+async function openModal(mode: ModalMode, record?: ExtendedMemberIdentityItem) {
   modalMode.value = mode;
-  modalOpen.value = true;
   modalSubmitting.value = false;
+  isEditReady.value = false;
 
   form.value = {
     memberID: '',
@@ -232,13 +411,103 @@ async function openModal(mode: ModalMode, record?: MemberIdentityItem) {
   memberLastAccountID.value = '';
 
   if (mode === 'edit' && record) {
-    form.value.memberID = String(record.memberID ?? '');
+    // STEP D: 編輯模式下，先 preload 會員顯示資料
+    const memberID = String(record.memberID ?? '');
     form.value.identity = Number(record.identity) as IdentityType;
     originalIdentity.value = Number(record.identity);
-    // 確保編輯時 select 能顯示（避免沒搜尋時空白）
-    memberOptions.value = [{ label: form.value.memberID, value: form.value.memberID, disabled: false }];
-    await fetchNowIdentity(form.value.memberID);
+
+    // 如果有已合併的會員資料，直接使用
+    if (record.accountID && record.nickName) {
+      form.value.memberID = {
+        value: memberID,
+        label: `${record.accountID} - ${record.nickName}`,
+      };
+      memberOptions.value = [{
+        label: `${record.accountID} - ${record.nickName}`,
+        value: memberID,
+        disabled: false,
+      }];
+      isEditReady.value = true;
+      await fetchNowIdentity(memberID);
+    }
+    else {
+      // 如果沒有會員資料，需要查詢
+      const masterAgent = String(selectedMasterAgent.value || '').trim();
+      if (masterAgent) {
+        try {
+          // 提取 account 部分進行查詢
+          const account = memberID.split('@')[0];
+          const memberRes = await fuzzyQueryUser({
+            masterAgent,
+            queryText: account,
+            limit: 100,
+          });
+          const memberList = Array.isArray(memberRes) ? memberRes : [];
+          const matchedMember = memberList.find((m: FuzzyQueryUserItem) =>
+            `${m.account}@${m.agentID}` === memberID,
+          );
+
+          if (matchedMember) {
+            form.value.memberID = {
+              value: memberID,
+              label: `${matchedMember.accountID} - ${matchedMember.nickName}`,
+            };
+            memberOptions.value = [{
+              label: `${matchedMember.accountID} - ${matchedMember.nickName}`,
+              value: memberID,
+              disabled: false,
+            }];
+          }
+          else {
+            // 如果查詢不到，使用 memberID 作為 fallback
+            form.value.memberID = {
+              value: memberID,
+              label: memberID,
+            };
+            memberOptions.value = [{
+              label: memberID,
+              value: memberID,
+              disabled: false,
+            }];
+          }
+        }
+        catch {
+          // 查詢失敗時使用 memberID 作為 fallback
+          form.value.memberID = {
+            value: memberID,
+            label: memberID,
+          };
+          memberOptions.value = [{
+            label: memberID,
+            value: memberID,
+            disabled: false,
+          }];
+        }
+      }
+      else {
+        // 沒有 masterAgent 時使用 memberID 作為 fallback
+        form.value.memberID = {
+          value: memberID,
+          label: memberID,
+        };
+        memberOptions.value = [{
+          label: memberID,
+          value: memberID,
+          disabled: false,
+        }];
+      }
+
+      isEditReady.value = true;
+      await fetchNowIdentity(memberID);
+    }
   }
+  else {
+    // 新增模式下直接開啟
+    isEditReady.value = true;
+  }
+
+  // 確認準備完成後才開啟 Modal
+  modalOpen.value = true;
 }
 
 const closeModal = () => {
@@ -246,10 +515,15 @@ const closeModal = () => {
 };
 
 const validateForm = () => {
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     throw new Error(t('notify.masterAgentRequired'));
   }
-  if (!form.value.memberID) {
+  // STEP C: 從 label-in-value 結構中提取 value
+  const memberIDValue = typeof form.value.memberID === 'string'
+    ? form.value.memberID
+    : form.value.memberID?.value || '';
+  if (!memberIDValue) {
     throw new Error(t('notify.required'));
   }
   const identity = Number(form.value.identity);
@@ -263,7 +537,10 @@ const submitModal = async () => {
     validateForm();
     modalSubmitting.value = true;
 
-    const memberID = form.value.memberID;
+    // STEP C: 從 label-in-value 結構中提取 value（memberID）
+    const memberID = typeof form.value.memberID === 'string'
+      ? form.value.memberID
+      : form.value.memberID?.value || '';
     const identity = Number(form.value.identity) as IdentityType;
 
     // 對齊 Vue2：編輯時先移除舊身分再設定新身分
@@ -284,8 +561,10 @@ const submitModal = async () => {
   }
 };
 
-async function onDelete(record: MemberIdentityItem) {
-  if (!masterAgent.value) {
+async function onDelete(record: ExtendedMemberIdentityItem) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
+    message.error(t('notify.masterAgentRequired'));
     return;
   }
   const memberID = String(record.memberID ?? '');
@@ -293,26 +572,38 @@ async function onDelete(record: MemberIdentityItem) {
 
   Modal.confirm({
     title: t('confirmDelete'),
-    content: `${t('confirmDeleteContent')} ${memberID}`,
+    content: () => h('div', [
+      h('div', t('confirmDeleteContent')),
+      h('div', { style: 'margin-top: 8px; font-weight: 500;' }, `${record.accountID || ''} - ${record.nickName || ''}`),
+    ]),
     okText: t('delete'),
     okType: 'danger',
     cancelText: t('cancel'),
     async onOk() {
-      await removeMemberIdentity({ memberID, identity });
-      message.success(t('deleteSuccess'));
-      tableInstance?.reload?.();
+      try {
+        await removeMemberIdentity({ memberID, identity });
+        message.success(t('deleteSuccess'));
+        tableInstance?.reload?.();
+      }
+      catch (e: any) {
+        message.error(e?.message || t('saveFailed'));
+      }
     },
   });
 }
 
+/**
+ * 監聽 contextVersion 變更，當站長切換時自動重置並刷新表格
+ */
 watch(
-  () => masterAgent.value,
+  () => contextVersion.value,
   () => {
     // masterAgent 變更時，清掉 modal 內會員選單（避免跨總代殘留）
     memberOptions.value = [];
     memberLastQueryText.value = '';
     memberLastAccountID.value = '';
-    tableInstance?.reload?.();
+    // 清空表格資料並自動重新載入
+    tableInstance?.reload(true);
   },
 );
 
@@ -324,48 +615,38 @@ watch(
       form.value.nowIdentityLabel = '';
       return;
     }
-    fetchNowIdentity(v);
+    // 處理 label-in-value 結構
+    const memberIDValue = typeof v === 'string' ? v : v?.value || '';
+    if (!memberIDValue) {
+      form.value.nowIdentityLabel = '';
+      return;
+    }
+    fetchNowIdentity(memberIDValue);
   },
 );
-
-onMounted(() => {
-  // 對齊 Vue2：level>=4 直接鎖定總代理
-  if (userStore.level >= 4) {
-    masterAgent.value = userStore.masterAgent;
-  }
-});
 </script>
 
 <template>
-  <div>
-    <DynamicTable
-      row-key="memberID"
-      :header-title="t('title')"
-      :data-request="loadTableData"
-      :columns="columns"
-      :pagination="false"
+  <div class="agent-page">
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
     >
-      <template #toolbar>
-        <a-space>
-          <template v-if="userStore.level < 4">
-            <AdminAccountSelector
-              v-model="masterAgent"
-              value-type="account"
-              :auto-select-first="true"
-              style="width: 240px"
-              :placeholder="t('filters.masterAgentPlaceholder')"
-            />
-          </template>
-          <template v-else>
-            <a-input :value="masterAgent" style="width: 240px" disabled />
-          </template>
-
-          <a-button type="primary" :disabled="!masterAgent || tableLoading" @click="openModal('add')">
+      <DynamicTable
+        row-key="memberID"
+        :header-title="t('title')"
+        :data-request="loadTableData"
+        :columns="columns"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :pagination="false"
+      >
+        <template #toolbar>
+          <a-button type="primary" :disabled="!selectedMasterAgent || tableLoading" @click="openModal('add')">
             {{ t('add') }}
           </a-button>
-        </a-space>
-      </template>
-    </DynamicTable>
+        </template>
+      </DynamicTable>
+    </div>
 
     <a-modal
       v-model:open="modalOpen"
@@ -377,8 +658,10 @@ onMounted(() => {
       @ok="submitModal"
       @cancel="closeModal"
     >
-      <a-form layout="vertical">
+      <!-- STEP D: 使用 v-if 確保編輯時資料已準備完成 -->
+      <a-form v-if="isEditReady || modalMode === 'add'" layout="vertical">
         <a-form-item :label="t('form.member')" required>
+          <!-- STEP C: 使用 label-in-value -->
           <a-select
             v-model:value="form.memberID"
             show-search
@@ -388,6 +671,7 @@ onMounted(() => {
             :disabled="modalMode === 'edit'"
             :placeholder="t('form.memberPlaceholder')"
             style="width: 100%"
+            label-in-value
             allow-clear
             @search="onMemberSearch"
             @popup-scroll="onMemberPopupScroll"
@@ -405,6 +689,3 @@ onMounted(() => {
     </a-modal>
   </div>
 </template>
-
-
-
