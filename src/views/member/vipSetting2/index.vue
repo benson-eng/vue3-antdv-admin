@@ -1,26 +1,29 @@
 <script setup lang="ts">
 import type { FormInstance, Rule } from 'ant-design-vue/es/form';
-import type { DefaultOptionType } from 'ant-design-vue/es/select';
 import type { VipExtraSetting, VipSetting } from '@/api/backend/member/vipServer';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 
-import { message } from 'ant-design-vue';
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { message, Tag } from 'ant-design-vue';
+import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
 import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
 import VipApi from '@/api/backend/member/vipServer';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
 import { getBaseName, isDistributionPlatform } from '@/utils/platform';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 
 defineOptions({ name: 'MemberVipSetting2' });
 
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
 const userStore = useUserStore();
 
-const hasPermission = computed(() => userStore.level < 4);
-const isMasterAgentDisabled = computed(() => userStore.level >= 4);
-const canEdit = computed(() => userStore.level < 3);
-const isSuperAdmin = computed(() => userStore.level === 1);
+const hasPermission = computed(() => userStore.level <= 4);
+const canEdit = computed(() => userStore.level <= 3);
+const isSuperAdmin = computed(() => userStore.level === 2);
 
 const baseName = computed(() => getBaseName());
 const isDistribution = computed(() => isDistributionPlatform());
@@ -39,13 +42,37 @@ const sendItemCountLabel = computed(() => (isRestrictedBaseName.value ? '贈禮�
 const { t } = useI18n();
 const pageTitle = computed(() => t('routes.member.vipSetting'));
 
-const masterAgent = ref<string>('');
+// 從 Layout inject 站長選單狀態（與 agent 頁面一致）
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值（與 agent 頁面一致）
+// 優先使用 Layout 提供的值，如果沒有則使用 userStore.masterAgent（Level 4 用戶）
+const selectedMasterAgent = computed(() => {
+  // 優先使用 Layout 提供的站長值
+  if (masterAgentCtx?.selectedMasterAgent.value) {
+    return String(masterAgentCtx.selectedMasterAgent.value || '').trim();
+  }
+  // Level 4 用戶：如果 Layout 沒有值，使用 userStore.masterAgent
+  if (userStore.level === 4) {
+    return String(userStore.masterAgent || '').trim();
+  }
+  return '';
+});
+
+// 使用 computed 取得 contextVersion（與 agent 頁面一致）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
+
 const vipDowngradeFormula = ref<0 | 1 | 2 | 3>(0);
-const masterAgentOptions = ref<DefaultOptionType[]>([]);
 const masterAgentMetaMap = ref<Record<string, any>>({});
 
 const [DynamicTable, tableInstance] = useTable({
-  search: true, // 保留搜尋區容器
+  search: false, // 無搜尋條件，不顯示搜尋區
 });
 const DynamicTableReady = computed(() => Boolean(DynamicTable));
 
@@ -94,36 +121,39 @@ const formatTip = (val: unknown) => {
 };
 const formatVipLimit = (val: unknown) => (String(val) === '1' ? '有會員期限' : '無會員期限');
 
-const columns = ref<any[]>([]);
-
-const rebuildColumns = () => {
+// 定義所有欄位（包含操作欄）
+const baseColumnsWithAction = computed<any[]>(() => {
   const base = [
-    { title: 'ID', dataIndex: 'id', width: 90, align: 'center' },
-    { title: 'VIP 等級', dataIndex: 'vipLevel', width: 110, align: 'center' },
+    { title: 'ID', dataIndex: 'id', width: 90 },
+    { title: 'VIP 等級', dataIndex: 'vipLevel', width: 110 },
     {
       title: '升級所需點數',
       dataIndex: 'levelUpNeedPoint',
       width: 150,
-      align: 'center',
       customRender: ({ text }: any) => (Number(text) === -1 ? '-' : String(text)),
     },
-    { title: '名稱', dataIndex: 'name', width: 140, align: 'center' },
+    {
+      title: '名稱',
+      dataIndex: 'name',
+      flexible: true, // 彈性寬度欄位
+      minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    },
   ];
 
   let extra: any[] = [];
-  if (vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3) {
+  if (vipDowngradeFormula.value <= 3) {
     extra = [
-      { title: '累積押注', dataIndex: 'totalBet', width: 140, align: 'center' },
-      { title: '等級限制', dataIndex: 'levelLimit', width: 140, align: 'center' },
-      { title: '勳章欄位', dataIndex: 'badgeSlotCount', width: 120, align: 'center' },
-      { title: '贈禮', dataIndex: 'sendGiftText', width: 140, align: 'center' },
-      { title: '收禮', dataIndex: 'receiveGiftText', width: 140, align: 'center' },
-      { title: '手續費', dataIndex: 'tipText', width: 140, align: 'center' },
-      { title: '會員期限', dataIndex: 'vipLimitText', width: 140, align: 'center' },
+      { title: '累積押注', dataIndex: 'totalBet', width: 140 },
+      { title: '等級限制', dataIndex: 'levelLimit', width: 140 },
+      { title: '勳章欄位', dataIndex: 'badgeSlotCount', width: 120 },
+      { title: '贈禮', dataIndex: 'sendGiftText', width: 140 },
+      { title: '收禮', dataIndex: 'receiveGiftText', width: 140 },
+      { title: '手續費', dataIndex: 'tipText', width: 140 },
+      { title: '會員期限', dataIndex: 'vipLimitText', width: 140 },
     ];
 
     // Vue2: distribution 平台且非超管，列表不顯示 levelLimit / badgeSlotCount
-    if (isDistribution.value && userStore.level > 1) {
+    if (isDistribution.value && userStore.level > 3) {
       extra = extra.filter(c => c.dataIndex !== 'levelLimit' && c.dataIndex !== 'badgeSlotCount');
     }
   }
@@ -132,9 +162,19 @@ const rebuildColumns = () => {
     {
       title: '操作',
       dataIndex: 'ACTION',
-      width: 120,
-      align: 'center',
+      width: 320, // 調寬操作欄位，避免按鈕換行
       fixed: 'right',
+      hideInSearch: true,
+      /**
+       * 防止內容換行
+       */
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
+      },
       actions: ({ record }: any) => [
         {
           label: '編輯',
@@ -146,17 +186,83 @@ const rebuildColumns = () => {
     },
   ];
 
-  columns.value = [...base, ...extra, ...action];
-};
+  return [...base, ...extra, ...action];
+});
 
-watch([vipDowngradeFormula, isDistribution], rebuildColumns, { immediate: true });
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumnsWithAction);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<any[]>(() => {
+  return baseColumnsWithAction.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: any = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: any) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
 
 const loadTableData = async (_params: LoadDataParams) => {
-  if (!masterAgent.value) {
+  // 使用從 LayoutBreadcrumb provide 取得的站長值
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  const items = (await VipApi.listByMasterAgent({ masterAgent: masterAgent.value })) ?? [];
+  const items = (await VipApi.listByMasterAgent({ masterAgent })) ?? [];
   const mapped: VipRow[] = items.map((row) => {
     const totalBet = getExtraValue(row, 'totalBet');
     const levelLimit = getExtraValue(row, 'levelLimit');
@@ -181,36 +287,111 @@ const loadTableData = async (_params: LoadDataParams) => {
   return { items: mapped, meta: { totalItems: mapped.length } };
 };
 
+/**
+ * 載入總代理清單並建立 meta map
+ */
 const fetchMasterAgents = async () => {
   const list = await getMasterAgentAccountList();
-  masterAgentOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
   masterAgentMetaMap.value = (list || []).reduce((acc: any, cur: any) => {
     acc[cur.account] = cur;
     return acc;
   }, {});
 };
 
-const onMasterAgentChanged = async (val: string) => {
-  masterAgent.value = val;
-  const meta = masterAgentMetaMap.value[val] || {};
-  vipDowngradeFormula.value = (meta.vipDowngradeFormula ?? 0) as 0 | 1 | 2 | 3;
-  tableInstance?.reload?.();
+/**
+ * 根據登入者對應的 masterAgent 更新 vipDowngradeFormula
+ * vipDowngradeFormula 是登入者的等級，不是站長的等級
+ */
+const updateVipDowngradeFormula = () => {
+  /**
+   * 取得登入者對應的 masterAgent
+   * Level 4 用戶：使用 userStore.masterAgent（登入者對應的 masterAgent）
+   * 其他等級：登入者可能就是 masterAgent 本身，或需要從登入者帳號資訊中取得
+   */
+  const loginUserMasterAgent = userStore.level === 4
+    ? String(userStore.masterAgent || '').trim()
+    : String(selectedMasterAgent.value || '').trim(); /** 非 Level 4 用戶，暫時使用當前選取的站長（可能需要調整） */
+
+  if (loginUserMasterAgent) {
+    const meta = masterAgentMetaMap.value[loginUserMasterAgent] || {};
+    vipDowngradeFormula.value = (meta.vipDowngradeFormula ?? 0) as 0 | 1 | 2 | 3;
+  }
 };
 
 onMounted(async () => {
   await fetchMasterAgents();
+  updateVipDowngradeFormula();
+});
 
-  // 對齊 Vue2：level>=4 固定 masterAgent
-  if (userStore.level >= 4) {
-    masterAgent.value = userStore.masterAgent || '';
-  }
-  else {
-    masterAgent.value = (masterAgentOptions.value[0]?.value as string) || '';
+/**
+ * 監聽 contextVersion 變更，當站長切換時自動重置並刷新表格（與 agent 頁面一致）
+ */
+watch(
+  () => contextVersion.value,
+  () => {
+    // 注意：vipDowngradeFormula 是登入者的等級，不應該在站長切換時更新
+    // 只重新載入表格資料
+    tableInstance?.reload(true);
+  },
+);
+
+// 對於 Level 4 用戶，同時監聽 userStore.masterAgent 變化
+// 這是既有系統機制（userStore 是系統層狀態管理）
+if (userStore.level === 4) {
+  watch(
+    () => userStore.masterAgent,
+    () => {
+      // 更新 vipDowngradeFormula
+      updateVipDowngradeFormula();
+      // 當 userStore.masterAgent 變化時，重新載入表格資料
+      tableInstance?.reload(true);
+    },
+  );
+}
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
   }
 
-  if (masterAgent.value) {
-    await onMasterAgentChanged(masterAgent.value);
-  }
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - 無搜尋條件（search: false）
+ * - 資料直接從後端 API 載入（VipApi.listByMasterAgent）
+ * - 沒有前端過濾或搜尋功能
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
 });
 
 // ===== Modal（新增/編輯）=====
@@ -417,8 +598,11 @@ const rules: Record<string, Rule[]> = {
       if (form.sendGiftMode === 'not') {
         return;
       }
-      if (form.tipType === 1 && (!isInt(form.tip) || Number(form.tip) <= 0)) {
-        throw new Error('請輸入大於 0 的整數');
+      if (form.tipType === 1) {
+        const tipNum = Number(form.tip);
+        if (Number.isNaN(tipNum) || tipNum <= 0) {
+          throw new Error('請輸入大於 0 的數字');
+        }
       }
     },
     trigger: 'change',
@@ -570,7 +754,8 @@ function openCreate() {
     message.error('權限不足');
     return;
   }
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     message.error('請先選擇總代理');
     return;
   }
@@ -669,7 +854,8 @@ const handleSubmit = async () => {
     message.error('權限不足');
     return;
   }
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     message.error('請先選擇總代理');
     return;
   }
@@ -684,7 +870,7 @@ const handleSubmit = async () => {
       const extraSettings = buildExtraSettings(-1, false);
       await VipApi.createVipSetting({
         id: -1,
-        masterAgent: masterAgent.value,
+        masterAgent,
         lastMonthVip: null,
         vipLevel: Number(form.vipLevel ?? 0),
         levelUpNeedPoint,
@@ -720,7 +906,7 @@ const handleSubmit = async () => {
     }
 
     // 2) reload 並同步 id
-    const reloaded = (await VipApi.listByMasterAgent({ masterAgent: masterAgent.value })) ?? [];
+    const reloaded = (await VipApi.listByMasterAgent({ masterAgent })) ?? [];
     const latest = reloaded.find(r => r.id === vipSettingId);
     existingExtraMap.value = (latest?.extraSettings || []).reduce((acc: any, cur: any) => {
       acc[cur.name] = cur;
@@ -731,7 +917,7 @@ const handleSubmit = async () => {
 
     await VipApi.updateVipSetting({
       id: vipSettingId,
-      masterAgent: masterAgent.value,
+      masterAgent,
       lastMonthVip: editingRecord.value.lastMonthVip ?? null,
       vipLevel: Number(form.vipLevel ?? editingRecord.value.vipLevel),
       levelUpNeedPoint,
@@ -757,47 +943,36 @@ const handleSubmit = async () => {
 <template>
   <a-result v-if="!hasPermission" status="403" title="權限不足" sub-title="您的帳號等級無法使用此功能" />
 
-  <component
-    :is="DynamicTable"
+  <div
     v-else-if="DynamicTableReady"
-    row-key="id"
-    :header-title="pageTitle"
-    :data-request="loadTableData"
-    :columns="columns"
-    :form-props="{ schemas: [] }"
+    class="table-container"
+    :style="{ overflowX: containerOverflowX }"
   >
-    <template #form-formHeader>
-      <a-col :span="24">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="8">
-            <a-form-item label="總代理" class="mb-0" :label-col="{ span: 8 }" :wrapper-col="{ span: 16 }">
-              <a-select
-                v-model:value="masterAgent"
-                style="width: 240px"
-                :options="masterAgentOptions"
-                :disabled="isMasterAgentDisabled"
-                :allow-clear="false"
-                @change="onMasterAgentChanged"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
-            <a-typography-text type="secondary">
-              vipDowngradeFormula：{{ vipDowngradeFormula }}
-            </a-typography-text>
-          </a-col>
-        </a-row>
-      </a-col>
-    </template>
-
-    <template #toolbar>
-      <a-space>
-        <a-button type="primary" :disabled="!masterAgent || !canEdit" @click="openCreate">
-          新增
-        </a-button>
-      </a-space>
-    </template>
-  </component>
+    <component
+      :is="DynamicTable"
+      row-key="id"
+      :header-title="pageTitle"
+      :data-request="loadTableData"
+      :columns="columns"
+      :scroll="{ x: tableConfig.scrollX.value }"
+    >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ pageTitle }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+      <template #toolbar>
+        <a-space>
+          <a-button type="primary" :disabled="!selectedMasterAgent || !canEdit" @click="openCreate">
+            新增
+          </a-button>
+        </a-space>
+      </template>
+    </component>
+  </div>
 
   <div v-else />
 
@@ -993,6 +1168,3 @@ const handleSubmit = async () => {
     </a-form>
   </a-modal>
 </template>
-
-
-
