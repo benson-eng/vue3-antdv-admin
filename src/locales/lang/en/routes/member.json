@@ -348,6 +348,8 @@
     },
     "columns": {
       "memberID": "Member",
+      "accountID": "Account ID",
+      "nickName": "Nickname",
       "activity": "Activity",
       "operation": "Operation"
     }

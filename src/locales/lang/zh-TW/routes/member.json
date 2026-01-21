@@ -357,6 +357,8 @@
     },
     "columns": {
       "memberID": "會員",
+      "accountID": "帳戶ID",
+      "nickName": "暱稱",
       "activity": "活躍度",
       "operation": "操作"
     }
