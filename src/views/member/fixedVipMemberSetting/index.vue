@@ -5,7 +5,7 @@ import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-tabl
 
 import { message, Modal, Tag } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
-import { computed, inject, onMounted, ref, watch } from 'vue';
+import { computed, h, inject, onMounted, ref, watch } from 'vue';
 import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import VipApi from '@/api/backend/member/vipServer';
 import { useTable } from '@/components/core/dynamic-table';
@@ -385,7 +385,10 @@ async function onDelete(record: FixedVipMemberInfo & { accountID?: string; nickN
   const memberID = String(record.memberID ?? '');
   Modal.confirm({
     title: t('confirmDelete'),
-    content: `${t('confirmDeleteContent')} ${record.accountID || ''} - ${record.nickName || ''}`,
+    content: () => h('div', [
+      h('div', t('confirmDeleteContent')),
+      h('div', { style: 'margin-top: 8px; font-weight: 500;' }, `${record.accountID || ''} - ${record.nickName || ''}`),
+    ]),
     okText: t('delete'),
     okType: 'danger',
     cancelText: t('cancel'),
