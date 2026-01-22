@@ -29,8 +29,8 @@ defineOptions({
 const i18n = useI18n('routes.member.identityMemberSettingPage');
 const t = i18n.t;
 
-// SearchMode 定義
-type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+  // SearchMode 定義
+  type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 // 從 Layout 根元件 provide 取得站長選單狀態
 const masterAgentCtx = inject<{
@@ -367,7 +367,7 @@ const containerOverflowX = computed(() => {
   return 'hidden';
 });
 
-type ModalMode = 'add' | 'edit';
+  type ModalMode = 'add' | 'edit';
 
 const modalOpen = ref(false);
 const modalSubmitting = ref(false);
@@ -419,22 +419,53 @@ async function openModal(mode: ModalMode, record?: ExtendedMemberIdentityItem) {
     form.value.identity = Number(record.identity) as IdentityType;
     originalIdentity.value = Number(record.identity);
 
-    // 如果有已合併的會員資料，直接使用
-    if (record.accountID && record.nickName) {
+    // =========================
+    // STEP 1: Context 可用性判斷
+    // =========================
+    // 1. 編輯入口來自資料表 row（非新建/非空白）✓ - mode === 'edit' && record 已滿足
+    // 2. row/context 已包含可直接顯示的會員資訊（accountID + nickName 或等價欄位）
+    const hasAccountID = Boolean(record.accountID);
+    /**
+     * 必須有 accountID 才能使用 Context-first
+     */
+    const hasDisplayableContext = hasAccountID;
+    // 3. 編輯 Modal 中「會員」欄位為唯讀（不可切換）✓ - :disabled="modalMode === 'edit'" 已滿足
+    const isMemberFieldReadonly = true;
+
+    const canUseContextFirst = hasDisplayableContext && isMemberFieldReadonly;
+
+    if (canUseContextFirst) {
+      // =========================
+      // CASE A: Context 可用 - Context-first 流程
+      // =========================
+      // 不呼叫任何會員查詢 API
+      // 直接由 row/context 重組會員 Select option
+      const accountID = record.accountID || '';
+      const nickName = record.nickName || '';
+      // 顯示文字規則：優先顯示「帳戶ID - 暱稱」，無暱稱時顯示「帳戶ID」
+      const displayLabel = accountID && nickName
+        ? `${accountID} - ${nickName}`
+        : accountID;
+
+      memberOptions.value = [
+        {
+          value: memberID,
+          label: displayLabel,
+          disabled: true, // option 僅一筆，且 disabled
+        },
+      ];
       form.value.memberID = {
         value: memberID,
-        label: `${record.accountID} - ${record.nickName}`,
+        label: displayLabel,
       };
-      memberOptions.value = [{
-        label: `${record.accountID} - ${record.nickName}`,
-        value: memberID,
-        disabled: false,
-      }];
       isEditReady.value = true;
       await fetchNowIdentity(memberID);
     }
     else {
-      // 如果沒有會員資料，需要查詢
+      // =========================
+      // CASE B: Context 不可用 - 退回 ARCH-02（Base）流程
+      // =========================
+      // 完全退回 ARCH-02（Base）流程：preload queryAccountBaseInfo / fallback fuzzyQueryUser
       const masterAgent = String(selectedMasterAgent.value || '').trim();
       if (masterAgent) {
         try {

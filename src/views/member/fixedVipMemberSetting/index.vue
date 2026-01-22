@@ -316,6 +316,50 @@ const openModal = async (mode: ModalMode, record?: FixedVipMemberInfo & { accoun
     isEditReady.value = false;
     form.value = { memberID: undefined, vip: undefined };
     const memberID = String(record.memberID ?? '');
+
+    // =========================
+    // STEP 1: Context 可用性判斷
+    // =========================
+    // 1. 編輯入口來自資料表 row（非新建/非空白）✓ - mode === 'edit' && record 已滿足
+    // 2. row/context 已包含可直接顯示的會員資訊（accountID + nickName 或等價欄位）
+    const hasAccountID = Boolean(record.accountID);
+    const hasDisplayableContext = hasAccountID; // 必須有 accountID 才能使用 Context-first
+    // 3. 編輯 Modal 中「會員」欄位為唯讀（不可切換）✓ - :disabled="modalMode === 'edit'" 已滿足
+    const isMemberFieldReadonly = true;
+
+    const canUseContextFirst = hasDisplayableContext && isMemberFieldReadonly;
+
+    if (canUseContextFirst) {
+      // =========================
+      // CASE A: Context 可用 - Context-first 流程
+      // =========================
+      // 不呼叫任何會員查詢 API
+      // 直接由 row/context 重組會員 Select option
+      const accountID = record.accountID || '';
+      const nickName = record.nickName || '';
+      // 顯示文字規則：優先顯示「帳戶ID - 暱稱」，無暱稱時顯示「帳戶ID」
+      const displayLabel = accountID && nickName
+        ? `${accountID} - ${nickName}`
+        : accountID;
+
+      memberOptions.value = [
+        {
+          value: memberID,
+          label: displayLabel,
+          disabled: true, // option 僅一筆，且 disabled
+        },
+      ];
+      form.value.memberID = { value: memberID, label: displayLabel };
+      form.value.vip = record.vip === undefined ? undefined : Number(record.vip);
+      modalOpen.value = true;
+      isEditReady.value = true;
+      return;
+    }
+
+    // =========================
+    // CASE B: Context 不可用 - 退回 ARCH-02（Base）流程
+    // =========================
+    // 完全退回 ARCH-02（Base）流程：preload queryAccountBaseInfo / fallback fuzzyQueryUser
     const preset = await preloadMemberOptionLabel(memberID, record.nickName, record.accountID);
     form.value.memberID = preset || { value: memberID, label: memberID };
     form.value.vip = record.vip === undefined ? undefined : Number(record.vip);

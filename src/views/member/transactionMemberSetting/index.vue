@@ -215,7 +215,52 @@ const openModal = async (mode: ModalMode, record?: TransactionMemberSettingItem)
     form.value = { member: undefined, serviceTariff: undefined };
     const memberID = String(record.memberID ?? '');
     const serviceTariff = Math.round(Number(record.serviceTariff || 0) * 100);
-    const preset = await preloadMemberOptionLabel(memberID, (record as any)?.nickName, (record as any)?.accountID);
+
+    // =========================
+    // STEP 1: Context 可用性判斷
+    // =========================
+    const recordWithContext = record as TransactionMemberSettingItem & { accountID?: string; nickName?: string };
+    // 1. 編輯入口來自資料表 row（非新建/非空白）✓ - mode === 'edit' && record 已滿足
+    // 2. row/context 已包含可直接顯示的會員資訊（accountID + nickName 或等價欄位）
+    const hasAccountID = Boolean(recordWithContext.accountID);
+    const hasDisplayableContext = hasAccountID; // 必須有 accountID 才能使用 Context-first
+    // 3. 編輯 Modal 中「會員」欄位為唯讀（不可切換）✓ - :disabled="modalMode === 'edit'" 已滿足
+    const isMemberFieldReadonly = true;
+
+    const canUseContextFirst = hasDisplayableContext && isMemberFieldReadonly;
+
+    if (canUseContextFirst) {
+      // =========================
+      // CASE A: Context 可用 - Context-first 流程
+      // =========================
+      // 不呼叫任何會員查詢 API
+      // 直接由 row/context 重組會員 Select option
+      const accountID = recordWithContext.accountID || '';
+      const nickName = recordWithContext.nickName || '';
+      // 顯示文字規則：優先顯示「帳戶ID - 暱稱」，無暱稱時顯示「帳戶ID」
+      const displayLabel = accountID && nickName
+        ? `${accountID} - ${nickName}`
+        : accountID;
+
+      memberOptions.value = [
+        {
+          value: memberID,
+          label: displayLabel,
+          disabled: true, // option 僅一筆，且 disabled
+        },
+      ];
+      form.value.member = { value: memberID, label: displayLabel };
+      form.value.serviceTariff = serviceTariff;
+      modalOpen.value = true;
+      isEditReady.value = true;
+      return;
+    }
+
+    // =========================
+    // CASE B: Context 不可用 - 退回 ARCH-02（Base）流程
+    // =========================
+    // 完全退回 ARCH-02（Base）流程：preload queryAccountBaseInfo / fallback fuzzyQueryUser
+    const preset = await preloadMemberOptionLabel(memberID, recordWithContext.nickName, recordWithContext.accountID);
     form.value.member = preset || { value: memberID, label: memberID };
     form.value.serviceTariff = serviceTariff;
     modalOpen.value = true;
