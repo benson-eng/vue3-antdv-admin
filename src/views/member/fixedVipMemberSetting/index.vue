@@ -403,14 +403,23 @@ async function onDelete(record: FixedVipMemberInfo & { accountID?: string; nickN
 // 定義所有欄位（包含操作欄）- STEP 3 定型結構
 const baseColumnsWithAction = computed<TableColumn<FixedVipMemberInfo & { accountID?: string; nickName?: string }>[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
+  // {
+  //   title: t('columns.memberID'),
+  //   dataIndex: 'memberID',
+  //   flexible: true, // 彈性寬度欄位，對齊 agent 頁面行為
+  //   minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+  //   hideInSearch: true,
+  //   hideInTable: true,
+  // },
   {
-    title: t('columns.memberID'),
-    dataIndex: 'memberID',
-    flexible: true, // 彈性寬度欄位，對齊 agent 頁面行為
-    minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    title: '帳戶ID',
+    dataIndex: 'accountID',
+    // === 結構支撐關鍵 ===
+    flexible: true,
+    minWidth: 160,
+    // === 行為控制 ===
     hideInSearch: true,
   },
-  { title: '帳戶ID', dataIndex: 'accountID', hideInSearch: true },
   { title: '暱稱', dataIndex: 'nickName', hideInSearch: true },
   {
     title: t('columns.vip'),

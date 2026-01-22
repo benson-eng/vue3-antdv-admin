@@ -42,14 +42,18 @@ export const getColumns = (t: I18nGlobalTranslation): TableColumnItem[] => [
     title: t('columns.registerTime'),
     dataIndex: 'registerTime',
     flexible: true, // 彈性寬度欄位（對齊 agent 頁 createDatetime 欄位行為）
-    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    minWidth: 180, /**
+                    * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+                    */
     customRender: ({ record }) => (record.registerTime ? formatToDateTime(record.registerTime) : '-'),
   },
   {
     title: t('columns.lastLoginTime'),
     dataIndex: 'lastLoginTime',
     flexible: true, // 彈性寬度欄位（對齊 agent 頁 lastLoginDatetime 欄位行為）
-    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    minWidth: 180, /**
+                    * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+                    */
     customRender: ({ record }) => (record.lastLoginTime ? formatToDateTime(record.lastLoginTime) : '-'),
   },
   {
@@ -89,8 +93,3 @@ export const getColumns = (t: I18nGlobalTranslation): TableColumnItem[] => [
     width: 140,
   },
 ];
-
-
-
-
-

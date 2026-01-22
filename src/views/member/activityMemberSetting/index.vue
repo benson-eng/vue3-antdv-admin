@@ -204,14 +204,14 @@ const loadTableData = async (_params: LoadDataParams) => {
 };
 
 const baseColumns = ref<TableColumn<FixedMemberActivityItem & { accountID?: string; nickName?: string }>[]>([
-  { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
-  {
-    title: t('columns.memberID'),
-    dataIndex: 'memberID',
-    flexible: true, // 彈性寬度欄位，對齊 agent 頁面行為
-    minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
-    hideInSearch: true,
-  },
+  // { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
+  // {
+  //   title: t('columns.memberID'),
+  //   dataIndex: 'memberID',
+  //   flexible: true, // 彈性寬度欄位，對齊 agent 頁面行為
+  //   minWidth: 160, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+  //   hideInSearch: true,
+  // },
   {
     title: t('columns.accountID'),
     dataIndex: 'accountID',

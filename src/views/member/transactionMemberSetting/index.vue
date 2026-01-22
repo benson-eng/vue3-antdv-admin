@@ -366,7 +366,7 @@ const formatPercent = (v: unknown) => {
 
 const columns = ref<TableColumn<TransactionMemberSettingItem & { accountID?: string; nickName?: string }>[]>([
   { title: 'ID', dataIndex: 'id', width: 120, hideInSearch: true },
-  { title: t('columns.memberID'), dataIndex: 'memberID', hideInSearch: true },
+  // { title: t('columns.memberID'), dataIndex: 'memberID', hideInSearch: true },
   { title: '帳戶ID', dataIndex: 'accountID', hideInSearch: true },
   { title: '暱稱', dataIndex: 'nickName', hideInSearch: true },
   {
@@ -454,9 +454,9 @@ watch(
             <Tag :color="searchModeConfig.color" style="margin: 0">
               SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
             </Tag>
-            <Tag color="orange" style="margin: 0">
+            <!-- <Tag color="orange" style="margin: 0">
               API優化:會員帳號與暱稱取得方式
-            </Tag>
+            </Tag> -->
           </div>
         </template>
         <template #toolbar>
