@@ -983,6 +983,10 @@ const handleSubmit = async () => {
     width="720px"
     :mask-closable="false"
     :destroy-on-close="true"
+    :body-style="{
+      maxHeight: '70vh',
+      overflowY: 'auto',
+    }"
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
