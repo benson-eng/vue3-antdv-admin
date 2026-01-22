@@ -180,6 +180,41 @@
       "viewVipRecord": "VIP紀錄",
       "viewPack": "背包",
       "viewWallet": "錢包"
+    },
+    "pack": {
+      "title": "背包"
+    },
+    "packColumns": {
+      "treasureItemID": "道具ID",
+      "itemType": "道具類型",
+      "itemName": "道具名稱",
+      "iconUrl": "圖示",
+      "isVipExclusive": "VIP專屬",
+      "sourceTypeStr": "來源類型",
+      "noteStr": "備註",
+      "sendedAt": "發送時間",
+      "firstUseTime": "首次使用時間",
+      "validFrom": "有效開始時間",
+      "validUntil": "有效結束時間"
+    },
+    "packSourceType": {
+      "forceBingo": "強制中獎",
+      "Mission": "任務",
+      "userBought": "用戶購買",
+      "Event": "活動",
+      "LobbyGame": "大廳遊戲",
+      "OpenMail": "開啟郵件",
+      "Redeem": "兌換",
+      "badge": "徽章",
+      "purchase": "購買",
+      "levelUp": "升級"
+    },
+    "wallet": {
+      "title": "錢包"
+    },
+    "walletColumns": {
+      "currencyType": "幣別代碼",
+      "balance": "餘額"
     }
   },
   "transactionMemberSettingPage": {

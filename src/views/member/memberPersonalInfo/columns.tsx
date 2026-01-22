@@ -35,18 +35,21 @@ export const getColumns = (t: I18nGlobalTranslation): TableColumnItem[] => [
   {
     title: t('columns.nickName'),
     dataIndex: 'nickName',
-    width: 140,
+    flexible: true, // 彈性寬度欄位（對齊 agent 頁 name 欄位行為）
+    minWidth: 140, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
   },
   {
     title: t('columns.registerTime'),
     dataIndex: 'registerTime',
-    width: 180,
+    flexible: true, // 彈性寬度欄位（對齊 agent 頁 createDatetime 欄位行為）
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     customRender: ({ record }) => (record.registerTime ? formatToDateTime(record.registerTime) : '-'),
   },
   {
     title: t('columns.lastLoginTime'),
     dataIndex: 'lastLoginTime',
-    width: 180,
+    flexible: true, // 彈性寬度欄位（對齊 agent 頁 lastLoginDatetime 欄位行為）
+    minWidth: 180, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
     customRender: ({ record }) => (record.lastLoginTime ? formatToDateTime(record.lastLoginTime) : '-'),
   },
   {
@@ -67,7 +70,8 @@ export const getColumns = (t: I18nGlobalTranslation): TableColumnItem[] => [
   {
     title: t('columns.email'),
     dataIndex: 'email',
-    width: 220,
+    flexible: true, // 彈性寬度欄位（對齊 agent 頁 website 欄位行為）
+    minWidth: 220, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
   },
   {
     title: t('columns.phoneNumber'),
