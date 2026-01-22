@@ -538,6 +538,13 @@ if (accountSearchCol) {
     label: t('filters.member'),
     component: 'Select',
     order: 1,
+    required: true,
+    rules: [
+      {
+        required: true,
+        message: t('notify.memberRequired'),
+      },
+    ],
     componentProps: () => ({
       options: memberOptions.value,
       loading: memberLoading.value,

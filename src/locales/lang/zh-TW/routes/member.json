@@ -594,7 +594,8 @@
       "createMemberAccountSuccess": "成功創建會員帳號：{0}",
       "updateMemberAccountSuccess": "成功更新會員帳號：{0}",
       "accountAlreadyExists": "帳號已存在",
-      "clickKickAllGame": "確定要踢出遊戲嗎？"
+      "clickKickAllGame": "確定要踢出遊戲嗎？",
+      "memberRequired": "請先選擇會員"
     },
     "columns": {
       "authProvider": "登入方式",

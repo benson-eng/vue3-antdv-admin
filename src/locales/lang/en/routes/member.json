@@ -525,5 +525,116 @@
       "platform": "Platform",
       "account": "Account"
     }
+  },
+  "indexPage": {
+    "index": "Member Management",
+    "filters": {
+      "masterAgent": "Master Agent",
+      "agent": "Agent",
+      "member": "Member",
+      "phoneNumber5code": "Please enter at least 5 digits phone number",
+      "masterAgentRequired": "Please select master agent first",
+      "agentRequired": "Please select master agent/agent first",
+      "memberHint": "Please enter at least 2 characters to search"
+    },
+    "search": "Query",
+    "success": "Success",
+    "error": "Error",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "warning": "Warning",
+    "postfinish": "Operation completed",
+    "notify": {
+      "idLength": "Member ID must be 8 digits",
+      "notInt": "Member ID must be a number",
+      "isNotNumber": "Phone number must be a number",
+      "phoneNumberLength": "Phone number must be at least 5 digits",
+      "hintText2": "Tip: You can enter Member ID (8 digits) or phone number (at least 5 digits) to query",
+      "createMemberAccountSuccess": "Successfully created member account: {0}",
+      "updateMemberAccountSuccess": "Successfully updated member account: {0}",
+      "accountAlreadyExists": "Account already exists",
+      "clickKickAllGame": "Are you sure you want to kick out of the game?",
+      "memberRequired": "Please select member first"
+    },
+    "columns": {
+      "authProvider": "Login Method",
+      "accountID": "Member ID",
+      "vipName": "VIP Name",
+      "nickName": "Nickname",
+      "guildName": "Guild Name",
+      "phoneNumber": "Phone Number",
+      "unbindPhoneNumber": "Unbind Phone Number",
+      "registDatetime": "Registration Time",
+      "lastLoginDevice": "Last Login Device",
+      "lastLoginDatetime": "Last Login Time",
+      "lastLoginIP": "Last Login IP",
+      "suspension": "Suspension Status",
+      "status": "Status",
+      "kickAllGame": "Kick All Game",
+      "enableAccount": "Enable Account",
+      "viewPack": "View Pack",
+      "viewWallets": "View Wallets",
+      "account": "Account",
+      "memberVipRecordMonth": "Month",
+      "memberVipRecordVipLevel": "VIP Level"
+    },
+    "labels": {
+      "unbindPhoneNumber": "Unbind Phone Number",
+      "password": "Password"
+    },
+    "datePicker": {
+      "startDate": "Start Date",
+      "dueDate": "Due Date"
+    },
+    "dialog": {
+      "editMemberAccount": "Edit Member Account",
+      "createMemberAccount": "Create Member Account"
+    },
+    "pack": {
+      "title": "Pack"
+    },
+    "wallet": {
+      "title": "Wallet"
+    },
+    "vip": {
+      "memberVipRecord": "Member VIP Record"
+    },
+    "packColumns": {
+      "treasureItemID": "Item ID",
+      "itemType": "Item Type",
+      "itemName": "Item Name",
+      "iconUrl": "Icon",
+      "isVipExclusive": "VIP Exclusive",
+      "sourceTypeStr": "Source Type",
+      "noteStr": "Note",
+      "sendedAt": "Sent At",
+      "firstUseTime": "First Use Time",
+      "validFrom": "Valid From",
+      "validUntil": "Valid Until"
+    },
+    "packSourceType": {
+      "forceBingo": "Force Bingo",
+      "Mission": "Mission",
+      "userBought": "User Bought",
+      "Event": "Event",
+      "LobbyGame": "Lobby Game",
+      "OpenMail": "Open Mail",
+      "Redeem": "Redeem",
+      "badge": "Badge",
+      "purchase": "Purchase",
+      "levelUp": "Level Up"
+    },
+    "walletColumns": {
+      "currencyType": "Currency Type",
+      "balance": "Balance"
+    },
+    "suspension": {
+      "normal": "Normal",
+      "platformSuspension": "Platform Suspension",
+      "chatRoomBan": "Chat Room Ban",
+      "giftBan": "Gift Ban"
+    },
+    "enable": "Enable",
+    "disable": "Disable"
   }
 }
