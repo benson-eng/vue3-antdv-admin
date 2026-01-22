@@ -5,7 +5,7 @@ import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-tabl
 
 import { message, Modal, Tag } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
-import { computed, h, inject, ref, watch } from 'vue';
+import { computed, h, inject, nextTick, onMounted, ref, watch } from 'vue';
 import {
   getMemberActivity,
   IdentityType,
@@ -58,6 +58,9 @@ const currentList = ref<ExtendedMemberIdentityItem[]>([]);
 const [DynamicTable, tableInstance] = useTable({
   search: false,
 });
+
+// 類型 A：無搜尋區頁面 - 延後 Table render，等待容器高度穩定
+const tableReady = ref(false);
 
 const unselectableSet = computed(() => new Set(currentList.value.map(i => String(i.memberID ?? ''))));
 
@@ -672,11 +675,23 @@ const searchModeConfig = computed(() => {
   };
   return configs[searchMode.value];
 });
+
+onMounted(async () => {
+  // 類型 A：無搜尋區頁面 - 延後 Table render，確保容器高度穩定
+  await nextTick();
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    tableReady.value = true;
+  }, 100);
+});
 </script>
 
 <template>
   <div class="agent-page">
     <div
+      v-if="tableReady"
       class="table-container"
       :style="{ overflowX: containerOverflowX }"
     >
@@ -686,6 +701,7 @@ const searchModeConfig = computed(() => {
         :columns="columns"
         :scroll="{ x: tableConfig.scrollX.value }"
         :pagination="false"
+        :auto-height="true"
       >
         <template #headerTitle>
           <div style="display: flex; align-items: center; gap: 8px">

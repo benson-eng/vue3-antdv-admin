@@ -5,7 +5,7 @@ import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-tabl
 
 import { message, Modal, Tag } from 'ant-design-vue';
 import { debounce } from 'lodash-es';
-import { computed, h, inject, onMounted, ref, watch } from 'vue';
+import { computed, h, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import VipApi from '@/api/backend/member/vipServer';
 import { useTable } from '@/components/core/dynamic-table';
@@ -58,6 +58,9 @@ const vipList = ref<VipSetting[]>([]);
 const [DynamicTable, tableInstance] = useTable({
   search: false,
 });
+
+// 類型 A：無搜尋區頁面 - 延後 Table render，等待容器高度穩定
+const tableReady = ref(false);
 
 const unselectableSet = computed(() => new Set(currentList.value.map(i => String(i.memberID ?? ''))));
 
@@ -323,7 +326,10 @@ const openModal = async (mode: ModalMode, record?: FixedVipMemberInfo & { accoun
     // 1. 編輯入口來自資料表 row（非新建/非空白）✓ - mode === 'edit' && record 已滿足
     // 2. row/context 已包含可直接顯示的會員資訊（accountID + nickName 或等價欄位）
     const hasAccountID = Boolean(record.accountID);
-    const hasDisplayableContext = hasAccountID; // 必須有 accountID 才能使用 Context-first
+    /**
+     * 必須有 accountID 才能使用 Context-first
+     */
+    const hasDisplayableContext = hasAccountID;
     // 3. 編輯 Modal 中「會員」欄位為唯讀（不可切換）✓ - :disabled="modalMode === 'edit'" 已滿足
     const isMemberFieldReadonly = true;
 
@@ -609,18 +615,32 @@ onMounted(async () => {
   if (selectedMasterAgent.value) {
     await fetchVipList();
   }
+
+  // 類型 A：無搜尋區頁面 - 延後 Table render，確保容器高度穩定
+  await nextTick();
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    tableReady.value = true;
+  }, 100);
 });
 </script>
 
 <template>
   <div class="agent-page">
-    <div class="table-container" :style="{ overflowX: containerOverflowX }">
+    <div
+      v-if="tableReady"
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
+    >
       <DynamicTable
         row-key="memberID"
         :data-request="loadTableData"
         :columns="columns"
         :pagination="false"
         :scroll="{ x: tableConfig.scrollX.value }"
+        :auto-height="true"
       >
         <template #headerTitle>
           <div style="display: flex; align-items: center; gap: 8px">
@@ -637,6 +657,8 @@ onMounted(async () => {
         </template>
       </DynamicTable>
     </div>
+
+    <div v-else />
 
     <a-modal
       v-if="isEditReady"

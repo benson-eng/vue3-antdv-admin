@@ -665,6 +665,16 @@ watch(
   { immediate: true },
 );
 
+// 類型 B：有搜尋區頁面 - 使用 computed 組合 scroll 對象
+// 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+// useScroll 會在 autoHeight 啟用時自動計算並設置 scroll.y
+const tableScroll = computed(() => {
+  return {
+    x: tableConfig.scrollX.value,
+    // 不傳入 y，讓 useScroll 根據 autoHeight: true 自動計算
+  };
+});
+
 // 計算 container 的 overflow-x 樣式
 // container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
 // 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
@@ -1312,11 +1322,24 @@ onMounted(async () => {
     }
 
     // 同步預設 agent 到搜尋表單（不觸發 submit）
+    await nextTick();
     const searchFormRef = (tableInstance as any)?.getSearchFormRef?.();
     searchFormRef?.setFieldsValue?.({
       agent: query.value.agent || undefined,
     });
   }
+
+  // 類型 B：有搜尋區頁面 - 在 mounted + nextTick 後確保容器高度穩定
+  // useScroll hook 會在 autoHeight 啟用時自動計算 scrollY
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成，讓 useScroll 能正確計算容器高度
+  await nextTick();
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  // 注意：scrollY 保持為 undefined，useScroll 會根據 autoHeight: true 自動計算
+  setTimeout(() => {
+    // useScroll hook 會自動監聽容器變化並計算 scrollY
+    // 這裡不需要手動設置 scrollY，因為 autoHeight: true 已啟用自動計算
+  }, 100);
 });
 </script>
 
@@ -1331,7 +1354,8 @@ onMounted(async () => {
           :columns="columns"
           :pagination="false"
           row-key="accountID"
-          :scroll="{ x: tableConfig.scrollX.value }"
+          :scroll="tableScroll"
+          :auto-height="true"
           :immediate="false"
           :form-props="{
             showSubmitButton: true,

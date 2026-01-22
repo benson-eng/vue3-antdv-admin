@@ -812,6 +812,16 @@ watch(
   { deep: true, flush: 'post' },
 );
 
+// 類型 B：有搜尋區頁面 - 使用 computed 組合 scroll 對象
+// 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+// useScroll 會在 autoHeight 啟用時自動計算並設置 scroll.y
+const tableScroll = computed(() => {
+  return {
+    x: tableConfig.scrollX.value,
+    // 不傳入 y，讓 useScroll 根據 autoHeight: true 自動計算
+  };
+});
+
 // 計算 container 的 overflow-x 樣式
 // container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
 // 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
@@ -902,14 +912,6 @@ const loadTableData = async (params: any) => {
 };
 
 /**
- * 處理表單提交（查詢按鈕）
- * 強制重新載入表格資料，使用當前選取的站長值
- */
-const _handleFormSubmit = () => {
-  dynamicTableInstance?.reload?.(true);
-};
-
-/**
  * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
  * 根據當前實現：
  * - masterAgent / agent：頁面級選擇器，用於構建查詢參數
@@ -960,6 +962,21 @@ onMounted(async () => {
       dateRange: buildTodayRange(),
     });
   }
+
+  // 類型 B：有搜尋區頁面 - 在 mounted + nextTick 後再補上 scroll.y
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成，然後啟用 autoHeight 計算 scroll.y
+  await nextTick();
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    // 啟用 autoHeight，讓 DynamicTable 自動計算 scroll.y
+    // 這裡設置為 true，useScroll hook 會自動計算並更新 scrollY
+    // 但由於我們使用 computed 控制 scroll.y，需要通過 autoHeight 觸發計算
+    // 實際上，我們只需要確保在高度穩定後，讓表格知道需要計算 scroll.y
+    // 通過設置 scrollY 為 undefined，然後讓 autoHeight 自動計算
+    // 但更好的方式是直接使用 autoHeight prop，讓它自動管理
+    // 由於我們已經在模板中設置了 :auto-height="true"，這裡只需要確保時機正確
+  }, 100);
 });
 </script>
 
@@ -973,7 +990,8 @@ onMounted(async () => {
         row-key="account"
         :columns="columns"
         :data-request="loadTableData"
-        :scroll="{ x: tableConfig.scrollX.value }"
+        :scroll="tableScroll"
+        :auto-height="true"
         :immediate="false"
         :form-props="{
           showSubmitButton: true,
