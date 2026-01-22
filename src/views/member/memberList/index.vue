@@ -208,9 +208,16 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  const agentID = buildAgentID(agent, masterAgent);
-
+  // 查詢條件驗證：會員與電話至少擇一輸入
   const account = String((params as any)?.account ?? '').trim();
+  const phoneNumberRaw = (params as any)?.phoneNumber;
+  const phoneNumber = String(phoneNumberRaw ?? '').trim();
+  if (!account && !phoneNumber) {
+    message.error('會員與電話至少擇一輸入');
+    return { items: [], meta: { totalItems: 0 } };
+  }
+
+  const agentID = buildAgentID(agent, masterAgent);
 
   const payload: IQueryAccountParams = {
     agentID,
@@ -220,8 +227,6 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
     isPersonalInfo: true,
   };
 
-  const phoneNumberRaw = (params as any)?.phoneNumber;
-  const phoneNumber = String(phoneNumberRaw ?? '').trim();
   if (phoneNumber) {
     // Vue2 對齊：至少 5 碼 + 必須為數字
     if (!/^[0-9]*$/.test(phoneNumber)) {
@@ -538,17 +543,10 @@ if (accountSearchCol) {
     label: t('filters.member'),
     component: 'Select',
     order: 1,
-    required: true,
-    rules: [
-      {
-        required: true,
-        message: t('notify.memberRequired'),
-      },
-    ],
     componentProps: () => ({
       options: memberOptions.value,
       loading: memberLoading.value,
-      placeholder: t('filters.member'),
+      placeholder: `${t('filters.member')}（與電話至少擇一）`,
       allowClear: true,
       showSearch: true,
       filterOption: false,
@@ -569,7 +567,7 @@ if (phoneSearchCol) {
     order: 2,
     componentProps: {
       allowClear: true,
-      placeholder: t('filters.phoneNumber5code'),
+      placeholder: `${t('filters.phoneNumber5code')}（與會員至少擇一）`,
     },
   };
 }
