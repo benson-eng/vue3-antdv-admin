@@ -4,7 +4,7 @@ import type { VipExtraSetting, VipSetting } from '@/api/backend/member/vipServer
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 
 import { message, Tag } from 'ant-design-vue';
-import { computed, inject, onMounted, reactive, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
 import VipApi from '@/api/backend/member/vipServer';
 import { useTable } from '@/components/core/dynamic-table';
@@ -74,7 +74,9 @@ const masterAgentMetaMap = ref<Record<string, any>>({});
 const [DynamicTable, tableInstance] = useTable({
   search: false, // 無搜尋條件，不顯示搜尋區
 });
-const DynamicTableReady = computed(() => Boolean(DynamicTable));
+
+// 延後 Table render，等待容器高度穩定
+const tableReady = ref(false);
 
 type VipRow = VipSetting & {
   totalBet?: string;
@@ -321,6 +323,15 @@ const updateVipDowngradeFormula = () => {
 onMounted(async () => {
   await fetchMasterAgents();
   updateVipDowngradeFormula();
+
+  // 延後 Table render，確保容器高度穩定
+  await nextTick();
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    tableReady.value = true;
+  }, 100);
 });
 
 /**
@@ -944,7 +955,7 @@ const handleSubmit = async () => {
   <a-result v-if="!hasPermission" status="403" title="權限不足" sub-title="您的帳號等級無法使用此功能" />
 
   <div
-    v-else-if="DynamicTableReady"
+    v-else-if="tableReady && DynamicTable"
     class="table-container"
     :style="{ overflowX: containerOverflowX }"
   >
@@ -955,6 +966,7 @@ const handleSubmit = async () => {
       :data-request="loadTableData"
       :columns="columns"
       :scroll="{ x: tableConfig.scrollX.value }"
+      :auto-height="true"
     >
       <template #headerTitle>
         <div style="display: flex; align-items: center; gap: 8px">
