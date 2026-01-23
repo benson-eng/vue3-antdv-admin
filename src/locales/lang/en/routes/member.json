@@ -513,6 +513,7 @@
     "reset": "Reset",
     "filters": {
       "masterAgentPlaceholder": "Please select master agent",
+      "member": "Member",
       "memberPlaceholder": "Search by member id / account / nickname"
     },
     "notify": {
