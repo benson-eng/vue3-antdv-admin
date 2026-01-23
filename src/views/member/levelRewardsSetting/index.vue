@@ -5,18 +5,19 @@ import type { TreasureCardInfo, TreasureItem } from '@/api/backend/treasureChest
 import type { ExcelData } from '@/components/basic/excel';
 import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-table';
 
-import { message } from 'ant-design-vue';
-import { computed, h, onMounted, ref, watch } from 'vue';
+import { message, Tag } from 'ant-design-vue';
+import { computed, h, inject, nextTick, onMounted, ref, watch } from 'vue';
 
 import { gameList } from '@/api/backend/adminSystem/gameManagerServer';
 import { bulkCreate, listByMasterAgent } from '@/api/backend/member/levelServer';
 import { addTreasureCard, queryTreasureCardInfos, treasureItemList } from '@/api/backend/treasureChestSystem';
 
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
 import { ImpExcel, jsonToSheetXlsx } from '@/components/basic/excel';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 
 defineOptions({
   name: 'LevelRewardsSetting',
@@ -28,12 +29,54 @@ const userStore = useUserStore();
 
 const hasPermission = computed(() => userStore.level <= 2);
 
-const masterAgent = ref<string>('');
+// 從 Layout 根元件 provide 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
+
 const tableLoading = ref(false);
 const currentList = ref<(LevelSettingItem & { awardStr: string[] })[]>([]);
 
+// 表格 render 就緒標記（用於確保 layout 穩定後再 render，避免 fixed header 失效）
+const tableReady = ref(false);
+
 const [DynamicTable, tableInstance] = useTable({
   search: false,
+});
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - masterAgent：後端 API 參數（Breadcrumb Context Selector）
+ * - 無搜尋表單欄位
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 本頁無搜尋表單，資料完全由後端 API 提供
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
 });
 
 // =========================
@@ -61,14 +104,15 @@ const formatAwardStr = (infos: LevelSettingTreasureCardInfo[]) => {
 // =========================
 
 const loadTableData = async (_params: LoadDataParams) => {
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     currentList.value = [];
     return { items: [], meta: { totalItems: 0 } };
   }
 
   tableLoading.value = true;
   try {
-    const list = await listByMasterAgent({ masterAgent: masterAgent.value });
+    const list = await listByMasterAgent({ masterAgent });
     const items = (Array.isArray(list) ? list : []).map(it => ({
       ...it,
       awardStr: formatAwardStr(it.treasureCardInfos || []),
@@ -81,18 +125,113 @@ const loadTableData = async (_params: LoadDataParams) => {
   }
 };
 
-const columns = ref<TableColumn<LevelSettingItem & { awardStr: string[] }>[]>(
-  [
-    { title: t('columns.id'), dataIndex: 'id', width: 120, hideInSearch: true },
-    { title: t('columns.level'), dataIndex: 'level', width: 120, hideInSearch: true },
-    {
-      title: t('columns.awardStr'),
-      dataIndex: 'awardStr',
-      hideInSearch: true,
-      customRender: ({ record }) =>
-        h('div', { style: 'white-space: pre-line;' }, (record?.awardStr || []).join('\n')),
-    },
-  ],
+// 定義所有欄位
+const baseColumns = computed<TableColumn<LevelSettingItem & { awardStr: string[] }>[]>(() => [
+  { title: t('columns.id'), dataIndex: 'id', width: 120, hideInSearch: true },
+  { title: t('columns.level'), dataIndex: 'level', width: 120, hideInSearch: true },
+  {
+    title: t('columns.awardStr'),
+    dataIndex: 'awardStr',
+    flexible: true, // 彈性寬度欄位，內容長度不固定，關閉其他欄位時自動擴展
+    minWidth: 200, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    hideInSearch: true,
+    customRender: ({ record }) =>
+      h('div', { style: 'white-space: pre-line;' }, (record?.awardStr || []).join('\n')),
+  },
+]);
+
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumns as any);
+
+// STEP 3 定型後的欄位 keys（按順序）：['id', 'level', 'awardStr']
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<TableColumn<LevelSettingItem & { awardStr: string[] }>[]>(() => {
+  const visibleKeys = tableConfig.visibleColumnKeys.value;
+  // Guard: 如果 visibleColumnKeys 尚未初始化完成（空或無效），維持全部顯示
+  const isVisibleKeysValid = Array.isArray(visibleKeys) && visibleKeys.length > 0;
+
+  return baseColumns.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    // 僅在 visibleColumnKeys 為有效集合時才套用 hideInTable
+    const isVisible = isVisibleKeysValid ? visibleKeys.includes(key) : true;
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumn<LevelSettingItem & { awardStr: string[] }> = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: any) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
 );
 
 // =========================
@@ -121,7 +260,7 @@ const buildTreasureCardAllList = (rows: any): TreasureItem[] => {
 };
 
 const rebuildTreasureCardGameMeta = () => {
-  const master = masterAgent.value;
+  const master = String(selectedMasterAgent.value || '').trim();
   const gameListFiltered = (gameInfoList.value || []).filter(g => !['0007', '0035', '0038', '0049'].includes(String(g.gameID)));
 
   // reference table
@@ -190,32 +329,36 @@ const rebuildTreasureCardGameMeta = () => {
 };
 
 const ensureMetaLoaded = async () => {
-  if (!masterAgent.value) {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     throw new Error(t('notify.masterAgentRequired'));
   }
-  if (metaLoadedFor.value === masterAgent.value) {
+  if (metaLoadedFor.value === masterAgent) {
     return;
   }
   metaLoading.value = true;
   try {
     const [treasureRes, games, infos] = await Promise.all([
-      treasureItemList({ masterAgent: masterAgent.value }),
-      gameList({ masterAgent: masterAgent.value }),
-      queryTreasureCardInfos({ masterAgent: masterAgent.value }),
+      treasureItemList({ masterAgent }),
+      gameList({ masterAgent }),
+      queryTreasureCardInfos({ masterAgent }),
     ]);
     treasureCardAllList.value = buildTreasureCardAllList((treasureRes as any)?.rows);
     gameInfoList.value = Array.isArray(games) ? games : [];
     treasureCardInfos.value = Array.isArray(infos) ? infos : [];
     rebuildTreasureCardGameMeta();
-    metaLoadedFor.value = masterAgent.value;
+    metaLoadedFor.value = masterAgent;
   }
   finally {
     metaLoading.value = false;
   }
 };
 
+/**
+ * 監聽 contextVersion 變更，當站長切換時自動重置並刷新表格
+ */
 watch(
-  () => masterAgent.value,
+  () => contextVersion.value,
   () => {
     metaLoadedFor.value = '';
     treasureCardAllList.value = [];
@@ -223,15 +366,18 @@ watch(
     gameInfoList.value = [];
     treasureCardGameList.value = [];
     referenceDataList.value = [];
-    tableInstance?.reload?.();
+    // 站長切換時強制重新載入資料（不使用快取），行為與 agent 頁一致
+    tableInstance?.reload(true);
   },
 );
 
-onMounted(() => {
-  // 對齊 Vue2：level>=4 直接鎖定總代理（但本頁本身限制 <=2）
-  if (userStore.level >= 4) {
-    masterAgent.value = userStore.masterAgent;
-  }
+// 確保 layout 穩定後再 render 表格，避免 fixed header 失效
+onMounted(async () => {
+  await nextTick();
+  // 使用 requestAnimationFrame 確保 DOM 完全渲染完成
+  requestAnimationFrame(() => {
+    tableReady.value = true;
+  });
 });
 
 // =========================
@@ -391,9 +537,10 @@ const parseImportRows = async (rows: ImportRow[]) => {
   treasureCardGameList.value.forEach(m => metaByGame.set(String(m.gameID), m));
 
   const ensureLevelItem = (level: number) => {
+    const masterAgent = String(selectedMasterAgent.value || '').trim();
     if (!postMap.has(level)) {
       postMap.set(level, {
-        masterAgent: masterAgent.value,
+        masterAgent,
         level,
         prizeMoney: 0,
         prizeVp: 0,
@@ -473,14 +620,15 @@ const parseImportRows = async (rows: ImportRow[]) => {
 
     if (!found) {
       // 沒有就建一張，再刷新 treasureCardAllList 後重找
+      const masterAgent = String(selectedMasterAgent.value || '').trim();
       await addTreasureCard({
-        masterAgent: masterAgent.value,
+        masterAgent,
         game: gameID,
         cardItem,
         bet,
         creditRate,
       });
-      const refreshed = await treasureItemList({ masterAgent: masterAgent.value });
+      const refreshed = await treasureItemList({ masterAgent });
       treasureCardAllList.value = buildTreasureCardAllList((refreshed as any)?.rows);
       found = findTreasureCardByKey(gameID, bet, cardItem, creditRate);
     }
@@ -521,7 +669,8 @@ const onImportSuccess = async (excelData: ExcelData[]) => {
 
 const saveImport = async () => {
   try {
-    if (!masterAgent.value) {
+    const masterAgent = String(selectedMasterAgent.value || '').trim();
+    if (!masterAgent) {
       throw new Error(t('notify.masterAgentRequired'));
     }
     if (importPreviewList.value.length === 0) {
@@ -559,37 +708,46 @@ const saveImport = async () => {
     />
 
     <div v-else>
-      <DynamicTable
-        row-key="id"
-        :header-title="t('title')"
-        :data-request="loadTableData"
-        :columns="columns"
-        :pagination="false"
+      <div
+        class="table-container"
+        :style="{ overflowX: containerOverflowX }"
       >
-        <template #toolbar>
-          <a-space>
-            <AdminAccountSelector
-              v-model="masterAgent"
-              value-type="account"
-              :auto-select-first="true"
-              style="width: 240px"
-              :placeholder="t('filters.masterAgentPlaceholder')"
-            />
+        <DynamicTable
+          v-if="tableReady"
+          row-key="id"
+          :data-request="loadTableData"
+          :columns="columns"
+          :scroll="{
+            x: tableConfig.scrollX.value,
+            y: 'calc(100vh - 280px)',
+          }"
+          :pagination="false"
+        >
+          <template #headerTitle>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span>{{ t('title') }}</span>
+              <Tag :color="searchModeConfig.color" style="margin: 0">
+                SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+              </Tag>
+            </div>
+          </template>
+          <template #toolbar>
+            <a-space>
+              <a-button type="primary" :disabled="!selectedMasterAgent || metaLoading" @click="exportExcel">
+                {{ t('exportExcel') }}
+              </a-button>
 
-            <a-button type="primary" :disabled="!masterAgent || metaLoading" @click="exportExcel">
-              {{ t('exportExcel') }}
-            </a-button>
+              <a-button type="primary" :disabled="!selectedMasterAgent || metaLoading" @click="openImport">
+                {{ t('importExcel') }}
+              </a-button>
 
-            <a-button type="primary" :disabled="!masterAgent || metaLoading" @click="openImport">
-              {{ t('importExcel') }}
-            </a-button>
-
-            <a-button :disabled="!masterAgent || metaLoading" @click="openReference">
-              {{ t('reference') }}
-            </a-button>
-          </a-space>
-        </template>
-      </DynamicTable>
+              <a-button :disabled="!selectedMasterAgent || metaLoading" @click="openReference">
+                {{ t('reference') }}
+              </a-button>
+            </a-space>
+          </template>
+        </DynamicTable>
+      </div>
 
       <!-- Import -->
       <a-modal
@@ -677,6 +835,3 @@ const saveImport = async () => {
   width: 100%;
 }
 </style>
-
-
-
