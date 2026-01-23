@@ -60,6 +60,9 @@ const [DynamicTable, tableInstance] = useTable({
 });
 // tableInstance 用於 CRUD 操作後重新載入資料
 
+// 類型 A：無搜尋區頁面 - 延後 Table render，等待容器高度穩定
+const tableReady = ref(false);
+
 const loading = ref(false);
 const rolesList = ref<RoleItem[]>([]);
 
@@ -814,6 +817,14 @@ const searchModeConfig = computed(() => {
 // 本階段僅做引擎替換，不啟用 column setting 等新功能
 
 onMounted(async () => {
+  // 類型 A：無搜尋區頁面 - 延後 Table render，確保容器高度穩定
+  await nextTick();
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    tableReady.value = true;
+  }, 100);
   // DynamicTable 的 data-request 會自動調用 loadTableData，loadTableData 會調用 updateView
   // 這裡不需要手動調用，避免重複載入
 });
@@ -822,6 +833,7 @@ onMounted(async () => {
 <template>
   <div class="roles-page">
     <div
+      v-if="tableReady"
       class="table-container"
       :style="{ overflowX: containerOverflowX }"
     >
@@ -833,6 +845,7 @@ onMounted(async () => {
         :pagination="false"
         :show-tool-bar="true"
         :show-table-setting="true"
+        :auto-height="true"
       >
         <template #headerTitle>
           <div style="display: flex; align-items: center; gap: 8px">
