@@ -98,26 +98,28 @@ const routes: RouteRecordRaw[] = [
           showMasterAgent: true,
         },
       },
-      {
-        path: 'MemberLevel',
-        name: 'MemberLevel',
-        component: () => import('@/views/member/memberLevel/index.vue'),
-        meta: {
-          title: t('routes.member.memberLevel'),
-          icon: 'ant-design:star-outlined',
-        },
-      },
-      {
-        path: 'levelRewardsSetting',
-        name: 'LevelRewardsSetting',
-        component: () => import('@/views/member/levelRewardsSetting/index.vue'),
-        meta: {
-          title: t('routes.member.levelRewardsSetting'),
-          icon: 'ant-design:star-outlined',
-          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
-          showMasterAgent: true,
-        },
-      },
+      // 2026-01-23 備註人:shang 移除頁面，目前用戶不會使用到
+      // {
+      //   path: 'MemberLevel',
+      //   name: 'MemberLevel',
+      //   component: () => import('@/views/member/memberLevel/index.vue'),
+      //   meta: {
+      //     title: t('routes.member.memberLevel'),
+      //     icon: 'ant-design:star-outlined',
+      //   },
+      // },
+      // 2026-01-23 備註人:shang 移除頁面，目前用戶不會使用到
+      // {
+      //   path: 'levelRewardsSetting',
+      //   name: 'LevelRewardsSetting',
+      //   component: () => import('@/views/member/levelRewardsSetting/index.vue'),
+      //   meta: {
+      //     title: t('routes.member.levelRewardsSetting'),
+      //     icon: 'ant-design:star-outlined',
+      //     // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+      //     showMasterAgent: true,
+      //   },
+      // },
       {
         path: 'getPlatformAccount',
         name: 'GetPlatformAccount',

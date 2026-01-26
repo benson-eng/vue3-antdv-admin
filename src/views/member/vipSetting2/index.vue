@@ -68,6 +68,12 @@ const selectedMasterAgent = computed(() => {
 // 使用 computed 取得 contextVersion（與 agent 頁面一致）
 const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
+/**
+ * 站長層級的 VIP 規則設定值（0 | 1 | 2 | 3）
+ * 此值從當前選取的站長（masterAgent）的設定資料中取得
+ * 用於控制 Extra 區塊是否顯示（值為 2 或 3 時顯示）
+ * 不得因登入者身份、權限或 userStore.level 而重新計算
+ */
 const vipDowngradeFormula = ref<0 | 1 | 2 | 3>(0);
 const masterAgentMetaMap = ref<Record<string, any>>({});
 
@@ -126,7 +132,6 @@ const formatVipLimit = (val: unknown) => (String(val) === '1' ? '有會員期限
 // 定義所有欄位（包含操作欄）
 const baseColumnsWithAction = computed<any[]>(() => {
   const base = [
-    { title: 'ID', dataIndex: 'id', width: 90 },
     { title: 'VIP 等級', dataIndex: 'vipLevel', width: 110 },
     {
       title: '升級所需點數',
@@ -301,22 +306,21 @@ const fetchMasterAgents = async () => {
 };
 
 /**
- * 根據登入者對應的 masterAgent 更新 vipDowngradeFormula
- * vipDowngradeFormula 是登入者的等級，不是站長的等級
+ * 根據當前選取的站長（masterAgent）更新 vipDowngradeFormula
+ * vipDowngradeFormula 為「站長層級的 VIP 規則設定值」，用於控制 Extra 區塊是否顯示
+ * 此值僅在站長設定資料載入完成後設定一次，不得因登入者身份或權限而重新計算
  */
 const updateVipDowngradeFormula = () => {
-  /**
-   * 取得登入者對應的 masterAgent
-   * Level 4 用戶：使用 userStore.masterAgent（登入者對應的 masterAgent）
-   * 其他等級：登入者可能就是 masterAgent 本身，或需要從登入者帳號資訊中取得
-   */
-  const loginUserMasterAgent = userStore.level === 4
-    ? String(userStore.masterAgent || '').trim()
-    : String(selectedMasterAgent.value || '').trim(); /** 非 Level 4 用戶，暫時使用當前選取的站長（可能需要調整） */
+  // 從當前選取的站長取得 vipDowngradeFormula 設定值
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
 
-  if (loginUserMasterAgent) {
-    const meta = masterAgentMetaMap.value[loginUserMasterAgent] || {};
+  if (masterAgent) {
+    const meta = masterAgentMetaMap.value[masterAgent] || {};
     vipDowngradeFormula.value = (meta.vipDowngradeFormula ?? 0) as 0 | 1 | 2 | 3;
+  }
+  else {
+    // 若無選取的站長，設為預設值 0（不顯示 Extra 區塊）
+    vipDowngradeFormula.value = 0;
   }
 };
 
@@ -335,30 +339,19 @@ onMounted(async () => {
 });
 
 /**
- * 監聽 contextVersion 變更，當站長切換時自動重置並刷新表格（與 agent 頁面一致）
+ * 監聽 contextVersion 變更，當站長切換時重新載入站長設定並刷新表格
+ * vipDowngradeFormula 為站長層級的設定值，當站長切換時需要重新取得該站長的設定
  */
 watch(
   () => contextVersion.value,
-  () => {
-    // 注意：vipDowngradeFormula 是登入者的等級，不應該在站長切換時更新
-    // 只重新載入表格資料
+  async () => {
+    // 站長切換時，重新載入站長設定資料並更新 vipDowngradeFormula
+    await fetchMasterAgents();
+    updateVipDowngradeFormula();
+    // 重新載入表格資料
     tableInstance?.reload(true);
   },
 );
-
-// 對於 Level 4 用戶，同時監聽 userStore.masterAgent 變化
-// 這是既有系統機制（userStore 是系統層狀態管理）
-if (userStore.level === 4) {
-  watch(
-    () => userStore.masterAgent,
-    () => {
-      // 更新 vipDowngradeFormula
-      updateVipDowngradeFormula();
-      // 當 userStore.masterAgent 變化時，重新載入表格資料
-      tableInstance?.reload(true);
-    },
-  );
-}
 
 // 計算 container 的 overflow-x 樣式
 // container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
@@ -474,6 +467,11 @@ const existingExtraMap = ref<Record<string, VipExtraSetting>>({});
 const modalTitle = computed(() => (modalMode.value === 'add' ? '新增 VIP' : '編輯 VIP'));
 const isVipLevelDisabled = computed(() => userStore.level >= 3 || modalMode.value === 'edit');
 
+/**
+ * 控制 Extra 區塊是否顯示
+ * vipDowngradeFormula 為站長層級的 VIP 規則設定值（0 | 1 | 2 | 3）
+ * 當值為 2 或 3 時，顯示 Extra 區塊（包含升級累積押注、贈禮相關設定等）
+ */
 const showExtraBlock = computed(() => vipDowngradeFormula.value === 2 || vipDowngradeFormula.value === 3);
 const showTransactionMinLevelLimit = computed(() => {
   // Vue2: (vipDowngradeFormula===2||3) && sendGift!=not && (not in list) && !distribution || superAdmin
@@ -683,6 +681,19 @@ const syncSendGiftRelated = () => {
 const syncTipRelated = () => {
   if (form.tipType !== 1) {
     form.tip = 1;
+  }
+};
+
+const syncSendItemCountRelated = () => {
+  if (form.sendItemCountMode === 'unlimited') {
+    // 切換到「無限制」時，重置數值為預設值
+    form.sendItemCount = 1;
+  }
+  else if (form.sendItemCountMode === 'limited') {
+    // 切換到「限制次數」時，確保有有效值
+    if (!form.sendItemCount || form.sendItemCount <= 0) {
+      form.sendItemCount = 1;
+    }
   }
 };
 
@@ -995,14 +1006,15 @@ const handleSubmit = async () => {
     width="720px"
     :mask-closable="false"
     :destroy-on-close="true"
+    :style="{ top: '40px' }"
     :body-style="{
-      maxHeight: '70vh',
+      maxHeight: '75vh',
       overflowY: 'auto',
     }"
     @ok="handleSubmit"
     @cancel="handleCancel"
   >
-    <a-form ref="formRef" :model="form" :label-col="{ span: 9 }" :wrapper-col="{ span: 15 }">
+    <a-form ref="formRef" :model="form" :label-col="{ span: 7 }" :wrapper-col="{ span: 17 }">
       <a-form-item label="VIP 等級" name="vipLevel" :rules="rules.vipLevel">
         <a-input-number v-model:value="form.vipLevel" style="width: 100%" :disabled="isVipLevelDisabled" :controls="false" />
       </a-form-item>
@@ -1016,8 +1028,6 @@ const handleSubmit = async () => {
       </a-form-item>
 
       <template v-if="showExtraBlock">
-        <a-divider>Extra Settings</a-divider>
-
         <a-form-item label="升級累積押注" name="totalBet" :rules="rules.totalBet">
           <a-input-number v-model:value="form.totalBet" style="width: 100%" :min="0" :controls="false" />
         </a-form-item>
@@ -1026,13 +1036,13 @@ const handleSubmit = async () => {
           <a-input-number v-model:value="form.levelLimit" style="width: 100%" :min="1" :controls="false" />
         </a-form-item>
 
-        <a-form-item v-if="canShowLevelLimitAndBadge" label="勳章欄位(格)" name="badgeSlotCount">
+        <a-form-item v-if="canShowLevelLimitAndBadge" label="勳章欄位(格)" name="badgeSlotCount" help="此欄位為系統自動設定，無法手動修改">
           <a-input-number v-model:value="form.badgeSlotCount" style="width: 100%" :controls="false" disabled />
         </a-form-item>
 
         <a-form-item :label="sendItemCountLabel" name="sendItemCount" :rules="rules.sendItemCount">
           <a-space direction="vertical" style="width: 100%">
-            <a-radio-group v-model:value="form.sendItemCountMode">
+            <a-radio-group v-model:value="form.sendItemCountMode" @change="syncSendItemCountRelated">
               <a-radio value="unlimited">
                 無限制
               </a-radio>
@@ -1041,16 +1051,21 @@ const handleSubmit = async () => {
               </a-radio>
             </a-radio-group>
             <a-input-number
-              v-if="form.sendItemCountMode === 'limited'"
               v-model:value="form.sendItemCount"
               style="width: 100%"
               :min="1"
               :controls="false"
+              :disabled="form.sendItemCountMode !== 'limited'"
             />
           </a-space>
         </a-form-item>
 
-        <a-form-item label="贈禮" name="sendGift" :rules="rules.sendGift">
+        <a-form-item
+          label="贈禮額度"
+          name="sendGift"
+          :rules="rules.sendGift"
+          :help="form.sendGiftMode === 'not' ? '當設定為「不可贈禮」時，贈禮手續費、贈禮等級限制、贈禮保留額度等相關選項將自動關閉' : undefined"
+        >
           <a-space direction="vertical" style="width: 100%">
             <a-radio-group v-model:value="form.sendGiftMode" @change="syncSendGiftRelated">
               <a-radio value="not">
@@ -1078,6 +1093,7 @@ const handleSubmit = async () => {
           label="贈禮等級限制"
           name="transactionMinLevelLimit"
           :rules="rules.transactionMinLevelLimit"
+          help="此設定僅在啟用贈禮功能後生效"
         >
           <a-input-number
             v-model:value="form.transactionMinLevelLimit"
@@ -1088,20 +1104,26 @@ const handleSubmit = async () => {
         </a-form-item>
 
         <a-form-item
-          v-if="showTransactionReservedBalance"
           label="贈禮保留額度"
           name="transactionReservedBalance"
           :rules="rules.transactionReservedBalance"
+          :help="showTransactionReservedBalance ? '此設定僅在啟用贈禮功能後生效' : '需先啟用「可贈禮」後才能設定'"
         >
           <a-input-number
             v-model:value="form.transactionReservedBalance"
             style="width: 100%"
             :min="0"
             :controls="false"
+            :disabled="!showTransactionReservedBalance"
           />
         </a-form-item>
 
-        <a-form-item label="贈禮手續費" name="tip" :rules="rules.tip">
+        <a-form-item
+          label="贈禮手續費"
+          name="tip"
+          :rules="rules.tip"
+          :help="form.sendGiftMode === 'not' ? '需先啟用「可贈禮」後才能設定' : undefined"
+        >
           <a-space direction="vertical" style="width: 100%">
             <a-radio-group v-model:value="form.tipType" :disabled="form.sendGiftMode === 'not'" @change="syncTipRelated">
               <a-radio :value="-1">
