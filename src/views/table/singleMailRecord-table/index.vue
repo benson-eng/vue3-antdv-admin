@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Dayjs } from 'dayjs';
-import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { TokenItem } from '@/api/backend/adminAccount/token';
 import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
 import type { GameInfo } from '@/api/backend/adminSystem/gameManagerServer';
@@ -10,15 +8,13 @@ import type {
   QueryMemberMailRecordsParams,
 } from '@/api/backend/mail';
 import type { TreasureItem } from '@/api/backend/treasureChestSystem';
-import type { TableColumn } from '@/components/core/dynamic-table';
+import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-table';
 
-import { SearchOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
+import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, h, onMounted, ref } from 'vue';
+import { computed, h, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
 import { queryTokens } from '@/api/backend/adminAccount/token';
 import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import { gameList as fetchGameList } from '@/api/backend/adminSystem/gameManagerServer';
@@ -29,10 +25,11 @@ import {
   queryMemberMailRecords,
 } from '@/api/backend/mail';
 import { treasureItemList as fetchTreasureItemList } from '@/api/backend/treasureChestSystem';
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '../../adminAccount/agent/constants';
+import { useTableConfig } from '../../adminAccount/masterAgent/useTableConfig';
 
 defineOptions({
   name: 'SingleMailRecordTable',
@@ -40,6 +37,23 @@ defineOptions({
 
 const { t } = useI18n('page.mail.singleMailRecordTable');
 const userStore = useUserStore();
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
+// 從 Layout 根元件 provide 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 /**
  * ============ 工具函數 ============
@@ -66,39 +80,28 @@ function pickByIdentity<T extends Record<string, any>>(
   return result;
 }
 
-// ============ 查詢條件 ============
-interface QueryState {
-  masterAgent: string;
-  agentID: string;
-  memberID?: string;
-  mailTitle?: string;
-  arrivalTime?: [Dayjs, Dayjs];
-}
+// ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
+// 已轉換為 DynamicTable formSchemas 模式
+// - 移除 query/appliedQuery 雙狀態模型
+// - 搜尋主控權完全由 DynamicTable 接管
+// - Context 切換時自動觸發 reload（Vue3 行為）
 
-const query = ref<QueryState>({
-  masterAgent: '',
-  agentID: '',
-  memberID: undefined,
-  mailTitle: undefined,
-  arrivalTime: undefined,
-});
-
-// 只有按下「查詢」才套用
-const appliedQuery = ref<QueryState>({ ...query.value });
-
-// ============ 會員搜索 ============
+// ============ 會員搜索（用於 DynamicTable 搜尋表單的 remote search）===========
 const memberLoading = ref(false);
 const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserItem }[]>([]);
 const memberLastQueryText = ref('');
 const memberLastAccountID = ref('');
 const memberPageSize = 10;
-const sMemberID = ref('');
-const sNickname = ref('');
+// 用於儲存選中的會員暱稱（用於表格顯示）
+const selectedMemberNickname = ref('');
 
-const fetchMemberOptions = async (queryText: string, append = false) => {
+// 當前選中的 agentID（用於會員搜尋）
+const currentAgentID = ref('');
+
+const fetchMemberOptions = async (queryText: string, agentID: string, append = false) => {
   memberLastQueryText.value = queryText;
 
-  if (!query.value.agentID) {
+  if (!agentID) {
     return;
   }
   if (!queryText || queryText.length < 2) {
@@ -109,10 +112,10 @@ const fetchMemberOptions = async (queryText: string, append = false) => {
 
   memberLoading.value = true;
   try {
-    const masterAgent = getMasterAgentByAgentID(query.value.agentID);
+    const masterAgent = getMasterAgentByAgentID(agentID);
     const res = await fuzzyQueryUser({
       masterAgent,
-      agentID: query.value.agentID,
+      agentID,
       queryText,
       limit: memberPageSize,
       lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
@@ -134,48 +137,26 @@ const fetchMemberOptions = async (queryText: string, append = false) => {
 };
 
 const onMemberSearch = debounce((text: string) => {
-  if (text && text.length >= 2) {
-    fetchMemberOptions(text, false);
+  if (text && text.length >= 2 && currentAgentID.value) {
+    fetchMemberOptions(text, currentAgentID.value, false);
   }
   else {
     memberOptions.value = [];
   }
 }, 300);
 
-const onMemberSelectChanged = (value: string) => {
-  if (!value) {
-    sMemberID.value = '';
-    sNickname.value = '';
-    query.value.memberID = undefined;
-    return;
-  }
-
-  const selected = memberOptions.value.find(opt => opt.value === value);
-  if (selected) {
-    // Vue2 格式：account@agentID
-    sMemberID.value = `${selected.raw.account}@${selected.raw.agentID}`;
-    sNickname.value = selected.raw.nickName;
-    query.value.memberID = `${selected.raw.account}@${selected.raw.agentID}`;
-  }
-};
-
 const onMemberPopupScroll = (e: Event) => {
   const target = e.target as HTMLElement;
   if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-    if (memberLastQueryText.value && memberLastQueryText.value.length >= 2) {
-      fetchMemberOptions(memberLastQueryText.value, true);
+    if (memberLastQueryText.value && memberLastQueryText.value.length >= 2 && currentAgentID.value) {
+      fetchMemberOptions(memberLastQueryText.value, currentAgentID.value, true);
     }
   }
 };
 
 // ============ 總代理和代理商 ============
-const masterAgentList = ref<MasterAgentItem[]>([]);
-const agentIDOptions = ref<{ label: string; value: string }[]>([]);
-const selectedMasterAgent = ref<string>('');
 const agentList = ref<{ label: string; value: string }[]>([]);
-const selectedAgent = ref<string>('');
 
-const isAgentIDDisabled = computed(() => userStore.level >= 4);
 const isAgentDisabled = computed(() => userStore.level >= 5);
 
 // ============ 幣別、道具、代幣、遊戲列表 ============
@@ -194,8 +175,10 @@ const mailStatusList = [
 ];
 
 // ============ 表格 ============
+// ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
+// 啟用 DynamicTable 內建搜尋表單，搜尋主控權完全由 DynamicTable 接管
 const [DynamicTable, dynamicTableInstance] = useTable({
-  search: false,
+  search: true,
 });
 
 type ColumnsRowData = MemberMailRecord & {
@@ -302,11 +285,12 @@ const formatMailAction = (mailAction: MailAction | string[]): string[] => {
   return newMailAction;
 };
 
-const columns = ref<TableColumn<ColumnsRowData>[]>([
+const baseColumns: TableColumn<ColumnsRowData>[] = [
   {
     title: t('tables.image') || '圖片',
     dataIndex: 'iconUrl',
     width: 100,
+    hideInSearch: true,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       if (!record.iconUrl) {
         return '';
@@ -322,17 +306,23 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
   {
     title: t('tables.mailTitle') || '郵件標題',
     dataIndex: 'title',
-    width: 200,
+    flexible: true,
+    minWidth: 200,
+    hideInSearch: true,
   },
   {
     title: t('tables.mailContent') || '郵件內容',
     dataIndex: 'content',
-    width: 300,
+    flexible: true,
+    minWidth: 300,
+    hideInSearch: true,
   },
   {
     title: t('tables.mailAction') || '郵件動作',
     dataIndex: 'mailAction',
-    width: 300,
+    flexible: true,
+    minWidth: 300,
+    hideInSearch: true,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       const actions = formatMailAction(record.mailAction);
       if (actions.length === 0) {
@@ -345,6 +335,7 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
     title: t('tables.arrivalTime') || '到達時間',
     dataIndex: 'arrivalTime',
     width: 180,
+    hideInSearch: true,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       return record.arrivalTime ? dayjs(record.arrivalTime).format('YYYY-MM-DD HH:mm:ss') : '';
     },
@@ -353,26 +344,176 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
     title: t('tables.mailSender') || '發送者',
     dataIndex: 'sender',
     width: 150,
+    hideInSearch: true,
   },
   {
     title: t('tables.member') || '會員',
     dataIndex: 'Nickname',
     width: 200,
+    hideInSearch: true,
   },
   {
     title: t('tables.status') || '狀態',
     dataIndex: 'status',
     width: 120,
+    hideInSearch: true,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       return formatMailStatus(record.status);
     },
   },
+];
+
+// ARCH03-01：SEARCH UI FIXED - 搜尋欄位獨立定義，確保 DynamicTable 初始化時可偵測到
+// 預設所有表格欄位隱藏搜尋
+baseColumns.forEach((col: any) => {
+  if (col.hideInSearch === undefined) {
+    col.hideInSearch = true;
+  }
+});
+
+// 搜尋專用欄位（computed，確保初始化時即可偵測）
+const searchOnlyColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
+  // 搜尋欄位 0：代理商（虛擬欄位，僅用於搜尋）
+  {
+    title: t('labels.agent') || '代理商',
+    dataIndex: '__agent_search__',
+    hideInTable: true,
+    hideInSearch: false,
+    searchField: 'agent',
+    formItemProps: {
+      label: t('labels.agent') || '代理商',
+      component: 'Select',
+      order: 0,
+      componentProps: () => ({
+        options: agentList.value,
+        disabled: isAgentDisabled.value,
+        placeholder: t('labels.agent') || '請選擇代理商',
+        allowClear: !isAgentDisabled.value,
+        onChange: (val: string) => {
+          // ARCH03-01：代理商變更時清空會員選擇（搜尋輔助元件調整）
+          const masterAgent = selectedMasterAgent.value;
+          if (masterAgent && val) {
+            const agentAccount = val.includes('.') ? val.split('.')[0] : val;
+            currentAgentID.value = `${agentAccount}.${masterAgent}`;
+          }
+          else if (masterAgent) {
+            currentAgentID.value = masterAgent;
+          }
+          else {
+            currentAgentID.value = '';
+          }
+          // 清空會員相關狀態（remote search 僅作為欄位輔助，不得直接觸發 reload）
+          memberOptions.value = [];
+          memberLastQueryText.value = '';
+          memberLastAccountID.value = '';
+          selectedMemberNickname.value = '';
+          // 清空搜尋表單中的會員欄位
+          const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
+          if (searchFormRef) {
+            searchFormRef.setFieldsValue({ memberID: undefined });
+          }
+        },
+      }),
+    },
+  },
+  // 搜尋欄位 1：會員（remote search，虛擬欄位，僅用於搜尋）
+  {
+    title: t('labels.member') || '會員',
+    dataIndex: '__member_search__',
+    hideInTable: true,
+    hideInSearch: false,
+    searchField: 'memberID',
+    formItemProps: {
+      label: t('labels.member') || '會員',
+      component: 'Select',
+      order: 1,
+      componentProps: () => ({
+        options: memberOptions.value,
+        loading: memberLoading.value,
+        disabled: !currentAgentID.value,
+        placeholder: '00001314 - 王小明',
+        allowClear: true,
+        showSearch: true,
+        filterOption: false,
+        onSearch: onMemberSearch,
+        onPopupScroll: onMemberPopupScroll,
+        onChange: (value: string) => {
+          if (value) {
+            const selected = memberOptions.value.find(opt => opt.value === value);
+            if (selected) {
+              selectedMemberNickname.value = selected.raw.nickName;
+            }
+          }
+          else {
+            selectedMemberNickname.value = '';
+          }
+        },
+      }),
+    },
+  },
+  // 搜尋欄位 2：郵件標題（虛擬欄位，僅用於搜尋）
+  {
+    title: t('labels.mailTitle') || '郵件標題',
+    dataIndex: '__mailTitle_search__',
+    hideInTable: true,
+    hideInSearch: false,
+    searchField: 'mailTitle',
+    formItemProps: {
+      label: t('labels.mailTitle') || '郵件標題',
+      component: 'Input',
+      order: 2,
+      componentProps: {
+        allowClear: true,
+        placeholder: t('labels.mailTitle') || '請輸入郵件標題',
+      },
+    },
+  },
+  // 搜尋欄位 3：到達時間（虛擬欄位，僅用於搜尋）
+  {
+    title: t('labels.arrivalTime') || '到達時間',
+    dataIndex: '__arrivalTime_search__',
+    hideInTable: true,
+    hideInSearch: false,
+    searchField: 'arrivalTime',
+    formItemProps: {
+      label: t('labels.arrivalTime') || '到達時間',
+      component: 'RangePicker',
+      order: 3,
+      componentProps: {
+        showTime: true,
+        format: 'YYYY-MM-DD HH:mm:ss',
+        placeholder: [t('datePicker.startDate') || '開始時間', t('datePicker.dueDate') || '結束時間'],
+      },
+    },
+  },
 ]);
+
+// ARCH03-01：SEARCH UI FIXED - 使用 computed 組合 columns，確保搜尋欄位在初始化時即可偵測
+const columns = computed<TableColumn<ColumnsRowData>[]>(() => [
+  ...searchOnlyColumns.value,
+  ...baseColumns,
+]);
+
+// 表格配置（對齊 agent 頁面的基礎架構）
+const tableConfig = useTableConfig(columns as any);
+
+// 計算 container 的 overflow-x 樣式（對齊 agent 頁）
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value as any;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // 其餘情況（'100%' 或 undefined）維持 hidden，避免多餘 scrollbar
+  return 'hidden';
+});
 
 /**
  * ============ API 調用 ============
  */
-const setCurrencyTypeList = async (masterAgent: string): Promise<void> => {
+const setCurrencyTypeList = async (_masterAgent: string): Promise<void> => {
   currencyTypeList.value = [];
   if (userStore.level === 4) {
     const currencies = userStore.currencies || [];
@@ -380,26 +521,15 @@ const setCurrencyTypeList = async (masterAgent: string): Promise<void> => {
       currencyTypeList.value.push({ name: item.currencyName, value: item.currencyCode });
     });
   }
-  else {
-    const masterAgentData = masterAgentList.value.find(ma => ma.account === masterAgent);
-    if (masterAgentData && masterAgentData.currencies && Array.isArray(masterAgentData.currencies)) {
-      masterAgentData.currencies.forEach((currencyItem: any) => {
-        if (currencyItem && typeof currencyItem === 'object' && currencyItem.currencyCode) {
-          currencyTypeList.value.push({
-            name: currencyItem.currencyName || currencyItem.currencyCode,
-            value: currencyItem.currencyCode,
-          });
-        }
-      });
-    }
-  }
+  // Level < 4 時，幣別列表由其他 API 或系統提供，這裡暫時保留空陣列
+  // 若未來需要從 masterAgent 資料取得幣別，可透過其他 API 取得
 };
 
 const setTreasureItemList = async (masterAgent: string): Promise<void> => {
   try {
     const res = await fetchTreasureItemList({ masterAgent });
-    if (res?.rows) {
-      treasureItemList.value = res.rows.reduce((acc: TreasureItem[], r) => {
+    if (res?.data?.rows) {
+      treasureItemList.value = res.data.rows.reduce((acc: TreasureItem[], r) => {
         if (
           r.type === 'eventItem'
           || r.type === 'gachapon'
@@ -417,10 +547,10 @@ const setTreasureItemList = async (masterAgent: string): Promise<void> => {
   }
 };
 
-const getTokenList = async () => {
+const getTokenList = async (masterAgent: string) => {
   tokenList.value = [];
   try {
-    const res = await queryTokens({ masterAgent: query.value.masterAgent });
+    const res = await queryTokens({ masterAgent });
     if (res) {
       tokenList.value = res;
     }
@@ -430,9 +560,9 @@ const getTokenList = async () => {
   }
 };
 
-const getGameList = async () => {
+const getGameList = async (masterAgent: string) => {
   try {
-    const res = await fetchGameList({ masterAgent: query.value.masterAgent });
+    const res = await fetchGameList({ masterAgent });
     if (res) {
       gameListAll.value = res.map(item => ({
         gameID: item.gameID,
@@ -443,17 +573,6 @@ const getGameList = async () => {
   }
   catch (error) {
     console.error('Failed to fetch game list:', error);
-  }
-};
-
-const fetchMasterAgentList = async () => {
-  try {
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = list || [];
-    agentIDOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
   }
 };
 
@@ -478,109 +597,127 @@ const fetchAgentList = async (masterAgent: string) => {
 /**
  * ============ 事件處理 ============
  */
-const onMasterAgentChanged = async (val: string) => {
-  selectedMasterAgent.value = val;
-  selectedAgent.value = '';
+/**
+ * ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
+ * 處理站長切換（從 Breadcrumb Context）
+ * - 重置搜尋表單條件
+ * - 自動觸發 DynamicTable reload（Vue3 行為：Context 切換時自動查詢）
+ */
+const handleMasterAgentChange = async (masterAgent: string) => {
   agentList.value = [];
   tokenList.value = [];
-  query.value.masterAgent = val;
-  sMemberID.value = '';
-  sNickname.value = '';
-  query.value.memberID = undefined;
+  currentAgentID.value = '';
   memberOptions.value = [];
+  memberLastQueryText.value = '';
+  memberLastAccountID.value = '';
+  selectedMemberNickname.value = '';
 
-  if (!val) {
+  if (!masterAgent) {
+    // 清空表格資料並觸發 reload（自動查詢）
+    await dynamicTableInstance?.reload?.(true);
     return;
   }
 
-  await setCurrencyTypeList(val);
-  await setTreasureItemList(val);
-  await getTokenList();
-  await getGameList();
+  await setCurrencyTypeList(masterAgent);
+  await setTreasureItemList(masterAgent);
+  await getTokenList(masterAgent);
+  await getGameList(masterAgent);
 
   // 如果有選擇總代理，獲取代理商列表
-  await fetchAgentList(val);
-  // 如果有代理商，自動選擇第一個
+  await fetchAgentList(masterAgent);
+
+  // 如果有代理商，自動選擇第一個並更新 currentAgentID
   if (agentList.value.length > 0 && userStore.level <= 4) {
-    selectedAgent.value = agentList.value[0].value;
-    const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-    query.value.agentID = `${agentAccount}.${val}`;
+    const firstAgent = agentList.value[0].value;
+    const agentAccount = firstAgent.includes('.') ? firstAgent.split('.')[0] : firstAgent;
+    currentAgentID.value = `${agentAccount}.${masterAgent}`;
   }
   else {
-    query.value.agentID = val;
-  }
-};
-
-const onAgentChanged = (val: string) => {
-  selectedAgent.value = val;
-  if (selectedMasterAgent.value && val) {
-    const agentAccount = val.includes('.') ? val.split('.')[0] : val;
-    query.value.agentID = `${agentAccount}.${selectedMasterAgent.value}`;
-  }
-  else if (selectedMasterAgent.value) {
-    query.value.agentID = selectedMasterAgent.value;
-  }
-  else {
-    query.value.agentID = '';
+    currentAgentID.value = masterAgent;
   }
 
-  query.value.memberID = undefined;
-  sMemberID.value = '';
-  sNickname.value = '';
-  memberOptions.value = [];
-};
-
-const onArrivalTimeDatePickChanged = (value: [Dayjs, Dayjs] | [string, string] | null) => {
-  if (value && Array.isArray(value) && value.length === 2) {
-    if (typeof value[0] === 'string') {
-      query.value.arrivalTime = [dayjs(value[0]), dayjs(value[1])];
-    }
-    else {
-      query.value.arrivalTime = value as [Dayjs, Dayjs];
+  // 重置搜尋表單（清空所有搜尋條件）
+  await nextTick();
+  const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.resetFields();
+    // 如果有預設 agent，重新設置
+    if (agentList.value.length > 0 && userStore.level <= 4) {
+      searchFormRef.setFieldsValue({ agent: agentList.value[0].value });
     }
   }
-  else {
-    query.value.arrivalTime = undefined;
-  }
+
+  // ARCH03-01：自動觸發 reload（Vue3 行為：Context 切換時自動查詢）
+  // 注意：如果必填欄位（agent、memberID）未填寫，loadTableData 會返回空結果
+  await dynamicTableInstance?.reload?.(true);
 };
 
-const searchConditionValidator = (): void => {
-  if (!query.value.masterAgent || !query.value.agentID) {
-    message.error(t('notify.masterAgentAndAgentFieldMissed') || '總代理和代理商欄位不能為空');
-    throw new Error('params missed');
-  }
-  if (!query.value.memberID) {
-    message.error(t('notify.needAccount') || '會員欄位不能為空');
-    throw new Error('memberID missed');
-  }
-};
+// ARCH03-01：COMPLETED - 監聽 contextVersion 變更，當站長切換時重置搜尋條件並自動觸發查詢
+watch(
+  () => contextVersion.value,
+  () => {
+    const masterAgent = selectedMasterAgent.value;
+    handleMasterAgentChange(masterAgent);
+  },
+);
 
-const loadTableData = async (_params: any) => {
-  if (!appliedQuery.value.masterAgent || !appliedQuery.value.agentID || !appliedQuery.value.memberID) {
+/**
+ * ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
+ * DynamicTable dataRequest（Submit 才觸發）
+ * - 直接使用 DynamicTable 傳入的搜尋參數
+ * - 已移除 query/appliedQuery 雙狀態模型
+ * - 搜尋主控權完全由 DynamicTable formSchemas 接管
+ */
+const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
+  if (!masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
   }
 
+  // 從搜尋表單取得參數
+  const agent = String((params as any)?.agent ?? '').trim();
+  const memberID = String((params as any)?.memberID ?? '').trim();
+  const mailTitle = String((params as any)?.mailTitle ?? '').trim();
+  const arrivalTime = (params as any)?.arrivalTime;
+
+  // 驗證必填欄位
+  if (!agent || !memberID) {
+    if (!agent) {
+      message.error(t('notify.masterAgentAndAgentFieldMissed') || '總代理和代理商欄位不能為空');
+    }
+    if (!memberID) {
+      message.error(t('notify.needAccount') || '會員欄位不能為空');
+    }
+    return { items: [], meta: { totalItems: 0 } };
+  }
+
+  // 構建 agentID
+  const agentAccount = agent.includes('.') ? agent.split('.')[0] : agent;
+  const agentID = `${agentAccount}.${masterAgent}`;
+
+  // 更新 currentAgentID（用於會員搜尋）
+  currentAgentID.value = agentID;
+
   const postData: any = {
-    masterAgent: appliedQuery.value.masterAgent,
-    memberID: appliedQuery.value.memberID,
+    masterAgent,
+    memberID,
   };
 
   // 處理 mailTitle：如果為空字符串則不傳遞
-  if (appliedQuery.value.mailTitle && appliedQuery.value.mailTitle.trim().length > 0) {
-    postData.mailTitle = appliedQuery.value.mailTitle;
+  if (mailTitle && mailTitle.trim().length > 0) {
+    postData.mailTitle = mailTitle;
   }
 
-  // 處理 arrivalTime：對齊 Vue2 的邏輯
-  // Vue2 中檢查：if (this.sArrivalTime === null || this.sArrivalTime[0] === undefined)
-  if (
-    appliedQuery.value.arrivalTime
-    && appliedQuery.value.arrivalTime[0]
-    && appliedQuery.value.arrivalTime[1]
-  ) {
-    postData.arrivalTime = {
-      startTime: appliedQuery.value.arrivalTime[0].toDate(),
-      endTime: appliedQuery.value.arrivalTime[1].toDate(),
-    };
+  // 處理 arrivalTime
+  if (arrivalTime && Array.isArray(arrivalTime) && arrivalTime.length === 2) {
+    const startTime = dayjs.isDayjs(arrivalTime[0]) ? arrivalTime[0] : dayjs(arrivalTime[0]);
+    const endTime = dayjs.isDayjs(arrivalTime[1]) ? arrivalTime[1] : dayjs(arrivalTime[1]);
+    if (startTime.isValid() && endTime.isValid()) {
+      postData.arrivalTime = {
+        startTime: startTime.toDate(),
+        endTime: endTime.toDate(),
+      };
+    }
   }
 
   // 移除 undefined 和空字符串的欄位
@@ -616,7 +753,7 @@ const loadTableData = async (_params: any) => {
         mailAction: item.mailAction || { type: EMailActionTypes.DO_NOTHING },
         arrivalTime: item.arrivalTime,
         sender: item.sender || '',
-        Nickname: sNickname.value,
+        Nickname: selectedMemberNickname.value,
         status: item.status ?? EMailStatus.ENABLED,
       };
 
@@ -647,244 +784,82 @@ const loadTableData = async (_params: any) => {
   }
 };
 
-const handleFilter = async () => {
-  try {
-    searchConditionValidator();
-    appliedQuery.value = {
-      ...query.value,
-      arrivalTime: query.value.arrivalTime ? [...query.value.arrivalTime] as [Dayjs, Dayjs] : undefined,
-    };
-    await dynamicTableInstance?.reload?.(true);
-  }
-  catch (error) {
-    // 驗證失敗，不執行查詢
-  }
-};
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - masterAgent / agent：頁面級選擇器，用於構建查詢參數
+ * - memberID / mailTitle / arrivalTime：查詢條件，直接傳遞給後端 API
+ * - 所有查詢條件都通過 queryMemberMailRecords API 發送到後端
+ * - 沒有前端過濾邏輯
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 所有查詢條件都直接傳遞給後端 API，沒有前端過濾
+  // 因此無論是否有查詢條件，都顯示為 BACKEND
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
 
 // ============ 初始化 ============
 onMounted(async () => {
-  await fetchMasterAgentList();
-
-  if (userStore.level === 5) {
-    if (userStore.masterAgent && userStore.agent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      selectedAgent.value = userStore.agent;
-      const agentAccount = userStore.agent.includes('.') ? userStore.agent.split('.')[0] : userStore.agent;
-      query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      query.value.masterAgent = userStore.masterAgent;
-      await fetchAgentList(userStore.masterAgent);
-      await setCurrencyTypeList(userStore.masterAgent);
-      await setTreasureItemList(userStore.masterAgent);
-      await getTokenList();
-      await getGameList();
-    }
-  }
-  else if (userStore.level === 4) {
-    if (userStore.masterAgent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      query.value.agentID = userStore.masterAgent;
-      query.value.masterAgent = userStore.masterAgent;
-      await fetchAgentList(userStore.masterAgent);
-      await setCurrencyTypeList(userStore.masterAgent);
-      await setTreasureItemList(userStore.masterAgent);
-      await getTokenList();
-      await getGameList();
-      if (agentList.value.length > 0) {
-        selectedAgent.value = agentList.value[0].value;
-        const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-        query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      }
-    }
-  }
-  else if (agentIDOptions.value.length > 0) {
-    selectedMasterAgent.value = agentIDOptions.value[0].value;
-    query.value.masterAgent = agentIDOptions.value[0].value;
-    await fetchAgentList(agentIDOptions.value[0].value);
-    await setCurrencyTypeList(agentIDOptions.value[0].value);
-    await setTreasureItemList(agentIDOptions.value[0].value);
-    await getTokenList();
-    await getGameList();
-    if (agentList.value.length > 0) {
-      selectedAgent.value = agentList.value[0].value;
-      const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-      query.value.agentID = `${agentAccount}.${agentIDOptions.value[0].value}`;
-    }
-    else {
-      query.value.agentID = agentIDOptions.value[0].value;
-    }
+  // 使用 Breadcrumb Context 的站長值進行初始化
+  const masterAgent = selectedMasterAgent.value;
+  if (masterAgent) {
+    await handleMasterAgentChange(masterAgent);
   }
 });
+
+// ARCH03-01：COMPLETED - 搜尋模型已升級
+// 移除不必要的 watcher：agent 變化已在 formItemProps onChange 中處理
+// currentAgentID 的更新由搜尋表單的 onChange 事件驅動，無需額外監聽
 </script>
 
 <template>
   <div class="app-container single-mail-record-table">
-    <div class="filter-container">
-      <div class="wrap">
-        <!-- 總代理選擇器 -->
-        <div
-          v-if="!isAgentIDDisabled"
-          class="input_group"
-        >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.masterAgent') || '總代理' }}</label>
+    <!-- ARCH03-01：SEARCH UI FIXED - 搜尋模型已升級，搜尋區正確顯示 -->
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
+    >
+      <DynamicTable
+        row-key="id"
+        :columns="columns"
+        :data-request="loadTableData"
+        :scroll="{ x: tableConfig.scrollX.value }"
+        :form-props="{
+          showSubmitButton: true,
+          showResetButton: true,
+          showAdvancedButton: true,
+          submitOnReset: true,
+        }"
+      >
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span>{{ t('title') || '單一會員郵件記錄' }}</span>
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
           </div>
-          <div class="my_input">
-            <AdminAccountSelector
-              v-model="selectedMasterAgent"
-              value-type="account"
-              :disabled="isAgentIDDisabled"
-              @update:model-value="onMasterAgentChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 代理商選擇器 -->
-        <div
-          v-if="selectedMasterAgent"
-          class="input_group"
-        >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.agent') || '代理商' }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="selectedAgent"
-              :options="agentList"
-              :disabled="isAgentDisabled"
-              placeholder="請選擇代理商"
-              style="width: 200px"
-              :allow-clear="!isAgentDisabled"
-              @change="onAgentChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 會員搜索 -->
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.member') || '會員' }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="query.memberID"
-              show-search
-              :filter-option="false"
-              :options="memberOptions"
-              :loading="memberLoading"
-              :disabled="!query.agentID"
-              style="width: 200px"
-              allow-clear
-              placeholder="00001314 - 王小明"
-              @search="onMemberSearch"
-              @change="onMemberSelectChanged"
-              @popup-scroll="onMemberPopupScroll"
-            />
-          </div>
-        </div>
-
-        <!-- 郵件標題 -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.mailTitle') || '郵件標題' }}</label>
-          </div>
-          <div class="my_input">
-            <a-input
-              v-model:value="query.mailTitle"
-              style="width: 200px"
-              allow-clear
-              placeholder="請輸入郵件標題"
-            />
-          </div>
-        </div>
-
-        <!-- 到達時間 -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.arrivalTime') || '到達時間' }}</label>
-          </div>
-          <div class="my_jcCenter">
-            <a-range-picker
-              v-model:value="query.arrivalTime"
-              show-time
-              format="YYYY-MM-DD HH:mm:ss"
-              :placeholder="[t('datePicker.startDate') || '開始時間', t('datePicker.dueDate') || '結束時間']"
-              style="width: 400px"
-              @change="onArrivalTimeDatePickChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 查詢按鈕 -->
-        <div class="input_group">
-          <a-button
-            type="primary"
-            class="input_btn"
-            @click="handleFilter"
-          >
-            <template #icon>
-              <SearchOutlined />
-            </template>
-            {{ t('search') || '查詢' }}
-          </a-button>
-        </div>
-      </div>
+        </template>
+      </DynamicTable>
     </div>
-
-    <DynamicTable
-      :columns="columns"
-      :data-request="loadTableData"
-      :scroll="{ x: 'max-content' }"
-    />
   </div>
 </template>
 
 <style lang="less" scoped>
 .single-mail-record-table {
-  .wrap {
-    display: flex;
-    flex-wrap: wrap;
-    background-color: #e7e7e7;
-    align-items: center;
-
-    .item {
-      margin-top: 10px;
-    }
-
-    .input_btn {
-      margin: 10px 0;
-    }
-  }
-
-  .input_group {
-    display: flex;
-    padding: 10px;
-    align-items: center;
-
-    .txt {
-      width: 100px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .my_input {
-      width: 200px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .my_select {
-      width: 200px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .my_jcCenter {
-      display: flex;
-      align-items: center;
-    }
+  .table-container {
+    width: 100%;
   }
 }
 </style>

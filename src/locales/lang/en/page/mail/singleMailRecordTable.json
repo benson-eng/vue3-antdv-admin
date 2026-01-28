@@ -37,9 +37,9 @@
     "connectionError": "Connection Error"
   },
   "search": "Search",
+  "title": "Single Member Mail Record",
   "datePicker": {
     "startDate": "Start Time",
     "dueDate": "End Time"
   }
 }
-

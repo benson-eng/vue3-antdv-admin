@@ -37,9 +37,9 @@
     "connectionError": "連接錯誤"
   },
   "search": "查詢",
+  "title": "单一会员邮件记录",
   "datePicker": {
-    "startDate": "開始時間",
-    "dueDate": "結束時間"
+    "startDate": "开始时间",
+    "dueDate": "结束时间"
   }
 }
-

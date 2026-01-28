@@ -37,6 +37,7 @@
     "connectionError": "連接錯誤"
   },
   "search": "查詢",
+  "title": "單一會員郵件記錄",
   "datePicker": {
     "startDate": "開始時間",
     "dueDate": "結束時間"
