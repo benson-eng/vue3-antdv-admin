@@ -13,7 +13,7 @@ import { computed, inject, onMounted, ref, watch } from 'vue';
 // import { nextTick } from 'vue'; // 備註：代理欄位恢復時需要取消備註
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
 import { queryTokens } from '@/api/backend/adminAccount/token';
-import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
+import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import { treasureItemList as fetchTreasureItemList } from '@/api/backend/treasureChestSystem';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
@@ -184,6 +184,10 @@ interface MissionRecordItem {
   id: number;
   settingID: number;
   memberID: string;
+  /** 帳戶ID（由 queryAccountBaseInfo 批次補齊） */
+  accountID?: string;
+  /** 暱稱（由 queryAccountBaseInfo 批次補齊） */
+  nickName?: string;
   taskId?: string;
   missionCreatedTime?: string;
   missionCompletedTime?: string;
@@ -270,12 +274,31 @@ const baseColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
     hideInTable: true,
   },
   {
+    title: '帳戶ID',
+    dataIndex: 'accountID',
+    flexible: true,
+    minWidth: 140,
+    hideInSearch: true,
+    customRender: ({ text }) => text || '-',
+  },
+  {
+    title: '暱稱',
+    dataIndex: 'nickName',
+    flexible: true,
+    minWidth: 140,
+    hideInSearch: true,
+    customRender: ({ text }) => text || '-',
+  },
+  {
+    // 會員ID 欄位僅保留作為搜尋欄位使用，資料表中不再顯示（ARCH-02）
     title: t('tables.memberID') || '會員ID',
     dataIndex: 'memberID',
     /** 彈性寬度欄位：會員ID長度可能不同 */
     flexible: true,
     /** flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0 */
     minWidth: 200,
+    /** 不在資料表中顯示，僅用於 DynamicTable 搜尋區 */
+    hideInTable: true,
   },
   {
     title: t('tables.taskId') || '任務ID',
@@ -404,8 +427,8 @@ const columns = computed<TableColumn<ColumnsRowData>[]>(() => {
       hideInTable: isVisibleKeysValid ? !isVisible : false,
     };
 
-    // 固定規則：ID 欄位（settingID）永遠不在資料表中顯示
-    if (key === 'settingID') {
+    // 固定規則：ID 欄位（settingID）與原始會員ID（memberID）永遠不在資料表中顯示
+    if (key === 'settingID' || key === 'memberID') {
       processedCol.hideInTable = true;
     }
 
@@ -674,27 +697,61 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
     // 處理多種可能的 API 響應結構
     const resData = res as any;
 
-    let items: MissionRecordItem[] = [];
+    let rawItems: any[] = [];
     let total = 0;
 
     // 路徑 1: res.data (API 定義的結構)
     if (resData?.data && Array.isArray(resData.data)) {
-      items = resData.data;
+      rawItems = resData.data;
       total = resData.data.length;
     }
     // 路徑 2: res 本身就是陣列
     else if (Array.isArray(resData)) {
-      items = resData;
+      rawItems = resData;
       total = resData.length;
     }
     // 確保 items 是數組
     else {
-      items = [];
+      rawItems = [];
       total = 0;
     }
 
-    // 處理數據格式
-    const processedItems = items.map((item: any) => {
+    /**
+     * ARCH-02：批次補齊會員基本資料（accountID / nickName）
+     */
+    const accounts = Array.from(
+      new Set(
+        rawItems
+          .map((i: any) => String(i.memberID || '').split('@')[0])
+          .filter(Boolean),
+      ),
+    );
+
+    let accountInfoMap: Record<string, { id?: string; nickName?: string }> = {};
+    let accountOnlyMap: Record<string, { id?: string; nickName?: string }> = {};
+    if (accounts.length && masterAgent) {
+      try {
+        const baseRes = await queryAccountBaseInfo({ masterAgent, accounts });
+        const baseListRaw = baseRes as { data?: any[] } | any[] | undefined;
+        const baseList = Array.isArray(baseListRaw) ? baseListRaw : baseListRaw?.data ?? [];
+        accountInfoMap = baseList.reduce((acc, cur) => {
+          const key = `${cur.account}@${cur.agentID}`;
+          acc[key] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+        accountOnlyMap = baseList.reduce((acc, cur) => {
+          acc[cur.account] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+      }
+      catch (error) {
+        // 會員基本資料查詢失敗不影響主列表，只記錄警告
+        console.warn('[MissionRecordTable] Failed to fetch member base info', error);
+      }
+    }
+
+    // 處理數據格式並合併會員基本資料
+    const processedItems = rawItems.map((item: any) => {
       let missionCompleted = false;
       if (item.missionCompletedTime !== null && item.missionCompletedTime !== undefined) {
         missionCompleted = true;
@@ -711,10 +768,16 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
         }
       }
 
+      const memberIDKey = String(item.memberID || '');
+      const accountKey = memberIDKey.split('@')[0];
+      const baseInfo = accountInfoMap[memberIDKey] || accountOnlyMap[accountKey] || {};
+
       const processedItem: MissionRecordItem = {
         id: item.id || item.settingID || 0,
         settingID: item.settingID || item.id || 0,
         memberID: item.memberID || '',
+        accountID: baseInfo.id || '',
+        nickName: baseInfo.nickName || '',
         taskId: item.setting?.extraInfo?.taskId || '',
         missionCreatedTime: item.missionCreatedTime || item.createdTime,
         missionCompletedTime: item.missionCompletedTime,
