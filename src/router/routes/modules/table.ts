@@ -59,6 +59,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.table.redemptionCodeRecord'),
           icon: 'ant-design:table-outlined',
+          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+          showMasterAgent: true,
         },
       },
       {

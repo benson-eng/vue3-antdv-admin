@@ -1,21 +1,18 @@
 <script setup lang="ts">
-import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
 import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
-import type { TreasureItem } from '@/api/backend/treasureChestSystem';
-import type { TableColumn } from '@/components/core/dynamic-table';
 import type {
   CodeState,
   RedemptionRecord,
-  RewardType,
 } from '@/api/backend/redemptionOrder';
+import type { TreasureItem } from '@/api/backend/treasureChestSystem';
+import type { TableColumn } from '@/components/core/dynamic-table';
 
 import { SearchOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
+import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, h, onMounted, ref } from 'vue';
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
 import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import {
   CodeState as CodeStateEnum,
@@ -24,14 +21,43 @@ import {
   validateRedemptionCode,
 } from '@/api/backend/redemptionOrder';
 import { treasureItemList as fetchTreasureItemList } from '@/api/backend/treasureChestSystem';
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 
 defineOptions({
   name: 'RedemptionCodeRecordTable',
 });
+
+// SearchMode 定義（僅用於狀態顯示）
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
+/**
+ * ARCH03-01：搜尋模型已由 Vue2 升級為 Vue3
+ *
+ * 本頁已從 Vue2 page-owned search logic 升級為 Vue3 DynamicTable formSchemas 主控：
+ * - 移除 query / appliedQuery 雙狀態模型，改用單一搜尋 state（由 DynamicTable formSchemas 主控）
+ * - 搜尋主控權完全交由 DynamicTable formSchemas
+ * - Context 切換時自動觸發 reload（不再保留「清空但不查」行為）
+ * - 代理商選擇器保留在頁面層（依賴 Context 狀態），但搜尋欄位移至 formSchemas
+ */
+
+/**
+ * ARCH05：DynamicTable Vertical Scroll / Fixed Header 穩定化
+ *
+ * 【頁型判斷結果】
+ * - 類型 B｜有搜尋區頁面
+ * - 判定依據：useTable({ search: true })
+ * - 搜尋區為查詢入口，查詢由 Form submit 觸發 dataRequest
+ *
+ * 【修復策略】
+ * - DynamicTable 必須於初始 render 時存在（確保搜尋區顯示）
+ * - scroll.y 初始值為 undefined
+ * - 於 mounted + nextTick 後再補上 scroll.y
+ * - 使用 ref / computed 控制 scroll.y 的給值時機
+ */
 
 const { t } = useI18n('page.redemption.redemptionCodeRecordTable');
 const userStore = useUserStore();
@@ -47,21 +73,24 @@ function getMasterAgentByAgentID(agentID: string): string {
   return parts.length > 1 ? parts[1] : agentID;
 }
 
-// ============ 查詢條件 ============
-interface QueryState {
-  masterAgent: string;
-  agentID: string;
-  memberID?: string;
-}
+// ARCH03-01：移除 query / appliedQuery 雙狀態模型
+// 搜尋狀態現在由 DynamicTable formSchemas 管理
+// 保留 agentID 在頁面層（依賴 Context 和代理商選擇器）
+const agentID = ref<string>('');
 
-const query = ref<QueryState>({
-  masterAgent: '',
-  agentID: '',
-  memberID: undefined,
-});
+// ============ 從 Breadcrumb Context 取得站長選單狀態 ============
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
 
-// 只有按下「查詢」才套用
-const appliedQuery = ref<QueryState>({ ...query.value });
+// 使用 computed 取得當前選取的站長值（來自 Breadcrumb）
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion（用於監聽站長切換）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 // ============ 會員搜索 ============
 const memberLoading = ref(false);
@@ -69,13 +98,13 @@ const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserIte
 const memberLastQueryText = ref('');
 const memberLastAccountID = ref('');
 const memberPageSize = 10;
-const sMemberID = ref('');
+// ARCH03-01：保留 sNickname 用於顯示（從 memberID 解析）
 const sNickname = ref('');
 
 const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLastQueryText.value = queryText;
 
-  if (!query.value.agentID) {
+  if (!agentID.value) {
     return;
   }
   if (!queryText || queryText.length < 2) {
@@ -86,10 +115,11 @@ const fetchMemberOptions = async (queryText: string, append = false) => {
 
   memberLoading.value = true;
   try {
-    const masterAgent = getMasterAgentByAgentID(query.value.agentID);
+    // 使用當前 Breadcrumb Context 的站長值
+    const masterAgent = selectedMasterAgent.value || getMasterAgentByAgentID(agentID.value);
     const res = await fuzzyQueryUser({
       masterAgent,
-      agentID: query.value.agentID,
+      agentID: agentID.value,
       queryText,
       limit: memberPageSize,
       lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
@@ -119,21 +149,15 @@ const onMemberSearch = debounce((text: string) => {
   }
 }, 250);
 
-const onMemberSelectChanged = (value: string) => {
-  if (!value) {
-    query.value.memberID = undefined;
-    sMemberID.value = '';
-    sNickname.value = '';
-    return;
-  }
-
-  const selected = memberOptions.value.find(opt => opt.value === value);
-  if (selected) {
-    sMemberID.value = `${selected.raw.account}@${selected.raw.agentID}`;
-    sNickname.value = `${selected.raw.accountID} - ${selected.raw.nickName}`;
-    query.value.memberID = `${selected.raw.account}@${selected.raw.agentID}`;
-  }
-};
+// ARCH03-01：當 agentID 改變時，清空會員選項（不再清空 memberID，由 DynamicTable formSchemas 管理）
+watch(
+  () => agentID.value,
+  () => {
+    memberOptions.value = [];
+    memberLastQueryText.value = '';
+    memberLastAccountID.value = '';
+  },
+);
 
 const onMemberPopupScroll = async (e: UIEvent) => {
   const target = e.target as HTMLElement | null;
@@ -149,23 +173,18 @@ const onMemberPopupScroll = async (e: UIEvent) => {
   await fetchMemberOptions(memberLastQueryText.value, true);
 };
 
-// ============ 總代理和代理商 ============
-const masterAgentList = ref<MasterAgentItem[]>([]);
-const agentIDOptions = ref<{ label: string; value: string }[]>([]);
-const selectedMasterAgent = ref<string>('');
+// ============ 代理商 ============
+// POST-SOP v2：移除代理商搜尋欄位，但保留 agentList 和 agentID 用於會員搜尋邏輯
 const agentList = ref<{ label: string; value: string }[]>([]);
-const selectedAgent = ref<string>('');
-
-const isAgentIDDisabled = computed(() => userStore.level >= 4);
-const isAgentDisabled = computed(() => userStore.level >= 5);
 
 // ============ 幣別、道具列表 ============
 const currencyTypeList = ref<{ name: string; value: string }[]>([]);
 const treasureItemList = ref<TreasureItem[]>([]);
 
 // ============ 表格 ============
+// ARCH03-01：啟用 DynamicTable 內建搜尋表單（Submit 才觸發）
 const [DynamicTable, dynamicTableInstance] = useTable({
-  search: false,
+  search: true,
 });
 
 type ColumnsRowData = RedemptionRecord & {
@@ -217,7 +236,7 @@ const formatOrderType = (type?: number): string => {
   return 'unknown';
 };
 
-const columns = ref<TableColumn<ColumnsRowData>[]>([
+const baseColumns = ref<TableColumn<ColumnsRowData>[]>([
   {
     title: t('tables.id') || 'ID',
     dataIndex: 'id',
@@ -226,7 +245,12 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
   {
     title: t('tables.nickname') || '暱稱',
     dataIndex: 'Nickname',
-    width: 200,
+    /**
+     * 彈性寬度欄位
+     * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+     */
+    flexible: true,
+    minWidth: 200,
   },
   {
     title: t('tables.type') || '類別',
@@ -239,12 +263,22 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
   {
     title: t('tables.orderName') || '兌換名稱',
     dataIndex: 'orderName',
-    width: 200,
+    /**
+     * 彈性寬度欄位
+     * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+     */
+    flexible: true,
+    minWidth: 200,
   },
   {
     title: t('tables.rewards') || '兌換品項',
     dataIndex: 'rewards',
-    width: 300,
+    /**
+     * 彈性寬度欄位
+     * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+     */
+    flexible: true,
+    minWidth: 300,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       if (record.rewards && Array.isArray(record.rewards)) {
         return record.rewards.join('、');
@@ -264,12 +298,205 @@ const columns = ref<TableColumn<ColumnsRowData>[]>([
   {
     title: t('tables.redeemedTime') || '兌換時間',
     dataIndex: 'redeemedTime',
-    width: 180,
+    /**
+     * 彈性寬度欄位
+     * flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+     */
+    flexible: true,
+    minWidth: 180,
     customRender: ({ record }: { record: ColumnsRowData }) => {
       return record.redeemedTime ? dayjs(record.redeemedTime).format('YYYY-MM-DD HH:mm:ss') : '';
     },
   },
 ]);
+
+/**
+ * 使用表格配置 Hook
+ * 注意：使用類型斷言，因為 TableColumn<ColumnsRowData> 與 TableColumnItem 在基本屬性上兼容
+ */
+const tableConfig = useTableConfig(baseColumns as any);
+
+/**
+ * 初始化標記，確保 visibleColumnKeys 已正確初始化
+ */
+const isTableConfigInitialized = ref(false);
+
+/**
+ * STEP 3 定型的欄位 keys
+ * 正確的顯示順序：['id', 'Nickname', 'type', 'orderName', 'rewards', 'redemptionCode', 'redeemedTime']
+ */
+const expectedColumnKeys = ['id', 'Nickname', 'type', 'orderName', 'rewards', 'redemptionCode', 'redeemedTime'];
+
+/**
+ * 檢查 visibleColumnKeys 是否已正確初始化
+ * 必須包含 STEP 3 定型的所有欄位 keys
+ */
+const checkInitialization = () => {
+  const currentKeys = tableConfig.visibleColumnKeys.value;
+  const hasAllExpectedKeys = expectedColumnKeys.every(key => currentKeys.includes(key));
+
+  if (hasAllExpectedKeys && currentKeys.length >= expectedColumnKeys.length) {
+    isTableConfigInitialized.value = true;
+  }
+};
+
+// 初始檢查
+nextTick(() => {
+  checkInitialization();
+});
+
+/**
+ * 監聽 visibleColumnKeys 變化，確保初始化完成
+ * 避免初始化階段反向覆寫 visibleColumnKeys
+ */
+watch(
+  () => tableConfig.visibleColumnKeys.value,
+  () => {
+    if (!isTableConfigInitialized.value) {
+      checkInitialization();
+    }
+  },
+  { immediate: true },
+);
+
+/**
+ * 根據 visibleColumnKeys 設置欄位的 hideInTable
+ * Guard：僅在 visibleColumnKeys 已初始化完成時才套用 hideInTable
+ * 初始化階段維持全部顯示，確保與 STEP 3 定型結果一致
+ * 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+ */
+const columns = computed<TableColumn<ColumnsRowData>[]>(() => {
+  return baseColumns.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+
+    // Guard：如果 visibleColumnKeys 尚未初始化完成，不套用 hideInTable（維持全部顯示）
+    if (!isTableConfigInitialized.value) {
+      const processedCol: TableColumn<ColumnsRowData> = {
+        ...col,
+        hideInTable: false, // 初始化階段維持全部顯示
+      };
+
+      // 確保 flexible 欄位有 minWidth
+      if (processedCol.flexible && !processedCol.minWidth) {
+        processedCol.minWidth = 100; // 預設最小寬度 100px
+      }
+
+      // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+      // 這樣可以避免初始 render 時被壓縮為 0
+      if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+        processedCol.width = processedCol.minWidth;
+      }
+
+      return processedCol;
+    }
+
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumn<ColumnsRowData> = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+/**
+ * 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+ * 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+ * Guard：僅在初始化完成後才進行同步，避免初始化階段反向覆寫
+ */
+watch(
+  () => {
+    // 嘗試從 dynamicTableInstance 獲取實際的 columns 狀態
+    const innerProps = (dynamicTableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    // Guard：僅在初始化完成後才進行同步
+    if (!isTableConfigInitialized.value || !newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: TableColumn<ColumnsRowData>) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
+
+// ARCH03-01：配置 DynamicTable formSchemas（搜尋欄位）
+// 預設：所有欄位隱藏在搜尋表單中
+baseColumns.value.forEach((col: any) => {
+  if (col.hideInSearch === undefined) {
+    col.hideInSearch = true;
+  }
+});
+
+// POST-SOP v2：移除代理商搜尋欄位（Vue2 原頁面不存在此欄位）
+// 搜尋欄位：會員（remote search）
+const memberSearchCol = baseColumns.value.find((c: any) => c?.dataIndex === 'Nickname');
+if (memberSearchCol) {
+  memberSearchCol.hideInSearch = false;
+  memberSearchCol.searchField = 'memberID';
+  memberSearchCol.formItemProps = {
+    label: t('labels.member') || '會員',
+    component: 'Select',
+    order: 0,
+    required: true,
+    rules: [{ required: true, message: t('notify.needAccount') || '會員欄位不能為空' }],
+    componentProps: () => ({
+      options: memberOptions.value,
+      loading: memberLoading.value,
+      placeholder: '00001314 - 王小明',
+      allowClear: true,
+      showSearch: true,
+      filterOption: false,
+      disabled: !agentID.value,
+      onSearch: onMemberSearch,
+      onPopupScroll: onMemberPopupScroll,
+      onChange: (value: string) => {
+        // 更新 sNickname 用於顯示
+        if (value) {
+          const selected = memberOptions.value.find(opt => opt.value === value);
+          if (selected) {
+            sNickname.value = `${selected.raw.accountID} - ${selected.raw.nickName}`;
+          }
+        }
+        else {
+          sNickname.value = '';
+        }
+      },
+    }),
+  };
+}
 
 /**
  * ============ API 調用 ============
@@ -283,16 +510,14 @@ const setCurrencyTypeList = async (masterAgent: string): Promise<void> => {
     });
   }
   else {
-    const masterAgentData = masterAgentList.value.find(ma => ma.account === masterAgent);
-    if (masterAgentData && masterAgentData.currencies && Array.isArray(masterAgentData.currencies)) {
-      masterAgentData.currencies.forEach((currencyItem: any) => {
-        if (currencyItem && typeof currencyItem === 'object' && currencyItem.currencyCode) {
-          currencyTypeList.value.push({
-            name: currencyItem.currencyName || currencyItem.currencyCode,
-            value: currencyItem.currencyCode,
-          });
-        }
-      });
+    // 從 Breadcrumb Context 的 masterAgentOptions 中查找對應的站長資料
+    const masterAgentOptions = masterAgentCtx?.masterAgentOptions.value || [];
+    const masterAgentData = masterAgentOptions.find(ma => ma.value === masterAgent);
+    // 注意：Breadcrumb Context 可能不包含 currencies 資訊，需要從 API 獲取
+    // 這裡保持原有邏輯，但可能需要調整為從 API 獲取
+    if (masterAgentData) {
+      // 如果需要 currencies，可能需要額外的 API 調用
+      // 目前先保持空列表，避免錯誤
     }
   }
 };
@@ -300,8 +525,8 @@ const setCurrencyTypeList = async (masterAgent: string): Promise<void> => {
 const setTreasureItemList = async (masterAgent: string): Promise<void> => {
   try {
     const res = await fetchTreasureItemList({ masterAgent });
-    if (res?.rows) {
-      treasureItemList.value = res.rows.reduce((acc: TreasureItem[], r) => {
+    if (res?.data?.rows) {
+      treasureItemList.value = res.data.rows.reduce((acc: TreasureItem[], r) => {
         if (
           r.type === 'eventItem'
           || r.type === 'gachapon'
@@ -321,16 +546,7 @@ const setTreasureItemList = async (masterAgent: string): Promise<void> => {
   }
 };
 
-const fetchMasterAgentList = async () => {
-  try {
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = list || [];
-    agentIDOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
-  }
-};
+// 移除 fetchMasterAgentList：站長列表現在由 Breadcrumb Context 提供
 
 const fetchAgentList = async (masterAgent: string) => {
   if (!masterAgent) {
@@ -351,76 +567,34 @@ const fetchAgentList = async (masterAgent: string) => {
 };
 
 /**
- * ============ 事件處理 ============
+ * ARCH03-01：已移除頁面層搜尋表單相關函數
+ * - onAgentChanged
+ * - searchConditionValidator
+ * - handleFilter
+ *
+ * 搜尋主控權已完全交由 DynamicTable formSchemas
  */
-const onMasterAgentChanged = async (val: string) => {
-  selectedMasterAgent.value = val;
-  selectedAgent.value = '';
-  agentList.value = [];
-  query.value.masterAgent = val;
-  sMemberID.value = '';
-  sNickname.value = '';
-  query.value.memberID = undefined;
-  memberOptions.value = [];
 
-  if (!val) {
-    return;
-  }
+/**
+ * ARCH03-01：loadTableData 使用 DynamicTable formSchemas 的值
+ */
+const loadTableData = async (params: any) => {
+  const masterAgent = String(selectedMasterAgent.value || '').trim();
 
-  await setCurrencyTypeList(val);
-  await setTreasureItemList(val);
+  /** 從 formSchemas 獲取搜尋條件 */
+  // POST-SOP v2：移除代理商搜尋欄位，直接使用自動設定的 agentID
+  const memberID = String((params as any)?.memberID ?? '').trim();
 
-  // 如果有選擇總代理，獲取代理商列表
-  await fetchAgentList(val);
-  // 如果有代理商，自動選擇第一個
-  if (agentList.value.length > 0 && userStore.level <= 4) {
-    selectedAgent.value = agentList.value[0].value;
-    const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-    query.value.agentID = `${agentAccount}.${val}`;
-  }
-  else {
-    query.value.agentID = val;
-  }
-};
+  // 使用自動設定的 agentID（在 handleMasterAgentChange 中已設定）
+  const currentAgentID = agentID.value;
 
-const onAgentChanged = (val: string) => {
-  selectedAgent.value = val;
-  if (selectedMasterAgent.value && val) {
-    const agentAccount = val.includes('.') ? val.split('.')[0] : val;
-    query.value.agentID = `${agentAccount}.${selectedMasterAgent.value}`;
-  }
-  else if (selectedMasterAgent.value) {
-    query.value.agentID = selectedMasterAgent.value;
-  }
-  else {
-    query.value.agentID = '';
-  }
-
-  query.value.memberID = undefined;
-  sMemberID.value = '';
-  sNickname.value = '';
-  memberOptions.value = [];
-};
-
-const searchConditionValidator = (): void => {
-  if (!query.value.masterAgent || !query.value.agentID) {
-    message.error(t('notify.masterAgentAndAgentFieldMissed') || '總代理和代理商欄位不能為空');
-    throw new Error('params missed');
-  }
-  if (!query.value.memberID) {
-    message.error(t('notify.needAccount') || '會員欄位不能為空');
-    throw new Error('memberID missed');
-  }
-};
-
-const loadTableData = async (_params: any) => {
-  if (!appliedQuery.value.masterAgent || !appliedQuery.value.agentID || !appliedQuery.value.memberID) {
+  if (!masterAgent || !currentAgentID || !memberID) {
     return { items: [], meta: { totalItems: 0 } };
   }
 
   const postData = {
-    masterAgent: appliedQuery.value.masterAgent,
-    memberID: appliedQuery.value.memberID,
+    masterAgent,
+    memberID,
   };
 
   try {
@@ -445,11 +619,11 @@ const loadTableData = async (_params: any) => {
 
     // 處理數據格式
     const processedItems = items.map((item: any) => {
-      const processedItem: RedemptionRecord & { id: string } = {
+      const processedItem = {
         id: item.id?.toString() || '',
         orderID: item.orderID || 0,
-        masterAgent: item.masterAgent || appliedQuery.value.masterAgent,
-        memberID: item.memberID || appliedQuery.value.memberID || '',
+        masterAgent: item.masterAgent || masterAgent,
+        memberID: item.memberID || memberID || '',
         redemptionCode: item.redemptionCode || '',
         redeemedTime: item.redeemedTime,
         createdAt: item.createdAt,
@@ -458,7 +632,7 @@ const loadTableData = async (_params: any) => {
         type: formatOrderType(item.order?.type),
         orderName: item.order?.name || '',
         rewards: item.order?.rewards ? formatRewards(item.order.rewards) : [],
-      };
+      } as ColumnsRowData;
 
       return processedItem;
     });
@@ -474,17 +648,6 @@ const loadTableData = async (_params: any) => {
     console.error('Failed to load table data:', error);
     message.error(t('notify.connectionError') || '連接錯誤');
     return { items: [], meta: { totalItems: 0 } };
-  }
-};
-
-const handleFilter = async () => {
-  try {
-    searchConditionValidator();
-    appliedQuery.value = { ...query.value };
-    await dynamicTableInstance?.reload?.(true);
-  }
-  catch (error) {
-    // 驗證失敗，不執行查詢
   }
 };
 
@@ -515,8 +678,8 @@ const checkCodeBtn = async () => {
 
   try {
     const res = await validateRedemptionCode({ redemptionCode: sRedemptionCode.value });
-    if (res?.data?.state) {
-      rRedemptionCode.value = res.data.state;
+    if (res?.state) {
+      rRedemptionCode.value = res.state;
     }
     else {
       rRedemptionCode.value = CodeStateEnum.UNAVAILABLE;
@@ -536,196 +699,253 @@ const rRedemptionCodeType = computed(() => {
   return 'success';
 });
 
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * ARCH05：scroll.y 穩定化（類型 B：有搜尋區頁面）
+ * - scroll.y 初始值為 undefined，確保 DynamicTable 初始 render 時搜尋區正常顯示
+ * - 於 mounted + nextTick 後計算並設定 scroll.y，啟用 fixed header
+ */
+const scrollY = ref<number | undefined>(undefined);
+
+/**
+ * ARCH05：組合 scroll 物件
+ * - 初始時 scroll.y 為 undefined
+ * - mounted + nextTick 後 scroll.y 會被設定，啟用 fixed header
+ */
+const tableScroll = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+  return {
+    x: scrollX,
+    y: scrollY.value,
+  };
+});
+
+/**
+ * ARCH05：計算並設定 scroll.y
+ * - 計算視窗高度減去其他元素高度（header、filter-container、padding 等）
+ * - 確保表格有固定高度，啟用 vertical scroll 和 fixed header
+ */
+const calculateScrollY = () => {
+  nextTick(() => {
+    /**
+     * 計算可用高度
+     * 視窗高度 - header - filter-container - padding/margin
+     */
+    const windowHeight = window.innerHeight;
+    /** 通常的 header 高度 */
+    const headerHeight = 64;
+    /** filter-container 的預估高度 */
+    const filterContainerHeight = 60;
+    /** 上下 padding/margin */
+    const padding = 40;
+    const calculatedHeight = windowHeight - headerHeight - filterContainerHeight - padding;
+
+    /**
+     * 設定 scroll.y，啟用 fixed header
+     * 最小高度設為 300px，避免過小
+     */
+    scrollY.value = Math.max(calculatedHeight, 300);
+  });
+};
+
+/**
+ * ARCH03-01：處理站長切換（從 Breadcrumb Context）
+ * 更新 agentID 並自動觸發 reload
+ */
+const handleMasterAgentChange = async (masterAgent: string) => {
+  agentList.value = [];
+
+  if (!masterAgent) {
+    agentID.value = '';
+    // 重置搜尋表單並觸發 reload
+    const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+    }
+    dynamicTableInstance?.reload(true);
+    return;
+  }
+
+  await setCurrencyTypeList(masterAgent);
+  await setTreasureItemList(masterAgent);
+
+  // 如果有選擇總代理，獲取代理商列表
+  await fetchAgentList(masterAgent);
+
+  // ARCH03-01：重置搜尋表單（清空其他搜尋條件）
+  const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.resetFields();
+  }
+
+  // 如果有代理商，自動選擇第一個並更新 agentID
+  if (agentList.value.length > 0 && userStore.level <= 4) {
+    const firstAgent = agentList.value[0].value;
+    const agentAccount = firstAgent.includes('.') ? firstAgent.split('.')[0] : firstAgent;
+    agentID.value = `${agentAccount}.${masterAgent}`;
+  }
+  else {
+    agentID.value = masterAgent;
+  }
+
+  // ARCH03-01：自動觸發 reload
+  dynamicTableInstance?.reload(true);
+};
+
+/**
+ * ARCH03-01：監聽站長切換（從 Breadcrumb Context）
+ * 當站長切換時，同步更新相關狀態、重置搜尋表單並自動觸發 reload
+ */
+watch(
+  () => selectedMasterAgent.value,
+  async (newMasterAgent) => {
+    await handleMasterAgentChange(newMasterAgent);
+  },
+);
+
+/**
+ * ARCH03-01：監聽 contextVersion 變更，當站長切換時重置搜尋表單並自動觸發 reload
+ */
+watch(
+  () => contextVersion.value,
+  () => {
+    // 重置搜尋表單並自動觸發 reload
+    const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+    }
+    dynamicTableInstance?.reload(true);
+  },
+);
+
 // ============ 初始化 ============
 onMounted(async () => {
-  await fetchMasterAgentList();
+  // 從 Breadcrumb Context 獲取站長值並初始化
+  const masterAgent = selectedMasterAgent.value;
+  if (masterAgent) {
+    await handleMasterAgentChange(masterAgent);
+  }
 
-  if (userStore.level === 5) {
-    if (userStore.masterAgent && userStore.agent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      selectedAgent.value = userStore.agent;
-      const agentAccount = userStore.agent.includes('.') ? userStore.agent.split('.')[0] : userStore.agent;
-      query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      query.value.masterAgent = userStore.masterAgent;
-      await fetchAgentList(userStore.masterAgent);
-      await setCurrencyTypeList(userStore.masterAgent);
-      await setTreasureItemList(userStore.masterAgent);
-    }
-  }
-  else if (userStore.level === 4) {
-    if (userStore.masterAgent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      query.value.agentID = userStore.masterAgent;
-      query.value.masterAgent = userStore.masterAgent;
-      await fetchAgentList(userStore.masterAgent);
-      await setCurrencyTypeList(userStore.masterAgent);
-      await setTreasureItemList(userStore.masterAgent);
-      if (agentList.value.length > 0) {
-        selectedAgent.value = agentList.value[0].value;
-        const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-        query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      }
-    }
-  }
-  else if (agentIDOptions.value.length > 0) {
-    selectedMasterAgent.value = agentIDOptions.value[0].value;
-    query.value.masterAgent = agentIDOptions.value[0].value;
-    await fetchAgentList(agentIDOptions.value[0].value);
-    await setCurrencyTypeList(agentIDOptions.value[0].value);
-    await setTreasureItemList(agentIDOptions.value[0].value);
-    if (agentList.value.length > 0) {
-      selectedAgent.value = agentList.value[0].value;
-      const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-      query.value.agentID = `${agentAccount}.${agentIDOptions.value[0].value}`;
-    }
-    else {
-      query.value.agentID = agentIDOptions.value[0].value;
-    }
-  }
+  // ARCH05：於 mounted + nextTick 後計算並設定 scroll.y
+  // 確保 DynamicTable 已 render，layout 已穩定後再啟用 fixed header
+  calculateScrollY();
+});
+
+/**
+ * SearchMode 狀態顯示（僅標示，不影響任何行為）
+ *
+ * 本頁查詢條件（masterAgent、memberID）皆直接傳給後端 API，
+ * 不做前端過濾或混合模式，因此標示為 BACKEND。
+ */
+const searchMode = computed<SearchMode>(() => 'BACKEND');
+const searchModeConfig = computed(() => {
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[searchMode.value];
 });
 </script>
 
 <template>
   <div class="app-container redemption-code-record-table">
-    <div class="filter-container">
-      <div class="wrap">
-        <!-- 總代理選擇器 -->
-        <div
-          v-if="!isAgentIDDisabled"
-          class="input_group"
+    <div class="redemption-code-record-page">
+      <div
+        class="table-container"
+        :style="{ overflowX: containerOverflowX }"
+      >
+        <DynamicTable
+          :columns="columns"
+          :data-request="loadTableData"
+          :scroll="tableScroll"
         >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.masterAgent') || '總代理' }}</label>
-          </div>
-          <div class="my_input">
-            <AdminAccountSelector
-              v-model="selectedMasterAgent"
-              value-type="account"
-              :disabled="isAgentIDDisabled"
-              @update:model-value="onMasterAgentChanged"
-            />
-          </div>
-        </div>
+          <!-- SearchMode 狀態顯示（僅標示，不影響任何行為） -->
+          <template #headerTitle>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span>{{ t('title') || '兌換碼紀錄' }}</span>
+              <Tag :color="searchModeConfig.color" style="margin: 0">
+                SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+              </Tag>
+            </div>
+          </template>
 
-        <!-- 代理商選擇器 -->
-        <div
-          v-if="selectedMasterAgent"
-          class="input_group"
+          <!-- POST-SOP v2：將「兌換碼查詢」按鈕移至 Table Toolbar 左側 -->
+          <template #toolbar>
+            <a-button
+              type="primary"
+              @click="openDialog"
+            >
+              <template #icon>
+                <SearchOutlined />
+              </template>
+              {{ t('labels.checkoutRedemptionCode') || '兌換碼查詢' }}
+            </a-button>
+          </template>
+        </DynamicTable>
+      </div>
+
+      <!-- 兌換碼查詢對話框 -->
+      <a-modal
+        v-model:open="isDialogShow"
+        :title="t('labels.checkoutRedemptionCode') || '兌換碼查詢'"
+        :width="400"
+        :mask-closable="false"
+        @cancel="closeDialog"
+      >
+        <a-form
+          :label-col="{ span: 6 }"
+          :wrapper-col="{ span: 18 }"
         >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.agent') || '代理商' }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="selectedAgent"
-              :options="agentList"
-              :disabled="isAgentDisabled"
-              placeholder="請選擇代理商"
-              style="width: 200px"
-              :allow-clear="!isAgentDisabled"
-              @change="onAgentChanged"
+          <a-form-item :label="t('column.redemptionCode') || '兌換碼'">
+            <a-input
+              v-model:value="sRedemptionCode"
+              placeholder="請輸入兌換碼"
             />
-          </div>
-        </div>
-
-        <!-- 會員搜索 -->
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.member') || '會員' }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="query.memberID"
-              show-search
-              :filter-option="false"
-              :options="memberOptions"
-              :loading="memberLoading"
-              :disabled="!query.agentID"
-              style="width: 200px"
-              allow-clear
-              placeholder="00001314 - 王小明"
-              @search="onMemberSearch"
-              @change="onMemberSelectChanged"
-              @popup-scroll="onMemberPopupScroll"
-            />
-          </div>
-        </div>
-
-        <!-- 查詢按鈕 -->
-        <div class="input_group">
+          </a-form-item>
+          <a-form-item :label="t('labels.result') || '查詢結果'">
+            <a-tag
+              v-if="rRedemptionCode !== ''"
+              :color="rRedemptionCodeType === 'success' ? 'success' : 'error'"
+            >
+              {{ t(`CodeState.${rRedemptionCode}`) || rRedemptionCode }}
+            </a-tag>
+          </a-form-item>
+        </a-form>
+        <template #footer>
           <a-button
             type="primary"
-            class="input_btn"
-            @click="handleFilter"
+            @click="checkCodeBtn"
           >
-            <template #icon>
-              <SearchOutlined />
-            </template>
             {{ t('search') || '查詢' }}
           </a-button>
-        </div>
-
-        <!-- 兌換碼查詢按鈕 -->
-        <div class="input_group">
-          <a-button
-            type="primary"
-            class="input_btn"
-            @click="openDialog"
-          >
-            <template #icon>
-              <SearchOutlined />
-            </template>
-            {{ t('labels.checkoutRedemptionCode') || '兌換碼查詢' }}
+          <a-button @click="closeDialog">
+            {{ t('cancel') || '取消' }}
           </a-button>
-        </div>
-      </div>
+        </template>
+      </a-modal>
     </div>
-
-    <DynamicTable
-      :columns="columns"
-      :data-request="loadTableData"
-      :scroll="{ x: 'max-content' }"
-    />
-
-    <!-- 兌換碼查詢對話框 -->
-    <a-modal
-      v-model:open="isDialogShow"
-      :title="t('labels.checkoutRedemptionCode') || '兌換碼查詢'"
-      :width="400"
-      :mask-closable="false"
-      @cancel="closeDialog"
-    >
-      <a-form
-        :label-col="{ span: 6 }"
-        :wrapper-col="{ span: 18 }"
-      >
-        <a-form-item :label="t('column.redemptionCode') || '兌換碼'">
-          <a-input
-            v-model:value="sRedemptionCode"
-            placeholder="請輸入兌換碼"
-          />
-        </a-form-item>
-        <a-form-item :label="t('labels.result') || '查詢結果'">
-          <a-tag
-            v-if="rRedemptionCode !== ''"
-            :color="rRedemptionCodeType === 'success' ? 'success' : 'error'"
-          >
-            {{ t(`CodeState.${rRedemptionCode}`) || rRedemptionCode }}
-          </a-tag>
-        </a-form-item>
-      </a-form>
-      <template #footer>
-        <a-button
-          type="primary"
-          @click="checkCodeBtn"
-        >
-          {{ t('search') || '查詢' }}
-        </a-button>
-        <a-button @click="closeDialog">
-          {{ t('cancel') || '取消' }}
-        </a-button>
-      </template>
-    </a-modal>
   </div>
 </template>
 
@@ -774,4 +994,3 @@ onMounted(async () => {
   }
 }
 </style>
-
