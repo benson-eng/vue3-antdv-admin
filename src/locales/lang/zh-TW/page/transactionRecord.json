@@ -18,8 +18,10 @@
     "receivedAt": "收禮時間",
     "expireTime": "過期時間",
     "canceledAt": "取消時間",
-    "searchType": "查詢種類",
-    "control": "控制"
+    "searchType": "查詢種類"
+  },
+  "action": {
+    "operation": "操作"
   },
   "state": {
     "Success": "成功",
@@ -58,4 +60,3 @@
   "confirm": "確認",
   "cancel": "取消"
 }
-

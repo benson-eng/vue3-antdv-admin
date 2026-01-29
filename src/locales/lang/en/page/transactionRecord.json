@@ -18,8 +18,10 @@
     "receivedAt": "Received Time",
     "expireTime": "Expire Time",
     "canceledAt": "Canceled Time",
-    "searchType": "Search Type",
-    "control": "Control"
+    "searchType": "Search Type"
+  },
+  "action": {
+    "operation": "Operation"
   },
   "state": {
     "Success": "Success",
@@ -58,5 +60,3 @@
   "confirm": "Confirm",
   "cancel": "Cancel"
 }
-
-
