@@ -7,6 +7,8 @@
   "column": {
     "id": "ID",
     "memberID": "Member ID",
+    "accountID": "Account ID",
+    "nickName": "Nickname",
     "sourcePlatform": "Source Platform",
     "frozenBalance": "Frozen Balance",
     "frozenAt": "Frozen At",
@@ -39,4 +41,3 @@
   "confirm": "Confirm",
   "cancel": "Cancel"
 }
-

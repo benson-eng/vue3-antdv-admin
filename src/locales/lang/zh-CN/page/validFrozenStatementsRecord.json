@@ -7,6 +7,8 @@
   "column": {
     "id": "ID",
     "memberID": "會員ID",
+    "accountID": "帳戶ID",
+    "nickName": "暱稱",
     "sourcePlatform": "來源平台",
     "frozenBalance": "凍結金額",
     "frozenAt": "凍結時間",
