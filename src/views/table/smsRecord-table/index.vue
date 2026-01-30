@@ -7,7 +7,6 @@ import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
 import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
 import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import { SMProviderName, smQueryStatus } from '@/api/backend/adminSystem/smsSystem';
@@ -22,7 +21,6 @@ defineOptions({
 });
 
 const { t } = useI18n('page.smsRecordTable');
-const route = useRoute();
 const userStore = useUserStore();
 
 // SearchMode 定義
@@ -199,13 +197,12 @@ const formatStatusCode = (statusCode: number): string => {
 // 注意：masterAgent 已由 Breadcrumb Context 提供，不再作為搜尋欄位
 const baseColumns = computed<TableColumn<ColumnsRowData>[]>(() => {
   return [
-    // 搜尋欄位：代理商（僅在站長選擇後顯示）
+    // 搜尋欄位：代理商（不在搜尋區顯示，僅用於內部邏輯）
     {
       title: t('labels.agent') || '代理商',
       dataIndex: '__agent_search__',
       hideInTable: true,
-      // 確保 Context 就緒且有站長值時才顯示，避免首次 render 時狀態不穩定
-      hideInSearch: !masterAgentCtx || !selectedMasterAgent.value,
+      hideInSearch: true, // 代理商不在搜尋區顯示
       searchField: 'agent',
       formItemProps: {
         label: t('labels.agent') || '代理商',
@@ -333,8 +330,13 @@ const baseColumns = computed<TableColumn<ColumnsRowData>[]>(() => {
   ] as TableColumn<ColumnsRowData>[];
 });
 
-// 使用表格配置 Hook
-const tableConfig = useTableConfig(baseColumns as any);
+// 過濾出非搜尋欄位（用於 useTableConfig，排除 hideInTable: true 的搜尋欄位）
+const tableColumns = computed(() => {
+  return baseColumns.value.filter(col => col.hideInTable !== true);
+});
+
+// 使用表格配置 Hook（只傳入表格顯示欄位，不包含搜尋欄位）
+const tableConfig = useTableConfig(tableColumns as any);
 
 // 初始化標記：用於防止初始化階段的錯誤同步
 const isInitialized = ref(false);
@@ -348,7 +350,8 @@ function getDefaultVisibleKeys(columns: TableColumn<ColumnsRowData>[]): string[]
   columns.forEach((col) => {
     const key = (col.dataIndex as string) || (col.key as string) || '';
     // 只包含不在表格中隱藏的欄位（hideInTable !== true）
-    if (key && col.hideInTable !== true) {
+    // 確保 key 不為空且有效（過濾掉空字串和無效值）
+    if (key && key.trim() && col.hideInTable !== true) {
       defaultVisibleKeys.push(key);
     }
   });
