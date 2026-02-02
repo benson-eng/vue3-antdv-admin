@@ -384,6 +384,12 @@ const searchOnlyColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
       label: t('labels.agent') || '代理商',
       component: 'Select',
       order: 0,
+      rules: [
+        {
+          required: true,
+          message: t('notify.masterAgentAndAgentFieldMissed') || '總代理和代理商欄位不能為空',
+        },
+      ],
       componentProps: () => ({
         options: agentList.value,
         disabled: isAgentDisabled.value,
@@ -427,6 +433,12 @@ const searchOnlyColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
       label: t('labels.member') || '會員',
       component: 'Select',
       order: 1,
+      rules: [
+        {
+          required: true,
+          message: t('notify.needAccount') || '會員欄位不能為空',
+        },
+      ],
       componentProps: () => ({
         options: memberOptions.value,
         loading: memberLoading.value,
@@ -479,6 +491,12 @@ const searchOnlyColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
       label: t('labels.arrivalTime') || '到達時間',
       component: 'RangePicker',
       order: 3,
+      rules: [
+        {
+          required: true,
+          message: `${t('labels.arrivalTime') || '到達時間'}欄位不能為空`,
+        },
+      ],
       componentProps: {
         showTime: true,
         format: 'YYYY-MM-DD HH:mm:ss',
@@ -495,18 +513,28 @@ const columns = computed<TableColumn<ColumnsRowData>[]>(() => [
 ]);
 
 // 表格配置（對齊 agent 頁面的基礎架構）
+// ARCH05 / STEP4.2：完全對齊 agent 頁行為，使用 tableConfig.scrollX 作為唯一來源
 const tableConfig = useTableConfig(columns as any);
 
 // 計算 container 的 overflow-x 樣式（對齊 agent 頁）
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
 const containerOverflowX = computed(() => {
-  const scrollX = tableConfig.scrollX.value as any;
+  const scrollX = tableConfig.scrollX.value;
 
   // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
   if (scrollX !== '100%' && typeof scrollX === 'number') {
     return 'auto';
   }
 
-  // 其餘情況（'100%' 或 undefined）維持 hidden，避免多餘 scrollbar
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
   return 'hidden';
 });
 
@@ -599,9 +627,58 @@ const fetchAgentList = async (masterAgent: string) => {
  */
 /**
  * ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
+ * 初始化站長相關資料（僅資料準備，不觸發查詢）
+ * - 用於 onMounted 階段，確保初次進入時不自動查詢
+ */
+const initializeMasterAgentData = async (masterAgent: string) => {
+  agentList.value = [];
+  tokenList.value = [];
+  currentAgentID.value = '';
+  memberOptions.value = [];
+  memberLastQueryText.value = '';
+  memberLastAccountID.value = '';
+  selectedMemberNickname.value = '';
+
+  if (!masterAgent) {
+    return;
+  }
+
+  await setCurrencyTypeList(masterAgent);
+  await setTreasureItemList(masterAgent);
+  await getTokenList(masterAgent);
+  await getGameList(masterAgent);
+
+  // 如果有選擇總代理，獲取代理商列表
+  await fetchAgentList(masterAgent);
+
+  // 如果有代理商，自動選擇第一個並更新 currentAgentID
+  if (agentList.value.length > 0 && userStore.level <= 4) {
+    const firstAgent = agentList.value[0].value;
+    const agentAccount = firstAgent.includes('.') ? firstAgent.split('.')[0] : firstAgent;
+    currentAgentID.value = `${agentAccount}.${masterAgent}`;
+  }
+  else {
+    currentAgentID.value = masterAgent;
+  }
+
+  // 重置搜尋表單（清空所有搜尋條件）
+  await nextTick();
+  const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.resetFields();
+    // 如果有預設 agent，重新設置
+    if (agentList.value.length > 0 && userStore.level <= 4) {
+      searchFormRef.setFieldsValue({ agent: agentList.value[0].value });
+    }
+  }
+};
+
+/**
+ * ARCH03-01：COMPLETED - 搜尋模型已升級（Vue2 → Vue3）
  * 處理站長切換（從 Breadcrumb Context）
  * - 重置搜尋表單條件
  * - 自動觸發 DynamicTable reload（Vue3 行為：Context 切換時自動查詢）
+ * - 僅在 contextVersion 變更時調用，確保符合受控型搜尋模型
  */
 const handleMasterAgentChange = async (masterAgent: string) => {
   agentList.value = [];
@@ -652,7 +729,9 @@ const handleMasterAgentChange = async (masterAgent: string) => {
   await dynamicTableInstance?.reload?.(true);
 };
 
-// ARCH03-01：COMPLETED - 監聽 contextVersion 變更，當站長切換時重置搜尋條件並自動觸發查詢
+// ARCH03-01：COMPLETED - 受控型搜尋模型
+// 監聽 contextVersion 變更，當站長切換時重置搜尋條件並自動觸發查詢
+// 僅在此處允許自動觸發查詢，符合受控型搜尋語意
 watch(
   () => contextVersion.value,
   () => {
@@ -680,14 +759,9 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
   const mailTitle = String((params as any)?.mailTitle ?? '').trim();
   const arrivalTime = (params as any)?.arrivalTime;
 
-  // 驗證必填欄位
+  // ARCH03-01：受控型搜尋模型 - 參數不足時安全回傳空結果
+  // 驗證責任完全交由 DynamicTable 搜尋表單處理，此處不顯示任何驗證訊息
   if (!agent || !memberID) {
-    if (!agent) {
-      message.error(t('notify.masterAgentAndAgentFieldMissed') || '總代理和代理商欄位不能為空');
-    }
-    if (!memberID) {
-      message.error(t('notify.needAccount') || '會員欄位不能為空');
-    }
     return { items: [], meta: { totalItems: 0 } };
   }
 
@@ -812,10 +886,11 @@ const searchModeConfig = computed(() => {
 
 // ============ 初始化 ============
 onMounted(async () => {
+  // ARCH03-01：受控型搜尋模型 - 初次進入時僅做資料初始化，不觸發查詢
   // 使用 Breadcrumb Context 的站長值進行初始化
   const masterAgent = selectedMasterAgent.value;
   if (masterAgent) {
-    await handleMasterAgentChange(masterAgent);
+    await initializeMasterAgentData(masterAgent);
   }
 });
 
@@ -860,6 +935,11 @@ onMounted(async () => {
 .single-mail-record-table {
   .table-container {
     width: 100%;
+  }
+
+  // ARCH05-EXT：防止表頭欄位換行
+  :deep(.ant-table-thead > tr > th) {
+    white-space: nowrap;
   }
 }
 </style>
