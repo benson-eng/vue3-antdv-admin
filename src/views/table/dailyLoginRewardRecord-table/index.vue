@@ -1,702 +1,459 @@
 <script setup lang="ts">
-import type { Dayjs } from 'dayjs';
+/**
+ * ARCH-MIGRATION-01（v2）：遷移至 Breadcrumb（單頁）
+ * - 移除頁面自管站長選擇器，統一改由 Breadcrumb Context 作為唯一來源
+ * - 本頁正式成為 Breadcrumb Context Consumer（單頁 Consumer）
+ */
 import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
-import type {
-  DailySignInRewardRecordItem,
-  EAwardType,
-} from '@/api/backend/marketingEvent';
+import type { DailySignInRewardRecordItem } from '@/api/backend/marketingEvent';
 import type { TableColumn } from '@/components/core/dynamic-table';
-import type { TokenItem } from '@/api/backend/adminAccount/token';
-import type { TreasureItem } from '@/api/backend/treasureChestSystem';
 
-import { SearchOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
+import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, h, onMounted, ref } from 'vue';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
-import { queryTokens } from '@/api/backend/adminAccount/token';
+import { computed, h, inject, nextTick, ref, watch } from 'vue';
+
+import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import {
   queryDailySignInActivitySetting,
   queryDailySignInRewardRecord,
 } from '@/api/backend/marketingEvent';
-import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
-import { treasureItemList as queryTreasureItemList } from '@/api/backend/treasureChestSystem';
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
+
 import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
-import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 
-defineOptions({
-  name: 'DailyLoginRewardRecordTable',
-});
+defineOptions({ name: 'DailyLoginRewardRecordTable' });
 
 const { t } = useI18n('page.dailyLoginRewardRecord');
-const userStore = useUserStore();
 
-/**
- * ============ 工具函數 ============
- */
-function getMasterAgentByAgentID(agentID: string): string {
-  if (!agentID) {
-    return '';
-  }
-  const parts = agentID.split('.');
-  return parts.length > 1 ? parts[1] : agentID;
-}
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
-function dateTranNameStr(date: string | undefined): string {
-  if (!date) {
-    return '';
-  }
-  const nDay = new Date(date);
-  return `${nDay.getFullYear()}-${nDay.getMonth() + 1}-${nDay.getDate()}`;
-}
+/* =========================
+ * Breadcrumb Context Consumer
+ * ========================= */
+// 從 Layout 根元件 provide 取得站長選單狀態（Breadcrumb Context）
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
 
-// ============ 查詢條件 ============
-interface QueryState {
-  memberID?: string;
-  activityID?: number | null;
-}
+// 使用 computed 取得當前選取的站長值（從 Breadcrumb Context）
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion（用於檢測站長切換）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
-const query = ref<QueryState>({
-  memberID: undefined,
-  activityID: undefined,
-});
-
-// 只有按下「查詢」才套用
-const appliedQuery = ref<QueryState>({ ...query.value });
-
-// ============ 總代理選擇 ============
-const masterAgent = ref('');
-const agentID = ref('');
-
-const isAgentIDDisabled = computed(() => userStore.level === 4 || userStore.level === 5);
-
-// ============ 會員搜索 ============
-const memberLoading = ref(false);
+/* =========================
+ * 會員搜尋
+ * ========================= */
 const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserItem }[]>([]);
-const memberLastQueryText = ref('');
-const memberLastAccountID = ref('');
-const memberPageSize = 10;
-const sMemberID = ref('');
-const sNickname = ref('');
+const memberLoading = ref(false);
 
-const fetchMemberOptions = async (queryText: string, append = false) => {
-  memberLastQueryText.value = queryText;
-
-  if (!agentID.value) {
-    return;
-  }
-  if (!queryText || queryText.length < 2) {
+const fetchMember = async (text: string) => {
+  if (!text || text.length < 2 || !selectedMasterAgent.value) {
     memberOptions.value = [];
-    memberLastAccountID.value = '';
     return;
   }
 
   memberLoading.value = true;
   try {
-    const masterAgentValue = getMasterAgentByAgentID(agentID.value);
     const res = await fuzzyQueryUser({
-      masterAgent: masterAgentValue,
-      queryText,
-      limit: memberPageSize,
-      lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
+      masterAgent: selectedMasterAgent.value,
+      queryText: text,
+      limit: 10,
     });
 
-    const list = res || [];
-    const mapped = list.map(item => ({
+    memberOptions.value = (res || []).map(item => ({
       raw: item,
       value: `${item.account}@${item.agentID}`,
       label: `${item.accountID} - ${item.nickName}`,
     }));
-
-    memberOptions.value = append ? [...memberOptions.value, ...mapped] : mapped;
-    memberLastAccountID.value = list.length > 0 ? list[list.length - 1].accountID : memberLastAccountID.value;
   }
   finally {
     memberLoading.value = false;
   }
 };
 
+// 使用 debounce 延遲搜尋，與其他頁面保持一致
 const onMemberSearch = debounce((text: string) => {
   if (text && text.length >= 2) {
-    fetchMemberOptions(text, false);
+    fetchMember(text);
   }
   else {
     memberOptions.value = [];
   }
 }, 300);
 
-const onMemberSelectChanged = (value: string) => {
-  if (!value) {
-    sMemberID.value = '';
-    sNickname.value = '';
-    query.value.memberID = undefined;
-    return;
-  }
-
-  const selected = memberOptions.value.find(opt => opt.value === value);
-  if (selected) {
-    sMemberID.value = `${selected.raw.account}@${selected.raw.agentID}`;
-    sNickname.value = `${selected.raw.accountID} - ${selected.raw.nickName}`;
-    query.value.memberID = `${selected.raw.account}@${selected.raw.agentID}`;
-  }
-};
-
-const onMemberPopupScroll = (e: Event) => {
-  const target = e.target as HTMLElement;
-  if (target.scrollTop + target.offsetHeight === target.scrollHeight) {
-    if (memberLastQueryText.value && memberLastQueryText.value.length >= 2) {
-      fetchMemberOptions(memberLastQueryText.value, true);
-    }
-  }
-};
-
-// ============ 活動列表 ============
-const activityList = ref<Array<{ name: string; value: number }>>([]);
+/* =========================
+ * 活動列表
+ * ========================= */
+const activityOptions = ref<{ label: string; value: number }[]>([]);
 const activityLoading = ref(false);
 
-const getDailySignInActivity = async (masterAgentValue: string) => {
-  if (!masterAgentValue) {
-    activityList.value = [];
+const fetchActivityList = async () => {
+  if (!selectedMasterAgent.value) {
+    activityOptions.value = [];
     return;
   }
 
   activityLoading.value = true;
   try {
     const res = await queryDailySignInActivitySetting({
-      masterAgent: masterAgentValue,
+      masterAgent: selectedMasterAgent.value,
       status: 'all',
     });
 
-    if (res && Array.isArray(res)) {
-      const sorted = [...res].sort((a, b) => {
-        return new Date(b.endDateTime).getTime() - new Date(a.startDateTime).getTime();
-      });
-
-      activityList.value = sorted.map(item => {
-        const sDay = dateTranNameStr(item.startDateTime);
-        const eDay = dateTranNameStr(item.endDateTime);
-        const name = `${sDay} ~ ${eDay}`;
-        return {
-          name,
-          value: item.activityID,
-        };
-      });
-    }
-    else {
-      activityList.value = [];
-    }
-  }
-  catch (error) {
-    console.error('Failed to load activity list:', error);
-    activityList.value = [];
+    activityOptions.value = (res || [])
+      .sort((a, b) => new Date(b.endDateTime).getTime() - new Date(a.endDateTime).getTime())
+      .map(item => ({
+        value: item.activityID,
+        label: `${dayjs(item.startDateTime).format('YYYY-MM-DD')} ~ ${dayjs(item.endDateTime).format('YYYY-MM-DD')}`,
+      }));
   }
   finally {
     activityLoading.value = false;
   }
 };
 
-// ============ 總代理列表 ============
-const masterAgentList = ref<Array<{ account: string; currencies?: Array<{ currencyName?: string; currencyCode?: string }> }>>([]);
-
-// ============ 幣別列表 ============
-const currencyList = ref<Array<{ name: string; value: string }>>([]);
-
-const setCurrencyTypeList = async (masterAgentValue: string): Promise<void> => {
-  currencyList.value = [];
-  if (userStore.level === 4 || userStore.level === 5) {
-    const currencies = userStore.currencies || [];
-    currencies.forEach((item: any) => {
-      currencyList.value.push({ name: item.currencyName, value: item.currencyCode });
-    });
-  }
-  else {
-    const masterAgentData = masterAgentList.value.find(ma => ma.account === masterAgentValue);
-    if (masterAgentData && masterAgentData.currencies && Array.isArray(masterAgentData.currencies)) {
-      masterAgentData.currencies.forEach((currencyItem: any) => {
-        if (currencyItem && typeof currencyItem === 'object' && currencyItem.currencyCode) {
-          currencyList.value.push({
-            name: currencyItem.currencyName || currencyItem.currencyCode,
-            value: currencyItem.currencyCode,
-          });
-        }
-      });
-    }
-  }
-};
-
-const fetchMasterAgentList = async () => {
-  try {
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = list || [];
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
-  }
-};
-
-// ============ 代幣列表 ============
-const tokenList = ref<TokenItem[]>([]);
-
-const getTokenList = async () => {
-  if (!masterAgent.value) {
-    tokenList.value = [];
-    return;
-  }
-
-  try {
-    const res = await queryTokens({ masterAgent: masterAgent.value });
-    if (res && Array.isArray(res)) {
-      tokenList.value = res;
-    }
-    else {
-      tokenList.value = [];
-    }
-  }
-  catch (error) {
-    console.error('Failed to load token list:', error);
-    tokenList.value = [];
-  }
-};
-
-// ============ 道具列表 ============
-const treasureItemList = ref<TreasureItem[]>([]);
-
-const getTreasureItemList = async (masterAgentValue: string) => {
-  if (!masterAgentValue) {
-    treasureItemList.value = [];
-    return;
-  }
-
-  try {
-    const res = await queryTreasureItemList({ masterAgent: masterAgentValue });
-    if (res?.rows) {
-      treasureItemList.value = res.rows.reduce((acc: TreasureItem[], r) => {
-        if (
-          r.type === 'eventItem'
-          || r.type === 'certificate'
-          || r.type === 'entityItem'
-          || r.type === 'freeScratchCard'
-          || r.type === 'coupon'
-          || r.type === 'dailyRewardPass'
-        ) {
-          const inItem: TreasureItem[] = [];
-          r.items.forEach((item) => {
-            if (item.enabled === 1 || item.enabled === true) {
-              const itemName = getItemNameStr(item.itemName);
-              inItem.push({
-                ...item,
-                itemName,
-              });
-            }
-          });
-          return [...acc, ...inItem];
-        }
-        else {
-          return acc;
-        }
-      }, []);
-    }
-    else {
-      treasureItemList.value = [];
-    }
-  }
-  catch (error) {
-    console.error('Failed to load treasure item list:', error);
-    treasureItemList.value = [];
-  }
-};
-
-function getItemNameStr(data: any): string {
-  let re = data;
-  if (typeof data === 'object') {
-    re = data.tw || data.default || '';
-  }
-  else if (typeof data === 'string' && re.includes('{"default":')) {
-    try {
-      const parsed = JSON.parse(re);
-      re = parsed.tw || parsed.default || '';
-    }
-    catch {
-      re = data;
-    }
-  }
-  return re || '';
-}
-
-// ============ 獎勵格式化 ============
-function formatRewardData(data: DailySignInRewardRecordItem['rewardData'][0]): string {
-  let result = '';
-
-  switch (data.type) {
-    case EAwardType.Currency: {
-      const currency = currencyList.value.find(item => item.value === data.currencyType);
-      if (currency) {
-        result = `${currency.name} * ${data.balance || 0}`;
-      }
-      break;
-    }
-    case EAwardType.Treasures: {
-      const treasure = treasureItemList.value.find(
-        obj => obj.treasureItemID === data.treasureItemID,
-      );
-      if (treasure) {
-        result = treasure.itemName || '';
-      }
-      break;
-    }
-    case EAwardType.Token: {
-      const token = tokenList.value.find(obj => obj.id === data.tokenID);
-      if (token) {
-        result = `${token.name} * ${data.amount || 0}`;
-      }
-      break;
-    }
-    default:
-      break;
-  }
-
-  return result;
-}
-
-// ============ 表格 ============
-const [DynamicTable, dynamicTableInstance] = useTable({
-  search: false,
-});
-
-const handleReload = () => {
-  dynamicTableInstance?.reload?.(true);
-};
-
-interface ColumnsRowData extends DailySignInRewardRecordItem {
+/* =========================
+ * 表格 Columns（唯一來源）
+ * ========================= */
+interface Row extends DailySignInRewardRecordItem {
   userName?: string;
-  name?: string;
   vipStr?: string;
   rewardDataStr?: string[];
   typeStr?: string;
 }
 
-const columns = ref<TableColumn<ColumnsRowData>[]>([
+const columns = computed<TableColumn<Row>[]>(() => [
+  /* ===== 搜尋欄位 ===== */
+  // 注意：masterAgent 已由 Breadcrumb Context 提供，不再作為搜尋欄位
   {
-    title: '#',
-    dataIndex: 'id',
-    width: 80,
+    title: t('labels.member'),
+    dataIndex: '__member_search__',
+    hideInTable: true,
+    searchField: 'memberID',
+    formItemProps: {
+      component: 'Select',
+      required: true,
+      componentProps: () => ({
+        showSearch: true,
+        filterOption: false,
+        options: memberOptions.value,
+        loading: memberLoading.value,
+        placeholder: '00001314 - 王小明',
+        onSearch: onMemberSearch,
+        allowClear: true,
+        disabled: !selectedMasterAgent.value,
+      }),
+    },
   },
   {
-    title: t('typeStr') || '種類',
+    title: t('queryFormActivityID'),
+    dataIndex: '__activity_search__',
+    hideInTable: true,
+    searchField: 'activityID',
+    formItemProps: {
+      component: 'Select',
+      required: true,
+      componentProps: () => ({
+        options: activityOptions.value,
+        loading: activityLoading.value,
+        placeholder: '請選擇期別',
+        allowClear: true,
+        disabled: !selectedMasterAgent.value,
+      }),
+    },
+  },
+
+  /* ===== 表格欄位 ===== */
+  {
+    title: t('typeStr'),
     dataIndex: 'typeStr',
     width: 120,
+    hideInSearch: true,
   },
   {
-    title: t('queryFormActivityID') || '期別',
-    dataIndex: 'name',
-    width: 200,
-  },
-  {
-    title: t('userName') || '會員',
+    title: t('userName'),
     dataIndex: 'userName',
     width: 200,
+    hideInSearch: true,
   },
   {
     title: 'VIP',
     dataIndex: 'vipStr',
     width: 100,
+    hideInSearch: true,
   },
   {
-    title: t('rewardDataStr') || '獎項',
+    title: t('rewardDataStr'),
     dataIndex: 'rewardDataStr',
-    width: 300,
-    customRender: ({ record }: { record: ColumnsRowData }) => {
-      if (!record.rewardDataStr || !Array.isArray(record.rewardDataStr)) {
-        return '';
-      }
-      return h('div', record.rewardDataStr.map((item, idx) => {
-        return h('div', { key: idx }, item);
-      }));
-    },
+    flexible: true, // 彈性寬度欄位
+    minWidth: 300, // flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0
+    hideInSearch: true,
+    customRender: ({ record }) =>
+      h('div', record.rewardDataStr?.map((r, i) => h('div', { key: i }, r))),
   },
   {
-    title: t('signInDate') || '領取時間',
+    title: t('signInDate'),
     dataIndex: 'signInDate',
     width: 180,
-    customRender: ({ record }: { record: ColumnsRowData }) => {
-      return record.signInDate ? dayjs(record.signInDate).format('YYYY-MM-DD HH:mm:ss') : '';
-    },
+    hideInSearch: true,
+    customRender: ({ record }) =>
+      record.signInDate ? dayjs(record.signInDate).format('YYYY-MM-DD HH:mm:ss') : '',
   },
 ]);
 
+// 過濾出非搜尋欄位（用於 useTableConfig，排除 hideInTable: true 的搜尋欄位）
+const tableColumns = computed(() => {
+  return columns.value.filter(col => !col.hideInTable);
+});
+
+// 使用表格配置 Hook（提供列設置、欄寬自適應等功能）
+const tableConfig = useTableConfig(tableColumns as any);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const finalColumns = computed<TableColumn<Row>[]>(() => {
+  return columns.value.map((col) => {
+    // 搜尋欄位不參與列設置
+    if (col.hideInTable) {
+      return col;
+    }
+
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumn<Row> = {
+      ...col,
+      hideInTable: !isVisible,
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+/* =========================
+ * DynamicTable
+ * ========================= */
+const [DynamicTable, dynamicTableInstance] = useTable({
+  search: true,
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+watch(
+  () => {
+    // 嘗試從 dynamicTableInstance 獲取實際的 columns 狀態
+    const innerProps = (dynamicTableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: any) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  return 'hidden';
+});
+
 /**
- * ============ 事件處理 ============
+ * =========================
+ * Data Request
+ * =========================
  */
-const onMasterAgentChanged = async (val: string) => {
-  masterAgent.value = val || '';
-  agentID.value = val || '';
-  sMemberID.value = '';
-  sNickname.value = '';
-  query.value.memberID = undefined;
-  memberOptions.value = [];
-  memberLastQueryText.value = '';
-  memberLastAccountID.value = '';
+const loadTableData = async (params: any) => {
+  const { memberID, activityID } = params;
+  // 站長值從 Breadcrumb Context 獲取（Single Source of Truth）
+  const masterAgent = selectedMasterAgent.value;
 
-  // 更新幣別列表
-  await setCurrencyTypeList(masterAgent.value);
-
-  // 重新載入活動列表、代幣列表、道具列表
-  getDailySignInActivity(masterAgent.value);
-  getTokenList();
-  getTreasureItemList(masterAgent.value);
-};
-
-const searchConditionValidator = (): void => {
-  if (!query.value.memberID) {
-    message.error(t('notify.requiredMemberID') || '會員為必要數值');
-    throw new Error('memberID missed');
-  }
-  if (!query.value.activityID) {
-    message.error(t('notify.requiredActivityID') || '期別為必要數值');
-    throw new Error('activityID missed');
-  }
-};
-
-const loadTableData = async (_params: any) => {
-  if (!appliedQuery.value.memberID || !appliedQuery.value.activityID) {
+  if (!memberID || !activityID || !masterAgent) {
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  const postData = {
-    masterAgent: masterAgent.value,
-    activityID: Number(appliedQuery.value.activityID),
-    memberID: appliedQuery.value.memberID,
-  };
-
   try {
-    const res = await queryDailySignInRewardRecord(postData);
-    const resData = res as any;
+    const res = await queryDailySignInRewardRecord({
+      masterAgent,
+      memberID,
+      activityID,
+    });
 
-    let items: ColumnsRowData[] = [];
-    let total = 0;
-
-    if (resData && Array.isArray(resData)) {
-      items = resData.map((item: DailySignInRewardRecordItem) => {
-        let rewardData: string[] = [];
-        let typeStr = '登入獎勵';
-        if (!item.id) {
-          typeStr = '簽到獎勵';
-        }
-
-        const sDay = dateTranNameStr(item.startDate);
-        const eDay = dateTranNameStr(item.endDate);
-        const name = item.startDate ? `${sDay} ~ ${eDay}` : '';
-
-        if (item.rewardData && Array.isArray(item.rewardData)) {
-          rewardData = item.rewardData.map(obj => formatRewardData(obj)).filter(Boolean);
-        }
-
-        return {
-          ...item,
-          userName: sNickname.value,
-          name,
-          vipStr: item.vipLevel ? `VIP${item.vipLevel}` : '',
-          rewardDataStr: rewardData,
-          typeStr,
-        };
-      });
-      total = items.length;
-    }
-    else {
-      items = [];
-      total = 0;
-    }
+    const items = (res || []).map((item: any) => ({
+      ...item,
+      userName: item.userName || '',
+      vipStr: item.vipLevel ? `VIP${item.vipLevel}` : '',
+      typeStr: item.id ? '登入獎勵' : '簽到獎勵',
+      rewardDataStr: item.rewardData?.map((r: any) => r.name).filter(Boolean),
+    }));
 
     return {
       items,
-      meta: {
-        totalItems: total,
-      },
+      meta: { totalItems: items.length },
     };
   }
-  catch (error) {
-    console.error('Failed to load table data:', error);
-    message.error(t('notify.connectionError') || '連接錯誤');
+  catch {
+    message.error(t('notify.connectionError') || '查詢失敗');
     return { items: [], meta: { totalItems: 0 } };
   }
 };
 
-const handleFilter = async () => {
+/**
+ * =========================
+ * Context Consumer 行為：處理站長切換
+ * =========================
+ * 當站長（Breadcrumb Context）切換時：
+ * - 清空會員搜尋選項
+ * - 重新載入活動列表
+ * - 重置搜尋表單
+ * - 自動觸發 DynamicTable reload
+ */
+watch(
+  () => contextVersion.value,
+  async () => {
+    // 清空會員相關狀態
+    memberOptions.value = [];
+
+    // 重新載入活動列表
+    await fetchActivityList();
+
+    // 重置搜尋表單
+    const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+    }
+
+    // 自動觸發 reload（Vue3 搜尋模型行為）
+    await nextTick();
+    (dynamicTableInstance as any)?.reload?.();
+  },
+);
+
+/**
+ * =========================
+ * SearchMode 狀態顯示
+ * =========================
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - masterAgent：後端 API 參數（Breadcrumb Context）
+ * - memberID、activityID：搜尋表單欄位，用於後端 API 查詢
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  // 嘗試獲取搜尋表單的值
+  const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+  if (!searchFormRef) {
+    return 'BACKEND';
+  }
+
   try {
-    searchConditionValidator();
-    appliedQuery.value = {
-      ...query.value,
-    };
-    handleReload();
-  }
-  catch (error) {
-    // 驗證失敗，不執行查詢
-  }
-};
+    const formValues = searchFormRef.getFieldsValue();
+    const hasMemberID = Boolean(formValues?.memberID?.trim());
+    const hasActivityID = Boolean(formValues?.activityID);
 
-// ============ 初始化 ============
-onMounted(async () => {
-  await fetchMasterAgentList();
-
-  if (userStore.level === 5) {
-    if (userStore.masterAgent && userStore.agent) {
-      masterAgent.value = userStore.masterAgent;
-      agentID.value = userStore.agent;
-      await onMasterAgentChanged(masterAgent.value);
-    }
+    // 所有搜尋條件都用於後端 API 查詢
+    // 因此無論是否有搜尋條件，都顯示為 BACKEND
+    return 'BACKEND';
   }
-  else if (userStore.level === 4) {
-    if (userStore.masterAgent) {
-      masterAgent.value = userStore.masterAgent;
-      agentID.value = userStore.masterAgent;
-      await onMasterAgentChanged(masterAgent.value);
-    }
+  catch {
+    return 'BACKEND';
   }
 });
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
+/**
+ * =========================
+ * Init
+ * =========================
+ */
+// 使用當前 Breadcrumb Context 的站長值進行初始化
+watch(
+  () => selectedMasterAgent.value,
+  async (newVal) => {
+    if (newVal) {
+      await fetchActivityList();
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
-  <div class="app-container daily-login-reward-record-table">
-    <div class="filter-container">
-      <div class="wrap">
-        <!-- 總代理選擇器 -->
-        <div
-          v-if="!isAgentIDDisabled"
-          class="input_group"
-        >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.masterAgent') || '總代理' }}</label>
-          </div>
-          <div class="my_input">
-            <AdminAccountSelector
-              v-model="masterAgent"
-              value-type="account"
-              :disabled="isAgentIDDisabled"
-              @update:model-value="onMasterAgentChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 會員搜索 -->
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.member') || '會員' }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="query.memberID"
-              show-search
-              :filter-option="false"
-              :options="memberOptions"
-              :loading="memberLoading"
-              :disabled="!agentID"
-              style="width: 200px"
-              allow-clear
-              placeholder="00001314 - 王小明"
-              @search="onMemberSearch"
-              @change="onMemberSelectChanged"
-              @popup-scroll="onMemberPopupScroll"
-            />
-          </div>
-        </div>
-
-        <!-- 期別選擇 -->
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('queryFormActivityID') || '期別' }}</label>
-          </div>
-          <div class="my_jcCenter">
-            <a-select
-              v-model:value="query.activityID"
-              :loading="activityLoading"
-              :disabled="!masterAgent"
-              style="width: 300px"
-              allow-clear
-              placeholder="請選擇期別"
-            >
-              <a-select-option
-                v-for="item in activityList"
-                :key="item.value"
-                :value="item.value"
-              >
-                {{ item.name }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </div>
-
-        <!-- 查詢按鈕 -->
-        <div class="input_group">
-          <a-button
-            type="primary"
-            class="input_btn"
-            :disabled="!query.activityID || !query.memberID"
-            @click="handleFilter"
-          >
-            <template #icon>
-              <SearchOutlined />
-            </template>
-            {{ t('search') || '查詢' }}
-          </a-button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 表格 -->
+  <div
+    class="table-container"
+    :style="{ overflowX: containerOverflowX }"
+  >
     <DynamicTable
-      :columns="columns"
+      :columns="finalColumns"
       :data-request="loadTableData"
-      :scroll="{ x: 'max-content' }"
-    />
+      :scroll="{ x: tableConfig.scrollX.value }"
+    >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ t('title') || '每日登入獎勵記錄' }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+    </DynamicTable>
   </div>
 </template>
-
-<style lang="less" scoped>
-.daily-login-reward-record-table {
-  .wrap {
-    display: flex;
-    flex-wrap: wrap;
-    background-color: #e7e7e7;
-    .item {
-      margin-top: 10px;
-    }
-    .input_btn {
-      margin: 10px 0;
-    }
-  }
-  .date_picker {
-    display: flex;
-    align-items: center;
-  }
-  .input_group {
-    display: flex;
-    padding: 10px;
-    .txt {
-      width: 100px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .my_input {
-      width: 200px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .my_select {
-      width: 280px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .my_jcCenter {
-      display: flex;
-      align-items: center;
-    }
-  }
-}
-</style>
-
