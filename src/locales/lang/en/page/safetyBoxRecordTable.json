@@ -1,4 +1,5 @@
 {
+  "title": "Safety Box Record Query",
   "labels": {
     "masterAgent": "Master Agent",
     "agent": "Agent",
@@ -16,6 +17,8 @@
   },
   "notify": {
     "required": "Member and search time are required",
+    "requiredMember": "Please select a member",
+    "requiredSearchTime": "Please select search time",
     "connectionError": "Connection Error"
   },
   "state": {

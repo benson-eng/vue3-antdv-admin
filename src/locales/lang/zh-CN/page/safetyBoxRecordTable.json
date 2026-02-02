@@ -1,4 +1,5 @@
 {
+  "title": "保險箱記錄查詢",
   "labels": {
     "masterAgent": "總代理",
     "agent": "代理商",
@@ -16,6 +17,8 @@
   },
   "notify": {
     "required": "會員與查詢時間為必要數值",
+    "requiredMember": "請選擇會員",
+    "requiredSearchTime": "請選擇查詢時間",
     "connectionError": "連接錯誤"
   },
   "state": {
