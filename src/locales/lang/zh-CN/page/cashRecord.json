@@ -15,6 +15,7 @@
     "sourceStatus": "來源狀態",
     "currencyType": "幣別",
     "memberID": "帳號",
+    "nickName": "暱稱",
     "masterAgent": "總代理",
     "agent": "代理商"
   },

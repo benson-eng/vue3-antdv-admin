@@ -1,5 +1,6 @@
-import { request } from '@/utils/request';
+import type { MasterAgentItem } from './masterAgent';
 import type { IVueResponse } from '@/api/types';
+import { request } from '@/utils/request';
 
 export interface AdminAccountItem {
   id: number;
@@ -25,3 +26,16 @@ export const changeAdminAccountPassword = (data: { account: string; password: st
     timeout: 0,
   });
 
+/**
+ * 取得所有網站列表
+ * 來源：admin-web/src/api/admin.ts getAllWebsite
+ * 從 getMasterAgentList 的完整資料中提取 website 欄位
+ */
+export const getAllWebsite = async (): Promise<string[]> => {
+  const response = await getMasterAgentList();
+  const masterAgentList = response as unknown as MasterAgentItem[];
+  const allWebsite = masterAgentList
+    .map((masterAgentInfo) => masterAgentInfo.website)
+    .filter((website): website is string => !!website); // 過濾掉 undefined/null
+  return allWebsite;
+};

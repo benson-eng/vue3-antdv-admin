@@ -1,15 +1,15 @@
-import { unref, nextTick, getCurrentInstance, watch } from 'vue';
-import { isFunction, isBoolean, get, debounce } from 'lodash-es';
+import type { FormProps } from 'ant-design-vue';
+import type { DynamicTableEmitFn, DynamicTableProps } from '../dynamic-table';
+import type { OnChangeCallbackParams, TableColumn } from '../types/';
+import type { Pagination, TableState } from './useTableState';
 import { useInfiniteScroll } from '@vueuse/core';
+import { debounce, get, isBoolean, isFunction } from 'lodash-es';
+import { getCurrentInstance, nextTick, unref, watch } from 'vue';
+import { isObject } from '@/utils/is';
+import { warn } from '@/utils/log';
 import tableConfig from '../dynamic-table.config';
 import { useEditable } from './useEditable';
 import { useTableExpand } from './useTableExpand';
-import type { TableState, Pagination } from './useTableState';
-import type { DynamicTableEmitFn, DynamicTableProps } from '../dynamic-table';
-import type { OnChangeCallbackParams, TableColumn } from '../types/';
-import type { FormProps } from 'ant-design-vue';
-import { warn } from '@/utils/log';
-import { isObject } from '@/utils/is';
 
 export type UseInfiniteScrollParams = Parameters<typeof useInfiniteScroll>;
 
@@ -59,6 +59,7 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
    * @description 表格查询
    */
   const handleSubmit = (params, page = 1) => {
+    console.log('[DynamicTable] handleSubmit called with params:', params, 'page:', page);
     updatePagination({
       current: page,
     });
@@ -71,9 +72,15 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
    * @description 获取表格数据
    */
   const fetchData = debounce(async (params: Recordable = {}) => {
+    console.log('[DynamicTable] fetchData called with params:', params);
     const { dataRequest, dataSource, fetchConfig, searchParams } = props;
 
     if (!dataRequest || !isFunction(dataRequest) || Array.isArray(dataSource)) {
+      console.warn('[DynamicTable] fetchData skipped:', {
+        hasDataRequest: !!dataRequest,
+        isFunction: isFunction(dataRequest),
+        isArrayDataSource: Array.isArray(dataSource),
+      });
       return;
     }
     try {
@@ -104,23 +111,39 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
       };
       await nextTick();
       if (searchFormRef.value) {
-        const values = await searchFormRef.value.validate();
-        queryParams = {
-          ...searchFormRef.value.handleFormValues(values),
-          ...queryParams,
-        };
+        console.log('[DynamicTable] Validating form...');
+        try {
+          const values = await searchFormRef.value.validate();
+          console.log('[DynamicTable] Form validation passed, values:', values);
+          queryParams = {
+            ...searchFormRef.value.handleFormValues(values),
+            ...queryParams,
+          };
+        }
+        catch (validationError) {
+          console.error('[DynamicTable] Form validation failed:', validationError);
+          // 驗證失敗時不繼續查詢
+          throw validationError;
+        }
       }
 
+      console.log('[DynamicTable] Calling dataRequest with queryParams:', queryParams);
       loadingRef.value = true;
       const res = await dataRequest(queryParams);
+      console.log('[DynamicTable] dataRequest response:', res);
+      console.log('[DynamicTable] fetchConfig:', { listField, totalField });
 
       const isArrayResult = Array.isArray(res);
+      console.log('[DynamicTable] isArrayResult:', isArrayResult);
       let resultItems: Recordable[] = isArrayResult ? res : get(res, listField);
       const resultTotal: number = isArrayResult ? res.length : Number(get(res, totalField));
+      console.log('[DynamicTable] Extracted resultItems:', resultItems);
+      console.log('[DynamicTable] Extracted resultTotal:', resultTotal);
 
       // 確保 resultItems 始終是數組
       if (!Array.isArray(resultItems)) {
         warn(`表格數據格式錯誤：期望數組，但得到 ${typeof resultItems}`);
+        console.error('[DynamicTable] resultItems is not an array:', resultItems);
         resultItems = [];
       }
 
@@ -134,18 +157,24 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
           return await fetchData(params);
         }
       }
+      console.log('[DynamicTable] Setting tableData.value to:', resultItems);
       tableData.value = resultItems;
       updatePagination({ total: ~~resultTotal });
+      console.log('[DynamicTable] Updated pagination total:', ~~resultTotal);
       if (queryParams[pageField]) {
         updatePagination({ current: queryParams[pageField] || 1 });
       }
+      console.log('[DynamicTable] Final tableData.value:', tableData.value);
       return tableData;
-    } catch (error) {
+    }
+    catch (error) {
+      console.error('[DynamicTable] fetchData error:', error);
       warn(`表格查询出错：${error}`);
       emit('fetch-error', error);
       tableData.value = [];
       updatePagination({ total: 0 });
-    } finally {
+    }
+    finally {
       loadingRef.value = false;
     }
   });
@@ -194,7 +223,9 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
   // dataIndex 可以为 a.b.c
   // const getDataIndexVal = (dataIndex, record) => dataIndex.split('.').reduce((pre, curr) => pre[curr], record)
 
-  // 获取表格列key
+  /**
+   * 获取表格列key
+   */
   const getColumnKey = (column: TableColumn) => {
     return (column?.key || column?.dataIndex) as string;
   };
@@ -205,7 +236,8 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
     const key = Array.isArray(name) ? name.join('.') : name;
     if (status) {
       editFormErrorMsgs.value.delete(key);
-    } else {
+    }
+    else {
       editFormErrorMsgs.value.set(key, errorMsgs);
     }
   };
@@ -214,7 +246,8 @@ export const useTableMethods = (payload: UseTableMethodsPayload) => {
   const updatePagination = (info: Pagination = paginationRef.value) => {
     if (isBoolean(info)) {
       paginationRef.value = info;
-    } else if (isObject(paginationRef.value)) {
+    }
+    else if (isObject(paginationRef.value)) {
       paginationRef.value = {
         ...paginationRef.value,
         ...info,

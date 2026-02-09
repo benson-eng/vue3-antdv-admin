@@ -1,1256 +1,1086 @@
 <script setup lang="ts">
-import type { Dayjs } from 'dayjs';
-import type { MasterAgentItem } from '@/api/backend/adminAccount/masterAgent';
-import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
-import type { ICashRecord } from '@/api/backend/adminSystem/cashRecordServer';
-import type { TableColumn } from '@/components/core/dynamic-table';
+import type { TableColumnItem } from './columns';
+import type { LobbyGameInfo } from '@/api/backend/adminSystem/lobbyGameServer';
 
-import { SearchOutlined } from '@ant-design/icons-vue';
-import { message } from 'ant-design-vue';
-import currency from 'currency.js';
+import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, h, onMounted, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
+
+import { getMasterAgentList } from '@/api/backend/adminAccount/admin';
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
-import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
+import { getAllWebsite } from '@/api/backend/adminAccount/masterAgent';
+import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import { queryCashRecord } from '@/api/backend/adminSystem/cashRecordServer';
-import { gameList } from '@/api/backend/adminSystem/gameManagerServer';
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
-import ChainSelector from '@/components/ChainSelector/index.vue';
+import { gameList as fetchGameList, getGameIDList } from '@/api/backend/adminSystem/gameManagerServer';
+import { getLobbyGameList } from '@/api/backend/adminSystem/lobbyGameServer';
 import { useTable } from '@/components/core/dynamic-table';
+import { useCashRecordSearchRules } from '@/composables/cashRecord/useCashRecordSearchRules';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
 
-defineOptions({
-  name: 'CashRecordTable',
-});
+import { createCashRecordColumns } from './columns';
+import { cashRecordSearchSchemas } from './formSchemas';
+import { useTableConfig } from './useTableConfig';
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 const { t } = useI18n('page.cashRecord');
 const userStore = useUserStore();
 
-/**
- * ============ 工具函數 ============
- */
-function precisionCalculation(num1: number, symbol: string, num2: number): number {
-  switch (symbol) {
-    case '+':
-      return Number(currency(num1, { precision: 4 }).add(num2));
-    case '-':
-      return Number(currency(num1, { precision: 4 }).subtract(num2));
-    default:
-      return Number.NaN;
-  }
-}
-
-function getMasterAgentByAgentID(agentID: string): string {
-  if (!agentID) {
-    return '';
-  }
-  const parts = agentID.split('.');
-  // 如果格式是 agent.masterAgent，返回 masterAgent (parts[1])
-  // 如果沒有點號，說明 agentID 本身就是 masterAgent，直接返回
-  return parts.length > 1 ? parts[1] : agentID;
-}
-
-// ============ 查詢條件 ============
-interface QueryState {
-  agentID: string;
-  account: string;
-  accountID: string;
-  memberID: string;
-  memberIDstr: string;
-  currency: string;
-  dateRange: [Dayjs, Dayjs];
-  type: string;
-  subType: string;
-  source: string;
-  sourceStatus: string;
-  remitno: string;
-}
-
-const query = ref<QueryState>({
-  agentID: '',
-  account: '',
-  accountID: '',
-  memberID: '',
-  memberIDstr: '',
-  currency: '',
-  dateRange: [dayjs().subtract(30, 'day').startOf('day'), dayjs().endOf('day')],
-  type: '',
-  subType: '',
-  source: '',
-  sourceStatus: '',
-  remitno: '',
+const masterAgentCtx = inject<any>(MASTER_AGENT_SELECT_KEY);
+const selectedMasterAgent = computed(() => {
+  return (
+    masterAgentCtx?.selectedMasterAgent?.value
+    || (userStore.level >= 4 ? userStore.masterAgent : '')
+  )?.trim() || '';
 });
 
-// 只有按下「查詢」才套用
-const appliedQuery = ref<QueryState>({ ...query.value });
+const contextVersion = computed(() => masterAgentCtx?.contextVersion?.value ?? 0);
 
-// ============ 會員搜索 ============
-const memberLoading = ref(false);
-const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserItem }[]>([]);
-const memberLastQueryText = ref('');
-const memberLastAccountID = ref('');
-const memberPageSize = 10;
-const sMemberID = ref('');
+/* ========================
+ * Type/SubType/Source/SourceStatus (拆解式搜尋模型)
+ * ======================== */
+/** 遊戲列表（用於 source 選項） */
+const gameSourceList = ref<Array<{ value: string; label: string }>>([]);
+/** 遊戲 ID 映射（gameName -> gameID），用於將選項中的 gameName 轉換為 gameID */
+const gameIDMap = ref<Map<string, string>>(new Map());
+/** 網站列表（用於 Transfer 的 source，當 authLevel <= 2 時） */
+const websiteList = ref<string[]>([]);
 
-// ============ 總代理選擇器 ============
-const isAgentIDDisabled = computed(() => userStore.level >= 4);
-const agentIDOptions = ref<Array<{ label: string; value: string }>>([]);
-const masterAgentList = ref<MasterAgentItem[]>([]);
+/**
+ * 載入遊戲列表（用於 source 選項）
+ * 根據 Vue2 邏輯：使用 gameName 作為選項，建立 gameName -> gameID 的映射
+ */
+const loadGameSourceList = async () => {
+  const masterAgent = selectedMasterAgent.value;
+  console.log('[CashRecord] loadGameSourceList called, masterAgent:', masterAgent);
 
-// ============ 代理商選擇器 ============
-const selectedMasterAgent = ref<string>('');
-const agentList = ref<Array<{ label: string; value: string }>>([]);
-const selectedAgent = ref<string>('');
-const isAgentDisabled = computed(() => userStore.level >= 5);
-
-const fetchMemberOptions = async (queryText: string, append = false) => {
-  memberLastQueryText.value = queryText;
-
-  if (!query.value.agentID) {
+  if (!masterAgent) {
+    console.warn('[CashRecord] No masterAgent, skipping loadGameSourceList');
+    gameSourceList.value = [];
+    gameIDMap.value.clear();
     return;
   }
-  if (!queryText || queryText.length < 2) {
-    memberOptions.value = [];
-    memberLastAccountID.value = '';
+
+  try {
+    console.log('[CashRecord] Starting to load game source list...');
+    const gameSourceSet = new Set<string>();
+    gameIDMap.value.clear();
+
+    // 1. 從 gameList API 獲取所有遊戲
+    console.log('[CashRecord] Fetching gameList from gameManager...');
+    const gameListRes = await fetchGameList({ masterAgent });
+    console.log('[CashRecord] gameList response:', gameListRes);
+
+    if (gameListRes && Array.isArray(gameListRes)) {
+      console.log('[CashRecord] gameList length:', gameListRes.length);
+      let gameListCount = 0;
+      gameListRes.forEach((game: any) => {
+        if (game.gameID && game.gameName) {
+          // 使用 gameName 作為選項（與 vue2 一致）
+          gameSourceSet.add(game.gameName);
+          // 建立 gameName -> gameID 的映射
+          gameIDMap.value.set(game.gameName, game.gameID);
+          gameListCount++;
+        }
+      });
+      console.log('[CashRecord] Added games from gameList:', gameListCount);
+    }
+    else {
+      console.warn('[CashRecord] gameList returned invalid data:', gameListRes);
+    }
+
+    // 2. 從 getGameIDList API 獲取完整的遊戲 ID 列表
+    // 注意：這個 API 只返回 gameID，沒有 gameName
+    // 如果 gameID 不在 gameList 中，使用 gameID 作為 gameName
+    try {
+      console.log('[CashRecord] Fetching getGameIDList...');
+      const gameIDListRes = await getGameIDList({ masterAgent });
+      console.log('[CashRecord] getGameIDList response:', gameIDListRes);
+
+      if (gameIDListRes && Array.isArray(gameIDListRes)) {
+        console.log('[CashRecord] getGameIDList length:', gameIDListRes.length);
+        let gameIDListCount = 0;
+        gameIDListRes.forEach((gameID: string) => {
+          if (gameID) {
+            // 檢查是否已經在 gameList 中（通過檢查 gameIDMap 的 values）
+            const exists = Array.from(gameIDMap.value.values()).includes(gameID);
+            if (!exists) {
+              // 如果不存在，使用 gameID 作為 gameName
+              gameSourceSet.add(gameID);
+              gameIDMap.value.set(gameID, gameID);
+              gameIDListCount++;
+            }
+          }
+        });
+        console.log('[CashRecord] Added games from getGameIDList:', gameIDListCount);
+      }
+      else {
+        console.warn('[CashRecord] getGameIDList returned invalid data:', gameIDListRes);
+      }
+    }
+    catch (error) {
+      // getGameIDList 可能不存在或失敗，不影響主要流程
+      console.error('[CashRecord] Failed to load game ID list:', error);
+    }
+
+    // 3. 從 getLobbyGameList API 獲取大廳遊戲列表（lobbyGameServer01）
+    try {
+      console.log('[CashRecord] Loading lobby game list...');
+      const lobbyGameListRes = await getLobbyGameList();
+      console.log('[CashRecord] getLobbyGameList response:', lobbyGameListRes);
+
+      // 處理 API 返回格式：可能是 { data: [...] } 或直接是數組
+      const lobbyGameList = Array.isArray(lobbyGameListRes)
+        ? lobbyGameListRes
+        : (lobbyGameListRes?.data && Array.isArray(lobbyGameListRes.data))
+            ? lobbyGameListRes.data
+            : null;
+
+      if (lobbyGameList && Array.isArray(lobbyGameList)) {
+        console.log('[CashRecord] LobbyGameList data length:', lobbyGameList.length);
+        let addedCount = 0;
+        lobbyGameList.forEach((lobby: LobbyGameInfo) => {
+          if (lobby.gameName && lobby.lobbyGameID) {
+            // 檢查是否已經存在（通過檢查 gameIDMap 的 values）
+            const exists = Array.from(gameIDMap.value.values()).includes(lobby.lobbyGameID);
+            if (!exists) {
+              // 使用 gameName 作為選項（與 vue2 一致）
+              gameSourceSet.add(lobby.gameName);
+              // 建立 gameName -> lobbyGameID 的映射
+              gameIDMap.value.set(lobby.gameName, lobby.lobbyGameID);
+              addedCount++;
+              console.log('[CashRecord] Added lobby game:', { gameName: lobby.gameName, lobbyGameID: lobby.lobbyGameID });
+            }
+            else {
+              console.log('[CashRecord] Lobby game already exists:', { gameName: lobby.gameName, lobbyGameID: lobby.lobbyGameID });
+            }
+          }
+          else {
+            console.warn('[CashRecord] Invalid lobby game data:', lobby);
+          }
+        });
+        console.log('[CashRecord] Total lobby games added:', addedCount);
+      }
+      else {
+        console.warn('[CashRecord] getLobbyGameList returned invalid data:', lobbyGameListRes);
+      }
+    }
+    catch (error) {
+      // getLobbyGameList 可能不存在或失敗，不影響主要流程
+      console.error('[CashRecord] Failed to load lobby game list:', error);
+    }
+
+    // 轉換為選項格式（使用 gameName 作為 value 和 label）
+    gameSourceList.value = Array.from(gameSourceSet).map(gameName => ({
+      value: gameName, // 使用 gameName 作為 value（與 vue2 一致）
+      label: gameName, // 使用 gameName 作為 label
+    }));
+
+    console.log('[CashRecord] gameSourceList length:', gameSourceList.value.length);
+    console.log('[CashRecord] gameSourceList values:', gameSourceList.value.map(i => i.value));
+    console.log('[CashRecord] gameIDMap size:', gameIDMap.value.size);
+  }
+  catch (error) {
+    console.error('Failed to load game list:', error);
+    gameSourceList.value = [];
+    gameIDMap.value.clear();
+  }
+};
+
+/**
+ * 載入網站列表（用於 Transfer 的 source，當 authLevel <= 2 時）
+ * 來源：admin-web/src/api/admin.ts getAllWebsite
+ */
+const loadWebsiteList = async () => {
+  // 只有當 authLevel <= 2 時才需要載入網站列表
+  if (userStore.level > 2) {
+    websiteList.value = [];
+    return;
+  }
+
+  try {
+    websiteList.value = await getAllWebsite();
+    console.log('[CashRecord] websiteList length:', websiteList.value.length);
+  }
+  catch (error) {
+    console.error('Failed to load website list:', error);
+    websiteList.value = [];
+  }
+};
+
+/* ========================
+ * DynamicTable
+ * ======================== */
+const [DynamicTable, tableInstance] = useTable({
+  search: true,
+  immediate: false, // 🔒 不自動查（Vue2 行為）
+  formProps: {
+    schemas: cashRecordSearchSchemas,
+  },
+});
+
+/** 根據選擇的類型和子類型更新選項 */
+const updateSubOptions = async (selectedType?: string, selectedSubType?: string) => {
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+
+  // 獲取規則實例
+  const rules = useCashRecordSearchRules({
+    authLevel: userStore.level,
+    gameSourceList: gameSourceList.value,
+    websiteList: websiteList.value,
+    t: (key: string) => t(key),
+  });
+
+  console.log('[CashRecord] rules.getSourceOptions(Bet):', rules.getSourceOptions('Bet').map(i => i.value),
+  );
+
+  if (!selectedType) {
+    // 清空子選項
+    formRef?.updateSchema([
+      {
+        field: 'subType',
+        componentProps: {
+          options: [],
+          disabled: true,
+        },
+      },
+      {
+        field: 'source',
+        componentProps: {
+          options: [],
+          disabled: true,
+        },
+      },
+      {
+        field: 'sourceStatus',
+        componentProps: {
+          options: [],
+          disabled: true,
+        },
+      },
+    ]);
+
+    // 清空子欄位的值
+    formRef?.setFieldsValue({
+      subType: undefined,
+      source: undefined,
+      sourceStatus: undefined,
+    });
+    return;
+  }
+
+  // 更新 subType
+  const subTypeOptions = rules.getSubTypeOptions(selectedType);
+  formRef?.updateSchema([{
+    field: 'subType',
+    componentProps: {
+      options: subTypeOptions,
+      disabled: subTypeOptions.length === 0,
+      onChange: async (val: string) => {
+        // 當 subType 變化時，重新更新 source 選項
+        await updateSubOptions(selectedType, val);
+        // 清空 source 的值（因為選項可能改變了）
+        const formRef = tableInstance.getSearchFormRef();
+        formRef?.setFieldsValue({ source: undefined });
+      },
+    },
+  }]);
+
+  // 更新 source（根據 subType 動態選擇）
+  const sourceOptions = rules.getSourceOptions(selectedType, selectedSubType);
+  formRef?.updateSchema([{
+    field: 'source',
+    componentProps: {
+      options: sourceOptions,
+      disabled: !rules.hasSource(selectedType),
+    },
+  }]);
+
+  // 更新 sourceStatus
+  const sourceStatusOptions = rules.getSourceStatusOptions(selectedType);
+  formRef?.updateSchema([{
+    field: 'sourceStatus',
+    componentProps: {
+      options: sourceStatusOptions,
+      disabled: !rules.hasSourceStatus(selectedType),
+    },
+  }]);
+};
+
+/** 更新類型選項 */
+const updateTypeOptions = async () => {
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+
+  // 獲取規則實例
+  const rules = useCashRecordSearchRules({
+    authLevel: userStore.level,
+    gameSourceList: gameSourceList.value,
+    websiteList: websiteList.value,
+    t: (key: string) => t(key),
+  });
+
+  console.log('[CashRecord] rules.getSourceOptions(Bet):', rules.getSourceOptions('Bet').map(i => i.value),
+  );
+
+  formRef?.updateSchema([{
+    field: 'type',
+    label: t('labels.type') || '類別',
+    componentProps: {
+      options: rules.getTypeOptions(),
+      placeholder: '請選擇類別',
+      allowClear: true,
+      onChange: async (val: string) => {
+        // 當類型變化時，清空所有子級選擇（與 vue2 的 ChianSelector 邏輯一致）
+        const formRef = tableInstance.getSearchFormRef();
+        formRef?.setFieldsValue({
+          subType: undefined,
+          source: undefined,
+          sourceStatus: undefined,
+        });
+        await updateSubOptions(val);
+      },
+    },
+  }]);
+};
+
+// 定義所有欄位
+// STEP 3 定型後的欄位 keys（按順序）：
+// 1. remitno, 2. transactionTime, 3. memberID (hideInTable), 4. accountID (ARCH-02),
+// 5. nickName (ARCH-02), 6. balanceChange, 7. beforeBalance, 8. afterBalance,
+// 9. currency, 10. type, 11. subType, 12. source, 13. sourceStatus, 14. noteTranslated
+const baseColumns = computed<TableColumnItem[]>(() => createCashRecordColumns(t));
+
+// 使用表格配置 Hook
+const tableConfig = useTableConfig(baseColumns);
+
+// 初始化標記：用於防止 watch 在初始化階段反向覆寫 visibleColumnKeys
+const isInitialized = ref(false);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
+const columns = computed<TableColumnItem[]>(() => {
+  const baseCols = baseColumns.value;
+  const visibleKeys = tableConfig.visibleColumnKeys.value;
+
+  // Guard: 如果 visibleColumnKeys 尚未初始化完成（空或無效），
+  // 不得套用 hideInTable，必須維持全部顯示
+  // 這確保初始載入時欄位顯示與 STEP 3 定型結果完全一致
+  const shouldApplyVisibility = isInitialized.value && visibleKeys.length > 0;
+
+  return baseCols.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+
+    // 僅在 visibleColumnKeys 為有效集合時才套用 hideInTable
+    /**
+     * 初始化階段：全部顯示
+     */
+    const isVisible = shouldApplyVisibility
+      ? visibleKeys.includes(key)
+      : true;
+
+    // 確保 flexible 欄位有 minWidth
+    const processedCol: TableColumnItem = {
+      ...col,
+      hideInTable: shouldApplyVisibility ? !isVisible : false, // 初始化階段：不隱藏
+    };
+
+    // 如果欄位是 flexible 但沒有設置 minWidth，設置預設值
+    if (processedCol.flexible && !processedCol.minWidth) {
+      processedCol.minWidth = 100; // 預設最小寬度 100px
+    }
+
+    // 對於 flexible 欄位，如果沒有設置 width，使用 minWidth 作為初始 width
+    // 這樣可以避免初始 render 時被壓縮為 0
+    if (processedCol.flexible && processedCol.minWidth && !processedCol.width) {
+      processedCol.width = processedCol.minWidth;
+    }
+
+    return processedCol;
+  });
+});
+
+// 監聽表格內部 columns 的變化，同步列設置組件的修改到 visibleColumnKeys
+// 注意：列設置組件會直接修改傳入表格的 columns，我們需要監聽這個變化
+// 重要：初始化階段不得反向覆寫 visibleColumnKeys，僅反映使用者操作
+watch(
+  () => {
+    // 嘗試從 tableInstance 獲取實際的 columns 狀態
+    const innerProps = (tableInstance as any)?.innerPropsRef?.value;
+    return innerProps?.columns;
+  },
+  (newColumns) => {
+    if (!newColumns || !Array.isArray(newColumns)) {
+      return;
+    }
+
+    // Guard: 初始化階段不得反向覆寫 visibleColumnKeys
+    // 僅在初始化完成後才同步使用者於 column setting 中的操作
+    if (!isInitialized.value) {
+      return;
+    }
+
+    // 根據新的 columns 狀態更新 visibleColumnKeys
+    const newVisibleKeys: string[] = [];
+    newColumns.forEach((col: TableColumnItem) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      if (key && !col.hideInTable) {
+        newVisibleKeys.push(key);
+      }
+    });
+
+    // 只更新有變化的部分，避免循環更新
+    const currentKeys = tableConfig.visibleColumnKeys.value;
+    const keysChanged = newVisibleKeys.length !== currentKeys.length
+      || newVisibleKeys.some(key => !currentKeys.includes(key))
+      || currentKeys.some(key => !newVisibleKeys.includes(key));
+
+    if (keysChanged) {
+      tableConfig.updateVisibleColumns(newVisibleKeys);
+    }
+  },
+  { deep: true, flush: 'post' },
+);
+
+// 監聽 baseColumns 和 visibleColumnKeys 的初始化完成
+// 確保 visibleColumnKeys 初始化完成後才標記為已初始化
+watch(
+  () => {
+    const baseCols = baseColumns.value;
+    const visibleKeys = tableConfig.visibleColumnKeys.value;
+    return { baseCols, visibleKeys };
+  },
+  ({ baseCols, visibleKeys }) => {
+    // 當 baseColumns 有值且 visibleColumnKeys 已初始化（包含所有欄位 keys）時，標記為已初始化
+    if (baseCols.length > 0 && visibleKeys.length > 0) {
+      // 驗證 visibleColumnKeys 包含所有 baseColumns 的 keys
+      const baseKeys = baseCols.map(col => (col.dataIndex as string) || (col.key as string) || '').filter(Boolean);
+      const hasAllKeys = baseKeys.every(key => visibleKeys.includes(key));
+
+      if (hasAllKeys && !isInitialized.value) {
+        // 使用 nextTick 確保在當前渲染週期完成後才標記為已初始化
+        nextTick(() => {
+          isInitialized.value = true;
+        });
+      }
+    }
+  },
+  { immediate: true },
+);
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+/**
+ * ARCH05：scroll.y 穩定化（類型 B：有搜尋區頁面）
+ * - scroll.y 初始值為 undefined，確保 DynamicTable 初始 render 時搜尋區正常顯示
+ * - 於 mounted + nextTick 後計算並設定 scroll.y，啟用 fixed header
+ * - 不得延後 DynamicTable render（不得使用 v-if）
+ */
+const scrollY = ref<number | undefined>(undefined);
+
+/**
+ * ARCH05：計算並設定 scroll.y
+ * - 計算視窗高度減去其他元素高度（header、filter-container、padding 等）
+ * - 確保表格有固定高度，啟用 vertical scroll 和 fixed header
+ */
+const calculateScrollY = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  nextTick(() => {
+    /**
+     * 計算可用高度
+     * 視窗高度 - header - filter-container - padding/margin
+     * 預留約 300px 給表頭、搜尋區、toolbar 和其他固定元素
+     */
+    const availableHeight = window.innerHeight - 300;
+    // 確保最小高度為 400px
+    scrollY.value = Math.max(availableHeight, 400);
+  });
+};
+
+/**
+ * ARCH05：組合 scroll 物件
+ * - 初始時 scroll.y 為 undefined
+ * - mounted + nextTick 後 scroll.y 會被設定，啟用 fixed header
+ */
+const tableScroll = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+  return {
+    x: scrollX,
+    y: scrollY.value,
+  };
+});
+
+/* ========================
+ * Agent ID tracking
+ * ======================== */
+const currentAgentID = ref<string>('');
+
+/* ========================
+ * Member (fuzzy)
+ * ======================== */
+const memberOptions = ref<any[]>([]);
+const memberLoading = ref(false);
+const sMemberID = ref('');
+
+/** 後續只更新 options / loading */
+const updateMemberOptions = async () => {
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+  formRef?.updateSchema([{
+    field: 'memberID',
+    componentProps: {
+      options: memberOptions.value,
+      loading: memberLoading.value,
+    },
+  }]);
+};
+
+const onMemberSearch = debounce(async (text: string) => {
+  if (!text || text.length < 2) {
+    return;
+  }
+
+  const form = tableInstance.getSearchFormRef();
+  const agentID = form?.getFieldsValue()?.agentID;
+  if (!agentID) {
+    message.error('請先選擇代理');
     return;
   }
 
   memberLoading.value = true;
+  await updateMemberOptions();
+
   try {
-    const masterAgent = getMasterAgentByAgentID(query.value.agentID);
     const res = await fuzzyQueryUser({
-      masterAgent,
-      agentID: query.value.agentID,
-      queryText,
-      limit: memberPageSize,
-      lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
+      masterAgent: selectedMasterAgent.value,
+      agentID,
+      queryText: text,
+      limit: 10,
     });
-
-    const list = res || [];
-    const mapped = list.map(item => ({
-      raw: item,
-      value: `${item.account}@${item.agentID}`,
-      label: `${item.accountID} - ${item.nickName}`,
+    memberOptions.value = (res || []).map((i: any) => ({
+      label: `${i.accountID} - ${i.nickName}`,
+      value: `${i.account}@${i.agentID}`,
     }));
-
-    memberOptions.value = append ? [...memberOptions.value, ...mapped] : mapped;
-    memberLastAccountID.value = list.length > 0 ? list[list.length - 1].accountID : memberLastAccountID.value;
   }
   finally {
     memberLoading.value = false;
+    await updateMemberOptions();
   }
-};
+}, 300);
 
-const onMemberSearch = debounce((text: string) => {
-  if (text && text.length >= 2) {
-    fetchMemberOptions(text, false);
-  }
-  else {
-    memberOptions.value = [];
-  }
-}, 250);
-
-const onMemberSelectChanged = (val: string) => {
-  query.value.memberID = val;
-  const matched = memberOptions.value.find(o => o.value === val);
-  query.value.account = matched?.raw?.account || '';
-  sMemberID.value = val;
-};
-
-const onMemberPopupScroll = async (e: UIEvent) => {
-  const target = e.target as HTMLElement | null;
-  if (!target) {
+/** 更新 memberID 和 memberIDstr 的互斥禁用狀態 */
+const updateMemberFieldsDisabled = async () => {
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+  if (!formRef) {
     return;
   }
 
-  const nearBottom = target.scrollTop + target.clientHeight >= target.scrollHeight - 20;
-  if (!nearBottom || !memberLastQueryText.value || !memberLastAccountID.value) {
-    return;
-  }
+  const values = formRef.getFieldsValue();
+  const hasMemberID = !!sMemberID.value || !!values.memberID;
+  const hasMemberIDstr = !!values.memberIDstr;
 
-  await fetchMemberOptions(memberLastQueryText.value, true);
+  // 更新 memberID 的禁用狀態
+  formRef.updateSchema([{
+    field: 'memberID',
+    componentProps: {
+      disabled: hasMemberIDstr,
+    },
+  }]);
+
+  // 更新 memberIDstr 的禁用狀態
+  formRef.updateSchema([{
+    field: 'memberIDstr',
+    componentProps: {
+      disabled: hasMemberID || !values.agentID,
+    },
+  }]);
 };
 
-watch(
-  () => query.value.agentID,
-  () => {
-    query.value.account = '';
-    query.value.memberID = '';
-    memberOptions.value = [];
-  },
-);
-
-// ============ 會員ID字串輸入 ============
-const memberIDstr = ref('');
-const isMemberIDstrValid = ref(false);
-
-const onMemberIDstrInput = (value: string) => {
-  const regex = /^[a-zA-Z0-9]*$/;
-  isMemberIDstrValid.value = !regex.test(value);
-};
-
-// ============ 幣別 ============
+/* ========================
+ * Currency Type List
+ * ======================== */
 const currencyTypeList = ref<Array<{ name: string; value: string }>>([]);
-const masterAgentCurrencyTypeMap = ref<Map<string, string>>(new Map());
+const masterAgentCurrencyTypeMap = ref(new Map<string, string>());
+const masterAgentList = ref<any[]>([]);
 
-const fetchCurrencyTypeList = async (masterAgentAccount?: string) => {
+const loadCurrencyTypeList = async () => {
+  const masterAgent = selectedMasterAgent.value;
   currencyTypeList.value = [];
   masterAgentCurrencyTypeMap.value.clear();
 
-  // Level 4 用戶使用自己的 currencies
+  if (!masterAgent) {
+    return;
+  }
+
+  // 如果用戶等級是 4，使用 userStore.currencies
   if (userStore.level === 4) {
     const currencies = userStore.currencies || [];
     currencies.forEach((item: any) => {
-      currencyTypeList.value.push({ name: item.currencyName, value: item.currencyCode });
+      currencyTypeList.value.push({
+        name: item.currencyName,
+        value: item.currencyCode,
+      });
       masterAgentCurrencyTypeMap.value.set(item.currencyCode, item.currencyName);
     });
   }
-  else if (masterAgentAccount) {
-    // 從 masterAgent 資料中獲取幣別列表
-    const masterAgent = masterAgentList.value.find(ma => ma.account === masterAgentAccount);
-    if (masterAgent && masterAgent.currencies && Array.isArray(masterAgent.currencies)) {
-      masterAgent.currencies.forEach((currencyItem: any) => {
+  else {
+    // 從 masterAgentList 中獲取幣別
+    if (masterAgentList.value.length === 0) {
+      masterAgentList.value = await getMasterAgentList() || [];
+    }
+
+    const masterAgentData = masterAgentList.value.find((ma: any) => ma.account === masterAgent);
+    if (masterAgentData && masterAgentData.currencies && Array.isArray(masterAgentData.currencies)) {
+      masterAgentData.currencies.forEach((currencyItem: any) => {
         if (currencyItem && typeof currencyItem === 'object' && currencyItem.currencyCode) {
           currencyTypeList.value.push({
             name: currencyItem.currencyName || currencyItem.currencyCode,
             value: currencyItem.currencyCode,
           });
-          masterAgentCurrencyTypeMap.value.set(currencyItem.currencyCode, currencyItem.currencyName || currencyItem.currencyCode);
+          masterAgentCurrencyTypeMap.value.set(
+            currencyItem.currencyCode,
+            currencyItem.currencyName || currencyItem.currencyCode,
+          );
         }
       });
     }
   }
 
+  // 更新幣別選項
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+  formRef?.updateSchema([{
+    field: 'currency',
+    label: t('labels.currencyType') || '幣別',
+    componentProps: {
+      options: currencyTypeList.value.map(item => ({
+        label: item.name,
+        value: item.value,
+      })),
+      placeholder: '請選擇幣別',
+    },
+  }]);
+
+  // 如果有幣別列表，自動選擇第一個
   if (currencyTypeList.value.length > 0) {
-    query.value.currency = currencyTypeList.value[0].value;
+    formRef?.setFieldsValue({
+      currency: currencyTypeList.value[0].value,
+    });
   }
 };
 
-const getCurrencyName = (currencyType: string): string => {
-  if (userStore.level === 4) {
-    const currencies = userStore.currencies || [];
-    const found = currencies.find((item: any) => item && typeof item === 'object' && item.currencyCode === currencyType) as any;
-    return (found?.currencyName) || 'unknown';
-  }
-  else {
-    return masterAgentCurrencyTypeMap.value.get(currencyType) || 'unknown';
-  }
-};
+/* ========================
+ * Agent Selector
+ * ======================== */
+const agentRawList = ref<any[]>([]);
 
-// ============ ChainSelector 相關 ============
-const filterSchema = ref<any>({});
-const chainSelectorKeyI18nMap = ref<Map<string, string>>(new Map());
-const gameIDList = ref<Map<string, { gameID: string; gameName: string }>>(new Map());
-
-const buildMabuSchema = async (gameSource: Array<string>) => {
-  const authLevel = userStore.level;
-  let transferSourceSchema: any = {};
-
-  // source website 權限設定
-  const websiteSource: Array<string> = [];
-  if (authLevel <= 2) {
-    // TODO: 需要實現 getAllWebsite API
-    // websiteSource = await getAllWebsite();
-    transferSourceSchema = {
-      source: {
-        value: websiteSource,
-        label: t('labels.source'),
-      },
-    };
+const loadAgents = async () => {
+  const masterAgent = selectedMasterAgent.value;
+  if (!masterAgent) {
+    return;
   }
 
-  // set chain selector i18n key map
-  const chainSelectorKeys = [
-    'Bet',
-    'Win',
-    'Transfer',
-    'Promote',
-    'Mission',
-    'MailAttachment',
-    'RedemptionCode',
-    'Transaction',
-    'transfer',
-    'DailyRewardPass',
-    'SafetyBox',
-    'singleWallet',
-    'Purchase',
-    'Manual',
-    'GameWinLose',
-    'Bonus',
-    'ServiceFee',
-  ];
-  chainSelectorKeys.forEach((k) => {
-    chainSelectorKeyI18nMap.value.set(k, t(`record.types.${k}`) || k);
-  });
+  agentRawList.value = await getAgentListByMasterAgent({ masterAgent }) || [];
 
-  const re: any = {
-    type: {
-      label: t('labels.type'),
-      value: {
-        Bet: {
-          subType: {
-            values: ['General'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-          source: {
-            values: gameSource.map(s => ({ value: s, label: s })),
-            label: t('labels.source'),
-          },
-          sourceStatus: {
-            values: ['NormalGame', 'DoubleGame'].map(g => ({ value: g, label: g })),
-            label: t('labels.sourceStatus'),
-          },
-        },
-        Win: {
-          subType: {
-            values: ['General', 'ForceSettle', 'Award'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-          source: {
-            values: gameSource.map(s => ({ value: s, label: s })),
-            label: t('labels.source'),
-          },
-          sourceStatus: {
-            values: ['NormalGame', 'FreeGame', 'DoubleGame', 'JackpotGame'].map(s => ({
-              value: s,
-              label: s,
-            })),
-            label: t('labels.sourceStatus'),
-          },
-        },
-        Transfer: {
-          subType: {
-            values: ['KeyIn', 'KeyOut'].map(s => ({ value: s, label: s })),
-            label: t('labels.subType'),
-          },
-          ...transferSourceSchema,
-        },
-        Promote: {
-          subType: {
-            values: ['Award', 'General', 'Activity'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-          source: {
-            values: gameSource.map(s => ({ value: s, label: s })),
-            label: t('labels.source'),
-          },
-          sourceStatus: {
-            values: ['LobbyGame', 'NormalGame', 'FreeGame', 'DoubleGame', 'JackpotGame'].map(s => ({
-              value: s,
-              label: s,
-            })),
-            label: t('labels.sourceStatus'),
-          },
-        },
-        Mission: {
-          subType: {
-            values: ['Reward', 'Mission'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        MailAttachment: {
-          subType: {
-            values: ['Transaction'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        RedemptionCode: {
-          subType: {
-            values: ['Redeem'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        Transaction: {
-          subType: {
-            values: ['Withhold', 'ServiceFee', 'Recover', 'Receive'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        transfer: {
-          subType: {
-            values: ['carryIn', 'carryOut'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        DailyRewardPass: {
-          subType: {
-            values: ['Reward', 'Deduct'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        SafetyBox: {
-          subType: {
-            values: ['Withdrawal', 'Deposit', 'ServiceFee'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        singleWallet: {
-          subType: {
-            values: ['gameBet', 'gamePlay', 'gameWin'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        Purchase: {
-          subType: {
-            values: ['FreeBalance'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        Manual: {
-          subType: {
-            values: ['add', 'sub'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        GameWinLose: {
-          subType: {
-            values: ['GamePlay', 'BuyGift'].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
-        Bonus: {
-          subType: {
-            values: [
-              'Activity',
-              'Mail',
-              'DailySignIn',
-              'NoviceMission',
-              'DailyMission',
-              'GuildMission',
-              'ContinuousDailyMission',
-              'ContinuousWeeklyMission',
-              'Other',
-            ].map((subType) => {
-              let i18t = subType;
-              if (subType === 'Activity') {
-                i18t = 'BonusActivity';
-              }
-              return {
-                value: subType,
-                label: t(`record.subTypes.${i18t}`) || subType,
-              };
-            }),
-            label: t('labels.subType'),
-          },
-        },
-        ServiceFee: {
-          subType: {
-            values: [
-              'CreateGuildServiceFee',
-              'RefundGuildServiceFee',
-              'TransactionServiceFee',
-              'SafetyBoxServiceFee',
-            ].map(subType => ({
-              value: subType,
-              label: t(`record.subTypes.${subType}`) || subType,
-            })),
-            label: t('labels.subType'),
-          },
-        },
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+  formRef?.updateSchema([{
+    field: 'agentID',
+    componentProps: {
+      options: agentRawList.value.map((i: any) => ({
+        label: i.account.includes('.') ? i.account.split('.')[0] : i.account,
+        value: i.account,
+      })),
+      disabled: userStore.level >= 5,
+      onChange: async (val: string) => {
+        currentAgentID.value = val || '';
+        await updateMemberFieldsDisabled();
       },
     },
-  };
+  }]);
 
-  // TODO: 根據平台判斷是否刪除某些類型
-  // if (isVnappPlatform()) {
-  //   delete re.type.value.Transfer;
-  // } else {
-  //   delete re.type.value.transfer;
-  // }
-
-  return re;
+  if (agentRawList.value.length) {
+    const formRef = tableInstance.getSearchFormRef();
+    const firstAgentID = agentRawList.value[0].account;
+    formRef?.setFieldsValue({
+      agentID: firstAgentID,
+    });
+    currentAgentID.value = firstAgentID;
+    // 更新 memberIDstr 的禁用狀態（需要代理才能輸入）
+    await updateMemberFieldsDisabled();
+  }
 };
 
-const getGameID = (gameName: string): string => {
-  let gameID = '';
-  gameIDList.value.forEach((value) => {
-    if (value.gameName === gameName) {
-      gameID = value.gameID;
-      return true;
-    }
+/** 初始化一次 member schema（只註冊 handler） */
+const initMemberSchema = async () => {
+  await nextTick();
+  const formRef = tableInstance.getSearchFormRef();
+  formRef?.updateSchema([{
+    field: 'memberID',
+    component: 'Select',
+    componentProps: {
+      showSearch: true,
+      filterOption: false,
+      allowClear: true,
+      options: [],
+      loading: false,
+      placeholder: '請選擇或輸入會員',
+      disabled: false,
+      onSearch: onMemberSearch,
+      onChange: async (val: string) => {
+        sMemberID.value = val || '';
+        // 當選擇 memberID 時，清空 memberIDstr
+        if (val) {
+          const formRef = tableInstance.getSearchFormRef();
+          formRef?.setFieldsValue({ memberIDstr: undefined });
+        }
+        await updateMemberFieldsDisabled();
+      },
+    },
+  }]);
+
+  // 初始化 memberIDstr 的 onChange 和 i18n
+  formRef?.updateSchema([{
+    field: 'memberIDstr',
+    label: t('labels.memberID') || '帳號',
+    componentProps: {
+      placeholder: t('notify.memberIDstr') || '帳號只可輸入英數字',
+      onChange: async (val: string) => {
+        // 當輸入 memberIDstr 時，清空 memberID
+        if (val) {
+          sMemberID.value = '';
+          const formRef = tableInstance.getSearchFormRef();
+          formRef?.setFieldsValue({ memberID: undefined });
+        }
+        await updateMemberFieldsDisabled();
+      },
+    },
+  }]);
+};
+
+/* ========================
+ * 初始化搜尋預設值（Vue2 行為）
+ * ======================== */
+onMounted(async () => {
+  await loadGameSourceList();
+  await loadWebsiteList(); // 載入網站列表（當 authLevel <= 2 時）
+  await updateTypeOptions();
+  await loadCurrencyTypeList();
+  await loadAgents();
+  await initMemberSchema();
+  await updateMemberFieldsDisabled();
+
+  // 初始化子選項為禁用狀態
+  await updateSubOptions();
+
+  const start = dayjs().subtract(30, 'day').startOf('day');
+  const end = dayjs().endOf('day');
+
+  // 這裡只做「注入」，不觸發查詢
+  const searchFormRef = tableInstance.getSearchFormRef();
+  searchFormRef?.setFieldsValue({
+    dateRange: [start, end],
   });
-  return gameID || gameName;
-};
 
-const handleSelectedValue = (selectedValue: { type: string; subType: string; source: string; sourceStatus: string }) => {
-  const { type, subType, source, sourceStatus } = selectedValue;
-  query.value.type = type;
-  query.value.subType = subType;
-  query.value.source = getGameID(source);
-  query.value.sourceStatus = sourceStatus;
-};
-
-// ============ 表格 ============
-const [DynamicTable, dynamicTableInstance] = useTable({
-  search: false,
+  // ARCH05：於 mounted + nextTick 後計算並設定 scroll.y
+  // 確保 DynamicTable 已 render，layout 已穩定後再啟用 fixed header
+  calculateScrollY();
 });
 
-type ColumsRowData = ICashRecord & {
-  balanceChange: number;
-  currencyTypeStr: string;
-  noteTranslated: string;
-};
+/* ========================
+ * Watch contextVersion
+ * ======================== */
+watch(contextVersion, async () => {
+  await loadGameSourceList();
+  await loadWebsiteList(); // 載入網站列表（當 authLevel <= 2 時）
+  await updateTypeOptions();
+  await updateSubOptions();
+  await loadCurrencyTypeList();
+  await loadAgents();
+  // 清空會員選擇
+  sMemberID.value = '';
+  currentAgentID.value = '';
+  const formRef = tableInstance.getSearchFormRef();
+  formRef?.setFieldsValue({
+    memberID: undefined,
+    memberIDstr: undefined,
+  });
+  await updateMemberFieldsDisabled();
+});
 
-const noteTranslator = (type: string, note: string): string => {
-  if (!note) {
-    return '';
-  }
-
-  // 嘗試解析 JSON，如果失敗則返回原始 note
-  try {
-    const parsed = JSON.parse(note);
-
-    // 如果有 gameName，優先顯示 gameName
-    if (parsed && typeof parsed === 'object' && 'gameName' in parsed) {
-      return parsed.gameName || note;
+/* ========================
+ * Watch agentID - 當代理變更時檢查並清空會員選擇
+ * ======================== */
+watch(
+  () => currentAgentID.value,
+  async (newAgentID, oldAgentID) => {
+    if (!newAgentID) {
+      // 代理被清空時，清空所有會員相關欄位
+      sMemberID.value = '';
+      const formRef = tableInstance.getSearchFormRef();
+      formRef?.setFieldsValue({
+        memberID: undefined,
+        memberIDstr: undefined,
+      });
+      await updateMemberFieldsDisabled();
+      return;
     }
 
-    // 根據不同類型處理
-    switch (type) {
-      case 'Store':
-        if (parsed.treasureItemName) {
-          return parsed.treasureItemName;
-        }
-        break;
-      case 'Promote':
-        if (parsed.missionName) {
-          return parsed.missionName;
-        }
-        break;
-      case 'Donate':
-        if (parsed.giftName) {
-          return parsed.giftName;
-        }
-        break;
-      default:
-        // 對於其他類型，如果有 gameName 則顯示，否則返回原始 note
-        break;
+    // 如果代理變更了，檢查選擇的會員是否屬於新代理
+    if (oldAgentID && sMemberID.value) {
+      const checkData = sMemberID.value.split('@');
+      if (checkData.length === 2 && checkData[1] !== newAgentID) {
+        // 會員不屬於新代理，清空會員選擇
+        sMemberID.value = '';
+        const formRef = tableInstance.getSearchFormRef();
+        formRef?.setFieldsValue({
+          memberID: undefined,
+          memberIDstr: undefined,
+        });
+      }
     }
 
-    return note;
+    // 更新禁用狀態
+    await updateMemberFieldsDisabled();
+  },
+);
+
+/**
+ * ========================
+ * Data Request
+ * ========================
+ */
+const loadTableData = async (params: any) => {
+  console.log('[CashRecord] loadTableData called with params:', params);
+  /**
+   * 🔹 memberID 組合（Vue2 行為）
+   * 優先使用模糊搜尋的 memberID，否則使用組合邏輯
+   */
+  let memberID = sMemberID.value || params.memberID;
+  if (!memberID) {
+    const { memberIDstr, agentID } = params;
+    if (memberIDstr && agentID) {
+      memberID = `${memberIDstr}@${agentID}`;
+    }
   }
-  catch (error) {
-    // JSON 解析失敗，返回原始 note
-    return note;
-  }
-};
 
-const appendBalanceChangeColumn = (cashRecords: ICashRecord[]): (ICashRecord & { balanceChange: number })[] => {
-  return cashRecords.map((r) => {
-    const balanceChange = r.withdrawal > 0
-      ? precisionCalculation(Number(r.deposit), '-', Number(r.withdrawal))
-      : Number(r.deposit);
-    return {
-      ...r,
-      balanceChange,
-    };
-  });
-};
+  const {
+    agentID,
+    currency,
+    dateRange,
+    remitno,
+    type,
+    subType,
+    source,
+    sourceStatus,
+  } = params;
 
-const gameListProcessor = (gameList: any): Array<string> => {
-  const list = Object.values(gameList);
-  const gameNameList: Array<string> = [];
-  list.forEach((gameInfo: any) => {
-    gameIDList.value.set(gameInfo.gameID, { gameID: gameInfo.gameID, gameName: gameInfo.gameName });
-    gameNameList.push(gameInfo.gameName);
-  });
-  return gameNameList;
-};
+  console.log('[CashRecord] Required fields check:', { agentID, currency, dateRange });
 
-const columns = ref<TableColumn<ColumsRowData>[]>([
-  {
-    title: t('labels.remitno'),
-    dataIndex: 'remitno',
-    width: 150,
-  },
-  {
-    title: t('labels.transactionTime'),
-    dataIndex: 'transactionTime',
-    width: 180,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return record.transactionTime ? dayjs(record.transactionTime).format('YYYY-MM-DD HH:mm:ss') : '';
-    },
-  },
-  {
-    title: t('labels.memberID'),
-    dataIndex: 'memberID',
-    width: 200,
-  },
-  {
-    title: t('labels.balanceChange'),
-    dataIndex: 'balanceChange',
-    width: 150,
-    align: 'right',
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      const value = record.balanceChange || 0;
-      const style = record.balanceChange < 0 ? { color: '#FF4949' } : {};
-      return h('span', { style }, value.toLocaleString());
-    },
-  },
-  {
-    title: t('labels.beforeBalance'),
-    dataIndex: 'beforeBalance',
-    width: 150,
-    align: 'right',
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return Number(record.beforeBalance || 0).toLocaleString();
-    },
-  },
-  {
-    title: t('labels.afterBalance'),
-    dataIndex: 'afterBalance',
-    width: 150,
-    align: 'right',
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return Number(record.afterBalance || 0).toLocaleString();
-    },
-  },
-  {
-    title: t('labels.currencyType'),
-    dataIndex: 'currency',
-    width: 120,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return getCurrencyName(record.currency);
-    },
-  },
-  {
-    title: t('labels.type'),
-    dataIndex: 'type',
-    width: 150,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return t(`record.types.${record.type}`) || record.type;
-    },
-  },
-  {
-    title: t('labels.subType'),
-    dataIndex: 'subType',
-    width: 150,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return t(`record.subTypes.${record.subType}`) || record.subType;
-    },
-  },
-  {
-    title: t('labels.source'),
-    dataIndex: 'source',
-    width: 150,
-  },
-  {
-    title: t('labels.sourceStatus'),
-    dataIndex: 'sourceStatus',
-    width: 150,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return record.sourceStatus === 'T9_SINGLE_WALLET' ? 'T9LIVE' : record.sourceStatus;
-    },
-  },
-  {
-    title: t('labels.note'),
-    dataIndex: 'note',
-    width: 200,
-    customRender: ({ record }: { record: ColumsRowData }) => {
-      return noteTranslator(record.type, record.note);
-    },
-  },
-]);
-
-const loadTableData = async (_params: any) => {
-  if (!appliedQuery.value.agentID || !appliedQuery.value.dateRange[0] || !appliedQuery.value.currency) {
+  // 必填條件不足 → 不查
+  if (!agentID || !currency || !dateRange?.length) {
+    console.warn('[CashRecord] Missing required fields, skipping API call');
     return { items: [], meta: { totalItems: 0 } };
   }
 
-  const [start, end] = appliedQuery.value.dateRange;
+  const [start, end] = dateRange;
+
+  // 確保日期值正確轉換為 Date 物件
+  // dateRange 可能是 dayjs 物件、Date 物件或字串
+  const startDate = dayjs(start).toDate();
+  const endDate = dayjs(end).toDate();
 
   const postData: any = {
-    agentID: appliedQuery.value.agentID,
-    date: [start.toDate(), end.toDate()],
-    currency: appliedQuery.value.currency,
+    agentID,
+    currency,
+    date: [startDate, endDate],
     page: 1,
     limit: 999999,
   };
 
-  if (appliedQuery.value.remitno) {
-    postData.remitno = appliedQuery.value.remitno;
+  // 移除空參數，避免傳送沒有意義的過濾條件
+  if (remitno?.toString().trim()) {
+    postData.remitno = remitno;
   }
-
-  if (appliedQuery.value.type) {
-    postData.type = appliedQuery.value.type;
+  if (type !== undefined && type !== null && type !== '') {
+    postData.type = type;
   }
-
-  if (appliedQuery.value.subType) {
-    postData.subType = appliedQuery.value.subType;
+  if (subType !== undefined && subType !== null && subType !== '') {
+    postData.subType = subType;
   }
-
-  if (appliedQuery.value.source) {
-    postData.source = appliedQuery.value.source;
+  if (source !== undefined && source !== null && source !== '') {
+    // 如果 source 是 gameName，轉換為 gameID（與 vue2 的 getGameID 邏輯一致）
+    if (gameIDMap.value.has(source)) {
+      postData.source = gameIDMap.value.get(source);
+    }
+    else {
+      // 如果找不到映射，直接使用原值（可能是 gameID 或網站名稱）
+      postData.source = source;
+    }
   }
-
-  if (appliedQuery.value.sourceStatus) {
-    postData.sourceStatus = appliedQuery.value.sourceStatus;
+  if (sourceStatus !== undefined && sourceStatus !== null && sourceStatus !== '') {
+    postData.sourceStatus = sourceStatus;
   }
-
-  // 處理會員ID
-  if (appliedQuery.value.memberID) {
-    postData.memberID = appliedQuery.value.memberID;
-  }
-  else if (appliedQuery.value.memberIDstr && appliedQuery.value.agentID) {
-    postData.memberID = `${appliedQuery.value.memberIDstr}@${appliedQuery.value.agentID}`;
-  }
-  else if (appliedQuery.value.account && appliedQuery.value.agentID) {
-    postData.memberID = `${appliedQuery.value.account}@${appliedQuery.value.agentID}`;
+  if (memberID) {
+    postData.memberID = memberID;
   }
 
   try {
+    console.log('[CashRecord] Calling queryCashRecord API with postData:', postData);
     const res = await queryCashRecord(postData);
-    // 調試：輸出實際 API 回傳結構
-    console.log('API 回傳資料:', res);
+    console.log('[CashRecord] queryCashRecord API response:', res);
+    console.log('[CashRecord] res.data:', res?.data);
+    console.log('[CashRecord] res.data?.items:', res?.data?.items);
 
-    // 使用類型斷言處理實際 API 回傳結構
-    const resData = res as any;
+    // 處理不同的 API 返回格式
+    // 格式1: { data: { items: [...], total: ... } } (標準格式)
+    // 格式2: { items: [...], total: ... } (可能被包裝器處理過)
+    const resAny = res as any;
+    const rawItems = res?.data?.items || resAny?.items || [];
+    const total = res?.data?.total ?? resAny?.total ?? rawItems.length;
 
-    // 嘗試多種可能的資料路徑
-    let items: ICashRecord[] = [];
-    let total = 0;
+    console.log('[CashRecord] Extracted rawItems:', rawItems);
+    console.log('[CashRecord] Extracted total:', total);
 
-    // 路徑 1: res.data.data.items (用戶指定的結構)
-    if (resData?.data?.data?.items) {
-      items = resData.data.data.items;
-      total = resData.data.data.total || 0;
+    /**
+     * ARCH-02：批次補齊會員基本資料（accountID / nickName）
+     */
+    const masterAgent = selectedMasterAgent.value;
+    const accounts = Array.from(
+      new Set(
+        rawItems
+          .map((i: any) => String(i.memberID || '').split('@')[0])
+          .filter(Boolean),
+      ),
+    );
+
+    let accountInfoMap: Record<string, { id?: string; nickName?: string }> = {};
+    let accountOnlyMap: Record<string, { id?: string; nickName?: string }> = {};
+    if (accounts.length && masterAgent) {
+      try {
+        const baseRes = await queryAccountBaseInfo({ masterAgent, accounts });
+        const baseListRaw = baseRes as { data?: any[] } | any[] | undefined;
+        const baseList = Array.isArray(baseListRaw) ? baseListRaw : baseListRaw?.data ?? [];
+        accountInfoMap = baseList.reduce((acc, cur) => {
+          const key = `${cur.account}@${cur.agentID}`;
+          acc[key] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+        accountOnlyMap = baseList.reduce((acc, cur) => {
+          acc[cur.account] = { id: cur.id, nickName: cur.nickName };
+          return acc;
+        }, {} as Record<string, { id?: string; nickName?: string }>);
+      }
+      catch (error) {
+        // 會員基本資料查詢失敗不影響主列表，只記錄警告
+        console.warn('[CashRecord] Failed to fetch member base info', error);
+      }
     }
-    // 路徑 2: res.data.items (API 定義的結構)
-    else if (resData?.data?.items) {
-      items = resData.data.items;
-      total = resData.data.total || 0;
-    }
-    // 路徑 3: res.items (直接返回)
-    else if (Array.isArray(resData?.items)) {
-      items = resData.items;
-      total = resData.total || resData.items.length;
-    }
-    // 路徑 4: res 本身就是陣列
-    else if (Array.isArray(resData)) {
-      items = resData;
-      total = resData.length;
-    }
 
-    console.log('解析後的 items 數量:', items.length, 'total:', total);
+    /**
+     * 🔹 補齊顯示用欄位（Vue2 行為）
+     */
+    const items = rawItems.map((r: any) => {
+      const memberIDKey = String(r.memberID || '');
+      const accountKey = memberIDKey.split('@')[0];
+      const baseInfo = accountInfoMap[memberIDKey] || accountOnlyMap[accountKey] || {};
 
-    const processedItems = appendBalanceChangeColumn(items);
+      return {
+        ...r,
+        balanceChange:
+          r.withdrawal > 0
+            ? Number(r.deposit) - Number(r.withdrawal)
+            : Number(r.deposit),
+        noteTranslated: r.note || '',
+        accountID: baseInfo.id || '',
+        nickName: baseInfo.nickName || '',
+      };
+    });
 
-    let st = 3.5;
-    if (items.length / 4500 > 3.5) {
-      st = items.length / 4500;
-    }
-
-    // 模擬請求時間
-    await new Promise(resolve => setTimeout(resolve, st * 1000));
-
-    return {
-      items: processedItems,
-      meta: {
-        totalItems: total,
-      },
+    const result = {
+      items,
+      meta: { totalItems: total },
     };
+    console.log('[CashRecord] Returning data to DynamicTable:', result);
+    console.log('[CashRecord] Items count:', items.length);
+    return result;
   }
-  catch (error) {
-    console.error('Failed to load table data:', error);
+  catch {
     message.error(t('notify.connectionError'));
     return { items: [], meta: { totalItems: 0 } };
   }
 };
 
 /**
- * ============ 日期選擇器 ============
+ * SearchMode 狀態顯示（僅標示，不影響任何行為）
+ *
+ * 本頁為 search: true（有搜尋區），所有查詢皆為後端 API（loadTableData），
+ * 因此標示為 BACKEND。
  */
-const disabledDate = (current: Dayjs) => {
-  const today = dayjs();
-  const threeMonthsAgo = today.subtract(3, 'month');
-  return current && current.isBefore(threeMonthsAgo);
-};
+const searchMode = computed<SearchMode>(() => 'BACKEND');
 
-/**
- * ============ 查詢處理 ============
- */
-const handleFilter = async () => {
-  if (!query.value.agentID) {
-    message.error(t('notify.agentIDRequired'));
-    return;
-  }
-  if (!query.value.dateRange || !query.value.dateRange[0]) {
-    message.error(t('notify.dateRequired'));
-    return;
-  }
-  if (!query.value.currency) {
-    message.error(t('notify.currencyRequired'));
-    return;
-  }
-  if (isMemberIDstrValid.value) {
-    message.error(t('notify.memberIDstrInvalid'));
-    return;
-  }
-
-  appliedQuery.value = {
-    ...query.value,
-    dateRange: [...query.value.dateRange] as [Dayjs, Dayjs],
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
   };
-
-  await dynamicTableInstance?.reload?.(true);
-};
-
-const fetchMasterAgentList = async () => {
-  try {
-    // 獲取完整的 masterAgent 資料（包含 currencies）
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = list || [];
-    agentIDOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
-  }
-};
-
-const fetchAgentList = async (masterAgent: string) => {
-  if (!masterAgent) {
-    agentList.value = [];
-    return;
-  }
-  try {
-    const list = await getAgentListByMasterAgent({ masterAgent });
-    agentList.value = (list || []).map(item => ({
-      // 顯示時只顯示點號前的部分
-      label: item.account.includes('.') ? item.account.split('.')[0] : item.account,
-      value: item.account,
-    }));
-  }
-  catch (error) {
-    console.error('Failed to fetch agent list:', error);
-    agentList.value = [];
-  }
-};
-
-const onMasterAgentChanged = async (val: string) => {
-  selectedMasterAgent.value = val;
-  selectedAgent.value = '';
-  agentList.value = [];
-
-  // 如果有選擇總代理，獲取代理商列表
-  if (val) {
-    await fetchAgentList(val);
-    // 如果有代理商，自動選擇第一個
-    if (agentList.value.length > 0 && userStore.level <= 4) {
-      selectedAgent.value = agentList.value[0].value;
-      // 確保 selectedAgent.value 不包含 masterAgent，如果包含則只取 agent 部分
-      const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-      query.value.agentID = `${agentAccount}.${val}`;
-    }
-    else {
-      // 如果沒有代理商，直接使用總代理作為 agentID
-      query.value.agentID = val;
-    }
-  }
-  else {
-    query.value.agentID = '';
-  }
-
-  query.value.account = '';
-  query.value.memberID = '';
-  query.value.memberIDstr = '';
-  memberOptions.value = [];
-  await fetchCurrencyTypeList(val);
-};
-
-const onAgentChanged = (val: string) => {
-  selectedAgent.value = val;
-  if (selectedMasterAgent.value && val) {
-    // 確保 val 不包含 masterAgent，如果包含則只取 agent 部分
-    const agentAccount = val.includes('.') ? val.split('.')[0] : val;
-    query.value.agentID = `${agentAccount}.${selectedMasterAgent.value}`;
-  }
-  else if (selectedMasterAgent.value) {
-    query.value.agentID = selectedMasterAgent.value;
-  }
-  else {
-    query.value.agentID = '';
-  }
-
-  query.value.account = '';
-  query.value.memberID = '';
-  query.value.memberIDstr = '';
-  memberOptions.value = [];
-};
-
-// ============ 初始化 ============
-onMounted(async () => {
-  await fetchMasterAgentList();
-
-  if (userStore.level === 5) {
-    // Level 5 用戶（代理商級別）使用自己的 agent 和 masterAgent
-    if (userStore.masterAgent && userStore.agent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      selectedAgent.value = userStore.agent;
-      // 確保 userStore.agent 不包含 masterAgent，如果包含則只取 agent 部分
-      const agentAccount = userStore.agent.includes('.') ? userStore.agent.split('.')[0] : userStore.agent;
-      query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      // 獲取該總代理下的代理商列表（用於顯示）
-      await fetchAgentList(userStore.masterAgent);
-    }
-  }
-  else if (userStore.level === 4) {
-    // Level 4 用戶（總代理級別）使用自己的 masterAgent
-    if (userStore.masterAgent) {
-      selectedMasterAgent.value = userStore.masterAgent;
-      query.value.agentID = userStore.masterAgent;
-      // 獲取該總代理下的代理商列表
-      await fetchAgentList(userStore.masterAgent);
-      if (agentList.value.length > 0) {
-        selectedAgent.value = agentList.value[0].value;
-        // 確保 selectedAgent.value 不包含 masterAgent，如果包含則只取 agent 部分
-        const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-        query.value.agentID = `${agentAccount}.${userStore.masterAgent}`;
-      }
-    }
-  }
-  else if (agentIDOptions.value.length > 0) {
-    // Level 1-3 用戶可以選擇總代理
-    selectedMasterAgent.value = agentIDOptions.value[0].value;
-    query.value.agentID = agentIDOptions.value[0].value;
-    // 獲取該總代理下的代理商列表
-    await fetchAgentList(agentIDOptions.value[0].value);
-    if (agentList.value.length > 0) {
-      selectedAgent.value = agentList.value[0].value;
-      // 確保 selectedAgent.value 不包含 masterAgent，如果包含則只取 agent 部分
-      const agentAccount = selectedAgent.value.includes('.') ? selectedAgent.value.split('.')[0] : selectedAgent.value;
-      query.value.agentID = `${agentAccount}.${agentIDOptions.value[0].value}`;
-    }
-  }
-
-  // 初始化幣別列表
-  await fetchCurrencyTypeList(selectedMasterAgent.value);
-
-  // 初始化遊戲列表和 schema
-  let gameSource: Array<string> = [];
-  try {
-    const masterAgent = getMasterAgentByAgentID(query.value.agentID);
-    if (masterAgent) {
-      const response = await gameList({ masterAgent });
-      const gameListData = (response || []).reduce((acc: any, gameInfo: any) => {
-        const gameID = gameInfo.gameID;
-        const obj: any = {};
-        obj[gameID] = gameInfo;
-        if (gameInfo.language && gameInfo.language.tw) {
-          obj[gameID].gameName += ` (${gameInfo.language.tw})`;
-        }
-        return Object.assign(acc, obj);
-      }, {});
-
-      if (gameListData) {
-        gameSource = gameListProcessor(gameListData);
-      }
-    }
-  }
-  catch (error) {
-    console.error('Failed to fetch game list:', error);
-  }
-
-  if (gameSource.length > 0) {
-    filterSchema.value = await buildMabuSchema(gameSource);
-  }
+  return configs[searchMode.value];
 });
 </script>
 
 <template>
-  <div class="app-container cash_record_table">
-    <div class="filter-container">
-      <div class="wrap">
-        <!-- 總代理選擇器 -->
-        <div
-          v-if="!isAgentIDDisabled"
-          class="input_group"
-        >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.masterAgent') }}</label>
-          </div>
-          <div class="my_input">
-            <AdminAccountSelector
-              v-model="selectedMasterAgent"
-              value-type="account"
-              :disabled="isAgentIDDisabled"
-              @update:model-value="onMasterAgentChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 代理商選擇器 -->
-        <div
-          v-if="selectedMasterAgent"
-          class="input_group"
-        >
-          <div class="txt">
-            <label style="color: #ff4949">{{ t('labels.agent') }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="selectedAgent"
-              :options="agentList"
-              :disabled="isAgentDisabled"
-              placeholder="請選擇代理商"
-              style="width: 200px"
-              :allow-clear="!isAgentDisabled"
-              @change="onAgentChanged"
-            />
-          </div>
-        </div>
-
-        <!-- 會員搜索 (SearchMemberID 組件位置) -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.member') }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="query.memberID"
-              show-search
-              :filter-option="false"
-              :options="memberOptions"
-              :loading="memberLoading"
-              :disabled="!query.agentID || !!memberIDstr"
-              style="width: 200px; margin-top: 7px"
-              allow-clear
-              placeholder="00001314 - 王小明"
-              @search="onMemberSearch"
-              @change="onMemberSelectChanged"
-              @popup-scroll="onMemberPopupScroll"
-            />
-            <div class="hint-text">
-              {{ t('notify.memberIDstrHint') }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 會員ID字串輸入 -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.memberID') }}</label>
-          </div>
-          <div class="my_input">
-            <a-input
-              v-model:value="memberIDstr"
-              :disabled="!query.agentID || !!query.account"
-              style="width: 200px; margin-top: 13px"
-              allow-clear
-              @update:value="onMemberIDstrInput"
-            />
-            <div
-              class="hint-text"
-              :class="{ 'error-text': isMemberIDstrValid, 'normal-text': !isMemberIDstrValid }"
-            >
-              {{ t('notify.memberIDstr') }}
-            </div>
-          </div>
-        </div>
-
-        <!-- 幣別 -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.currencyType') }}</label>
-          </div>
-          <div class="my_select">
-            <a-select
-              v-model:value="query.currency"
-              :options="currencyTypeList.map(c => ({ label: c.name, value: c.value }))"
-              placeholder="請選擇"
-              style="width: 200px"
-            />
-          </div>
-        </div>
-
-        <!-- 日期選擇器 -->
-        <div class="input_group">
-          <div class="txt redText">
-            <label>{{ t('labels.transactionTime') }}</label>
-          </div>
-          <div class="my_jcCenter">
-            <a-range-picker
-              v-model:value="query.dateRange"
-              show-time
-              format="YYYY-MM-DD HH:mm:ss"
-              :allow-clear="false"
-              :disabled-date="disabledDate"
-              range-separator="～"
-              :placeholder="['START TIME', 'END TIME']"
-              :default-time="[dayjs('00:00:00', 'HH:mm:ss'), dayjs('23:59:59', 'HH:mm:ss')]"
-              class="timeText item"
-            />
-          </div>
-        </div>
-
-        <!-- 查詢按鈕 -->
-        <div class="input_group">
-          <a-button
-            type="primary"
-            class="input_btn"
-            @click="handleFilter"
-          >
-            <template #icon>
-              <SearchOutlined />
-            </template>
-            {{ t('common.search') }}
-          </a-button>
-        </div>
-      </div>
-
-      <!-- 額外filter -->
-      <div
-        class="wrap"
-        style="height: auto"
+  <div class="cash-record-page">
+    <div
+      class="table-container"
+      :style="{ overflowX: containerOverflowX }"
+    >
+      <DynamicTable
+        row-key="remitno"
+        :columns="columns"
+        :data-request="loadTableData"
+        :pagination="false"
+        :scroll="tableScroll"
       >
-        <!-- remitno -->
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('labels.remitno') }}</label>
+        <!-- SearchMode 狀態顯示（僅標示，不影響任何行為） -->
+        <template #headerTitle>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <Tag :color="searchModeConfig.color" style="margin: 0">
+              SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+            </Tag>
           </div>
-          <div class="my_input">
-            <a-input
-              v-model:value="query.remitno"
-              :placeholder="t('labels.input')"
-              style="width: 200px"
-              allow-clear
-              @press-enter="handleFilter"
-            />
-          </div>
-        </div>
-
-        <!-- ChainSelector -->
-        <ChainSelector
-          v-if="Object.keys(filterSchema).length > 0"
-          :schema="filterSchema"
-          :key-label-i18n-map="chainSelectorKeyI18nMap"
-          @handle-selected-value="handleSelectedValue"
-        />
-      </div>
+        </template>
+      </DynamicTable>
     </div>
-
-    <DynamicTable
-      row-key="remitno"
-      :columns="columns"
-      :data-request="loadTableData"
-      :pagination="false"
-    />
   </div>
 </template>
-
-<style lang="less" scoped>
-.cash_record_table {
-  .wrap {
-    display: flex;
-    flex-wrap: wrap;
-    background-color: #e7e7e7;
-    align-items: center;
-
-    .item {
-      margin-top: 10px;
-    }
-
-    .input_btn {
-      margin: 10px 0;
-    }
-  }
-
-  .input_group {
-    display: flex;
-    padding: 10px;
-    align-items: center;
-
-    .txt {
-      width: 100px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .my_input {
-      width: 200px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .my_select {
-      width: 200px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-
-    .my_jcCenter {
-      display: flex;
-      align-items: center;
-    }
-  }
-}
-
-.timeText {
-  width: 400px;
-}
-
-.redText {
-  color: red;
-}
-
-.hint-text {
-  font-size: 12px;
-  color: #999;
-  margin-top: 2px;
-}
-
-.error-text {
-  color: red;
-}
-
-.normal-text {
-  color: #999;
-}
-</style>

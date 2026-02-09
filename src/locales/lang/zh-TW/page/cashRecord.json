@@ -3,7 +3,7 @@
     "input": "請輸入",
     "member": "會員",
     "accountID": "帳戶ID",
-    "type": "類型",
+    "type": "類別",
     "remitno": "交易單號",
     "transactionTime": "交易時間",
     "balanceChange": "點數價值",
@@ -15,6 +15,7 @@
     "sourceStatus": "來源狀態",
     "currencyType": "幣別",
     "memberID": "帳號",
+    "nickName": "暱稱",
     "masterAgent": "總代理",
     "agent": "代理商"
   },
@@ -95,4 +96,3 @@
     }
   }
 }
-

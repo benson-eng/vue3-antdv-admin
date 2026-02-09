@@ -7,17 +7,17 @@ import { request } from '@/utils/request';
  * =========================================
  */
 
-export type MasterAgentRole = {
+export interface MasterAgentRole {
   id: number;
   key?: string;
   name?: string;
-};
+}
 
-export type MasterAgentCurrency = {
+export interface MasterAgentCurrency {
   currencyIndex?: number;
   currencyName?: string;
   currencyCode?: string;
-};
+}
 
 export type MasterAgentItem = Record<string, any> & {
   id: number;
@@ -98,6 +98,23 @@ export const removeMasterAgentFromShareholder = (data: { masterAgentAccount: str
     timeout: 0,
   });
 
+/**
+ * 取得所有網站列表
+ * 來源：admin-web/src/api/admin.ts getAllWebsite
+ * 從 getMasterAgentAccountList 的完整資料中提取 website 欄位
+ */
+export const getAllWebsite = async (): Promise<string[]> => {
+  const response = await getMasterAgentAccountList();
+  const masterAgentList = response || [];
+  /**
+   * 過濾掉 undefined/null
+   */
+  const allWebsite = masterAgentList
+    .map(masterAgentInfo => masterAgentInfo.website)
+    .filter((website): website is string => !!website);
+  return allWebsite;
+};
+
 export default {
   getMasterAgentAccountList,
   createMasterAgentAccount,
@@ -105,10 +122,5 @@ export default {
   updateMasterAgentAccountPassword,
   updateMasterAgentShareholder,
   removeMasterAgentFromShareholder,
+  getAllWebsite,
 };
-
-
-
-
-
-
