@@ -1,14 +1,30 @@
 {
   "labels": {
     "masterAgent": "總代理",
-    "agent": "代理商",
+    "agent": "代理",
     "member": "會員",
     "eventID": "活動ID",
     "playDateTime": "遊玩時間",
     "spending": "花費",
-    "gain": "獲得"
+    "spendingType": "花費種類",
+    "spendingItem": "花費項目",
+    "spendingAmount": "花費數量",
+    "gain": "獲得",
+    "gainType": "獲得種類",
+    "gainItem": "獲得項目",
+    "gainAmount": "獲得數量",
+    "accountID": "帳戶ID",
+    "nickName": "暱稱",
+    "agentPlaceholder": "請選擇代理",
+    "memberPlaceholder": "00001314 - 王小明",
+    "type": "類型",
+    "currencyType": "幣別",
+    "balance": "數量",
+    "item": "道具",
+    "token": "代幣"
   },
   "tables": {
+    "id": "ID",
     "roundID": "回合編號",
     "eventID": "活動ID",
     "memberID": "會員ID",
@@ -19,7 +35,8 @@
     "gainType": "獲得類型",
     "gainDetails": "獲得細節",
     "gainAmount": "獲得數量",
-    "playDateTime": "遊玩時間"
+    "playDateTime": "遊玩時間",
+    "unknown": "未知"
   },
   "awardType": {
     "Currency": "金錢",
@@ -27,8 +44,8 @@
     "Token": "代幣"
   },
   "notify": {
-    "masterAgentAndAgentFieldMissed": "總代理商與代理商必填",
-    "connectionError": "連線錯誤"
+    "masterAgentAndAgentFieldMissed": "總代理和代理商欄位不能為空",
+    "connectionError": "連接錯誤"
   },
   "search": "查詢",
   "datePicker": {
@@ -36,5 +53,3 @@
     "dueDate": "結束日期"
   }
 }
-
-

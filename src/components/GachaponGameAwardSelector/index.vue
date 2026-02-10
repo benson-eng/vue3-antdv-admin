@@ -18,10 +18,12 @@
       </a-select-option>
     </a-select>
     <!-- currency type -->
+    <!-- Vue3 模式：始終顯示，使用 disabled 控制可用性 -->
     <a-select
-      v-if="isCurrencyTypeSelected"
       v-model:value="form.currencyType"
       :placeholder="t('labels.currencyType')"
+      :disabled="!isCurrencyTypeSelected"
+      allow-clear
       style="width: 120px; margin-right: 8px"
     >
       <a-select-option
@@ -33,17 +35,20 @@
       </a-select-option>
     </a-select>
     <!-- balance -->
+    <!-- Vue3 模式：始終顯示，使用 disabled 控制可用性 -->
     <a-input-number
-      v-if="isCurrencyTypeSelected"
       v-model:value="form.balance"
       :placeholder="t('labels.balance')"
+      :disabled="!isCurrencyTypeSelected"
       style="width: 120px; margin-right: 8px"
     />
     <!-- item -->
+    <!-- Vue3 模式：始終顯示，使用 disabled 控制可用性 -->
     <a-select
-      v-if="isItemSelected"
       v-model:value="form.itemID"
       :placeholder="t('labels.item')"
+      :disabled="!isItemSelected"
+      allow-clear
       style="width: 200px; margin-right: 8px"
     >
       <a-select-option
@@ -55,10 +60,12 @@
       </a-select-option>
     </a-select>
     <!-- token type -->
+    <!-- Vue3 模式：始終顯示，使用 disabled 控制可用性 -->
     <a-select
-      v-if="isTokenSelected"
       v-model:value="form.tokenID"
       :placeholder="t('labels.token')"
+      :disabled="!isTokenSelected"
+      allow-clear
       style="width: 200px; margin-right: 8px"
     >
       <a-select-option
@@ -136,25 +143,33 @@ watch(type, (newValue, oldValue) => {
     clear();
   }
   else {
-    // 當類型改變時，清空不相關的字段
+    // Vue3 模式：當類型改變時，清空不相關的字段（欄位始終顯示，但會被 disabled）
     if (oldValue && newValue !== oldValue) {
       if (newValue === 'Currency') {
-        // 只保留 Currency 相關字段
+        // 只保留 Currency 相關字段，清空其他字段
         form.value = {
           currencyType: form.value.currencyType,
           balance: form.value.balance,
+          itemID: undefined,
+          tokenID: undefined,
         };
       }
       else if (newValue === 'Treasures') {
-        // 只保留 Treasures 相關字段
+        // 只保留 Treasures 相關字段，清空其他字段
         form.value = {
           itemID: form.value.itemID,
+          currencyType: undefined,
+          balance: undefined,
+          tokenID: undefined,
         };
       }
       else if (newValue === 'Token') {
-        // 只保留 Token 相關字段
+        // 只保留 Token 相關字段，清空其他字段
         form.value = {
           tokenID: form.value.tokenID,
+          currencyType: undefined,
+          balance: undefined,
+          itemID: undefined,
         };
       }
     }
