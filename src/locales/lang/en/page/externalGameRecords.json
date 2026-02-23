@@ -1,4 +1,5 @@
 {
+  "title": "External Game Records",
   "labels": {
     "masterAgent": "Master Agent",
     "agent": "Agent",
@@ -16,7 +17,9 @@
     "buyFeature": "Buy Feature",
     "betType": "Bet Type",
     "searchTime": "Search Time",
-    "platform": "Platform"
+    "platform": "Platform",
+    "accountID": "Account ID",
+    "nickName": "Nickname"
   },
   "betType": {
     "NormalGame": "Normal Game",
