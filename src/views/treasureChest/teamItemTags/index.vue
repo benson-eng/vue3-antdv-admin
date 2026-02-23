@@ -1,116 +1,154 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { message, Modal, Switch } from 'ant-design-vue';
-import { useTable } from '@/components/core/dynamic-table';
-import { useFormModal } from '@/hooks/useModal';
-import { useI18n } from '@/hooks/useI18n';
-import { useUserStore } from '@/store/modules/user';
-import { getMasterAgentList } from '@/api/backend/adminAccount/admin';
 import type { DefaultOptionType } from 'ant-design-vue/es/select';
-import {
-  itemTagList,
-  addItemTag,
-  updateItemTag,
-  removeItemTag,
-  bulkUpdateItemTagOrder,
-  type ItemTag,
-  type ItemTypes,
-} from '@/api/backend/treasureChestSystem';
-import { getColumns } from './columns';
+import type { ItemTag, ItemTypes } from '@/api/backend/treasureChestSystem';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal, Tag } from 'ant-design-vue';
+import { computed, inject, onMounted, ref, watch } from 'vue';
+import { getMasterAgentList } from '@/api/backend/adminAccount/admin';
+import {
+  addItemTag,
+  bulkUpdateItemTagOrder,
+  itemTagList,
+  removeItemTag,
+  updateItemTag,
+} from '@/api/backend/treasureChestSystem';
+import { useTable } from '@/components/core/dynamic-table';
+import { useI18n } from '@/hooks/useI18n';
+import { useFormModal } from '@/hooks/useModal';
+import { useUserStore } from '@/store/modules/user';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { getColumns } from './columns';
 
 defineOptions({
   name: 'TeamItemTags',
 });
 
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
 const { t } = useI18n('page.teamItemTags');
 const userStore = useUserStore();
 
+// ARCH04：從 Layout 根元件 provide 取得站長選單狀態（Breadcrumb Context）
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// ARCH04：使用 computed 取得當前選取的站長值（優先使用 Context）
+const selectedMasterAgent = computed(() => {
+  const v = masterAgentCtx?.selectedMasterAgent.value;
+  if (v) {
+    return String(v).trim();
+  }
+  return '';
+});
+
+// ARCH04：使用 computed 取得 contextVersion（用於監聽變化）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
+
+// ARCH04：本地 masterAgent 狀態（用於 CRUD 操作和搜尋表單備用）
+const masterAgent = ref<string>('');
+const localMasterAgentOptions = ref<DefaultOptionType[]>([]);
+
+// ARCH06：此頁面已關閉搜尋區，不再需要這些變數（保留以備未來使用）
+// const masterAgentOptions = computed(() => {
+//   if (masterAgentCtx?.masterAgentOptions.value && masterAgentCtx.masterAgentOptions.value.length > 0) {
+//     return masterAgentCtx.masterAgentOptions.value;
+//   }
+//   return localMasterAgentOptions.value;
+// });
+
+// const isMasterAgentDisabled = computed(() => {
+//   if (masterAgentCtx) {
+//     return !masterAgentCtx.canSelectMasterAgent.value;
+//   }
+//   return userStore.level >= 4;
+// });
+
+// ARCH06：此頁面使用自動 reload，關閉搜尋區顯示
+// 查詢模式：自動查詢模式（Context 變化時自動觸發）
 const [DynamicTable, dynamicTableInstance] = useTable({
-  formProps: { autoSubmitOnEnter: true },
+  search: false, // ARCH06：關閉搜尋區顯示（使用自動 reload）
+  immediate: false, // ARCH06：不立即請求，等待 Context 準備好後再觸發
 });
 
 const [showModal] = useFormModal();
-
-// 總代理選擇
-const masterAgent = ref<string>('');
-const masterAgentOptions = ref<DefaultOptionType[]>([]);
-const isMasterAgentDisabled = computed(() => userStore.level >= 4);
 
 // 表格數據
 const tableData = ref<ItemTag[]>([]);
 const isShowOrderSubmitBtn = ref(false);
 const originalOrder = ref<number[]>([]);
 
+// ARCH05：啟用/停用操作的 loading 狀態（防止重複點擊）
+const enabledChangingIds = ref<Set<number>>(new Set());
+
 // 道具類型選項（只顯示 teamBadge）
 const itemTypes: ItemTypes[] = ['teamBadge'];
 
-// 獲取總代理列表
+/**
+ * ARCH04：獲取總代理列表（僅在 Context 不可用時作為備用）
+ */
 const fetchMasterAgents = async () => {
+  // ARCH04：如果 Context 可用，不需要本地獲取
+  if (masterAgentCtx?.masterAgentOptions.value && masterAgentCtx.masterAgentOptions.value.length > 0) {
+    return;
+  }
+
   const list = await getMasterAgentList();
-  masterAgentOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
-  
-  // 如果用戶等級 >= 4，自動選擇第一個總代理
-  if (userStore.level >= 4 && list && list.length > 0) {
+  localMasterAgentOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
+
+  // ARCH06：如果 Context 不可用且用戶等級 >= 4，自動選擇第一個總代理
+  // 注意：不再在此處觸發 reload，改由 watch 處理
+  if (!masterAgentCtx && userStore.level >= 4 && list && list.length > 0) {
     masterAgent.value = list[0].account;
-    await loadItemTagList();
   }
 };
 
-// 載入標籤列表
+// ARCH03：loadItemTagList 已整合至 loadTableData
+/**
+ * 此函數保留用於 CRUD 操作後的數據刷新
+ */
 const loadItemTagList = async () => {
   if (!masterAgent.value) {
     tableData.value = [];
     dynamicTableInstance?.reload();
     return;
   }
-  
+
   try {
     const res: any = await itemTagList({ masterAgent: masterAgent.value });
-    console.log('itemTagList API 回傳:', res);
-    
-    // 對齊 Vue2 邏輯：res.data 可能是陣列或 { data: [...] } 格式
-    // 根據實際回傳格式，後端直接回傳陣列：[{...}, {...}]
-    // Vue2 的處理：res.data.forEach(...)，表示 res.data 是陣列
-    // Vue3 的 request 對於 AdminSystem API 返回 response，res.data 是後端的回傳
-    // 如果後端直接回傳陣列，則 res.data 就是陣列
-    // 如果後端回傳 { data: [...] }，則 res.data.data 是陣列
+
     let dataArray: ItemTag[] = [];
-    
-    // 檢查各種可能的回傳格式
+
     if (Array.isArray(res)) {
-      // 如果 request 函數直接返回陣列
       dataArray = res;
-    } else if (Array.isArray(res.data)) {
-      // 後端直接回傳陣列（實際情況）
+    }
+    else if (Array.isArray(res.data)) {
       dataArray = res.data;
-    } else if (res.data && Array.isArray(res.data.data)) {
-      // 後端回傳 { data: [...] } 格式（Vue2 包裝後的情況）
+    }
+    else if (res.data && Array.isArray(res.data.data)) {
       dataArray = res.data.data;
-    } else if (res.data && res.data.error) {
-      // 如果有錯誤，不處理數據
+    }
+    else if (res.data && res.data.error) {
       console.error('API 回傳錯誤:', res.data.error);
       tableData.value = [];
       dynamicTableInstance?.reload();
       return;
     }
-    
-    console.log('解析後的數據陣列:', dataArray);
-    
-    // 對齊 Vue2 邏輯：只顯示 teamBadge 類型的標籤
-    // Vue2: res.data.forEach(function(item:any) { if (item.itemType === "teamBadge") { nData.push(item); } })
+
     const filteredData = dataArray.filter(item => item.itemType === 'teamBadge');
-    console.log('過濾後的 teamBadge 數據:', filteredData);
-    
-    // 對齊 Vue2 邏輯：將 enabled 轉換為布林值
-    // Vue2: this.itemTagList = nData.map(d => { return { ...d, enabled: !!d.enabled }; });
     tableData.value = filteredData.map(d => ({ ...d, enabled: !!d.enabled }));
     originalOrder.value = filteredData.map(d => d.order);
     isShowOrderSubmitBtn.value = false;
-    
-    // 刷新表格
+
+    // ARCH03：刷新表格（會觸發 loadTableData，但由於 masterAgent 未變更，會使用現有 tableData）
     dynamicTableInstance?.reload();
-  } catch (error) {
+  }
+  catch (error) {
     console.error('載入標籤列表失敗', error);
     message.error(t('loadFailed'));
     tableData.value = [];
@@ -118,43 +156,83 @@ const loadItemTagList = async () => {
   }
 };
 
-// 總代理變更處理
-const handleMasterAgentChange = async (value: string) => {
-  masterAgent.value = value;
-  await loadItemTagList();
-};
+// ARCH03：總代理變更處理已整合至 DynamicTable 搜尋表單的 onChange
+// 此函數保留用於向後兼容，但主要邏輯已移至搜尋表單
 
-// 載入表格數據
-const loadTableData = async (params: LoadDataParams) => {
+/**
+ * ARCH06：載入表格數據（使用 Context 的 masterAgent 注入參數）
+ * 注意：由於此頁面關閉搜尋區，參數完全由 Context 提供
+ * 此方式等同於 beforeFetch 的效果，在 data-request 中注入 Context 參數
+ */
+const loadTableData = async (_params: LoadDataParams & Record<string, any>) => {
+  // ARCH06：使用 Context 的 masterAgent（此頁面不依賴搜尋表單）
+  // 等同於 beforeFetch 的效果：在請求前注入 Context 參數
+  const finalMasterAgent = selectedMasterAgent.value;
+
   // 如果沒有選擇 masterAgent，返回空數據
-  if (!masterAgent.value) {
+  console.log('finalMasterAgent', finalMasterAgent);
+  if (!finalMasterAgent) {
+    tableData.value = [];
     return {
-      ...params,
       items: [],
-      total: 0,
+      meta: { totalItems: 0 },
     };
   }
-  
-  // 如果 tableData 已經有數據，直接返回
-  if (tableData.value.length > 0) {
+
+  // ARCH06：更新本地 masterAgent 狀態（用於 CRUD 操作）
+  masterAgent.value = finalMasterAgent;
+
+  // ARCH06：載入標籤列表（使用 Context 的 masterAgent）
+  try {
+    const res: any = await itemTagList({ masterAgent: finalMasterAgent });
+
+    // 對齊 Vue2 邏輯：res.data 可能是陣列或 { data: [...] } 格式
+    let dataArray: ItemTag[] = [];
+    if (Array.isArray(res)) {
+      dataArray = res;
+    }
+    else if (Array.isArray(res.data)) {
+      dataArray = res.data;
+    }
+    else if (res.data && Array.isArray(res.data.data)) {
+      dataArray = res.data.data;
+    }
+    else if (res.data && res.data.error) {
+      console.error('API 回傳錯誤:', res.data.error);
+      tableData.value = [];
+      return {
+        items: [],
+        meta: { totalItems: 0 },
+      };
+    }
+
+    // 對齊 Vue2 邏輯：只顯示 teamBadge 類型的標籤
+    const filteredData = dataArray.filter(item => item.itemType === 'teamBadge');
+
+    // 對齊 Vue2 邏輯：將 enabled 轉換為布林值
+    tableData.value = filteredData.map(d => ({ ...d, enabled: !!d.enabled }));
+    originalOrder.value = filteredData.map(d => d.order);
+    isShowOrderSubmitBtn.value = false;
+
     return {
-      ...params,
       items: tableData.value,
-      total: tableData.value.length,
+      meta: { totalItems: tableData.value.length },
     };
   }
-  
-  // 如果 tableData 為空，嘗試載入數據
-  await loadItemTagList();
-  
-  return {
-    ...params,
-    items: tableData.value,
-    total: tableData.value.length,
-  };
+  catch (error) {
+    console.error('載入標籤列表失敗', error);
+    message.error(t('loadFailed'));
+    tableData.value = [];
+    return {
+      items: [],
+      meta: { totalItems: 0 },
+    };
+  }
 };
 
-// 打開新增/編輯表單彈窗
+/**
+ * 打開新增/編輯表單彈窗
+ */
 const openFormModal = async (record?: ItemTag) => {
   const [formRef] = await showModal({
     modalProps: {
@@ -170,7 +248,8 @@ const openFormModal = async (record?: ItemTag) => {
               itemType: values.itemType,
             });
             message.success(t('updateSuccess'));
-          } else {
+          }
+          else {
             await addItemTag({
               masterAgent: masterAgent.value,
               tag: values.tag,
@@ -178,9 +257,10 @@ const openFormModal = async (record?: ItemTag) => {
             });
             message.success(t('createSuccess'));
           }
+          // ARCH03：CRUD 操作後，重新載入數據並刷新表格
           await loadItemTagList();
-          dynamicTableInstance?.reload();
-        } catch (error) {
+        }
+        catch (error) {
           console.error('保存失敗', error);
           message.error(record ? t('updateFailed') : t('createFailed'));
           throw error;
@@ -188,7 +268,7 @@ const openFormModal = async (record?: ItemTag) => {
       },
     },
     formProps: {
-      labelWidth: 100,
+      labelWidth: 120,
       schemas: [
         {
           field: 'itemType',
@@ -208,9 +288,14 @@ const openFormModal = async (record?: ItemTag) => {
           label: t('form.tag'),
           component: 'Input',
           componentProps: {
-            placeholder: t('form.tagPlaceholder'),
+            placeholder: t('form.tagPlaceholder') || '請輸入標籤名稱',
+            maxlength: 50,
+            showCount: true,
           },
-          rules: [{ required: true, message: t('form.tagRequired') }],
+          rules: [
+            { required: true, message: t('form.tagRequired') || '請輸入標籤名稱' },
+            { max: 50, message: '標籤名稱最多 50 個字元' },
+          ],
         },
       ],
     },
@@ -224,7 +309,9 @@ const openFormModal = async (record?: ItemTag) => {
   }
 };
 
-// 刪除標籤
+/**
+ * 刪除標籤
+ */
 const handleDelete = async (record: ItemTag) => {
   Modal.confirm({
     title: t('removeTagPopMessageBox.title'),
@@ -236,9 +323,10 @@ const handleDelete = async (record: ItemTag) => {
           masterAgent: masterAgent.value,
         });
         message.success(t('deleteSuccess'));
+        // ARCH03：刪除後重新載入數據
         await loadItemTagList();
-        dynamicTableInstance?.reload();
-      } catch (error) {
+      }
+      catch (error) {
         console.error('刪除失敗', error);
         message.error(t('deleteFailed'));
       }
@@ -246,27 +334,53 @@ const handleDelete = async (record: ItemTag) => {
   });
 };
 
-// 更新標籤啟用狀態
-const handleEnabledChange = async (record: ItemTag, enabled: boolean) => {
-  try {
-    await updateItemTag({
-      tagID: record.id,
-      masterAgent: masterAgent.value,
-      enabled,
-    });
-    message.success(t('updateSuccess'));
-    await loadItemTagList();
-    dynamicTableInstance?.reload();
-  } catch (error) {
-    console.error('更新失敗', error);
-    message.error(t('updateFailed'));
-  }
+/**
+ * ARCH05：切換標籤啟用狀態（帶確認對話框和 loading 保護）
+ */
+const handleToggleEnabled = (record: ItemTag) => {
+  const newEnabled = !record.enabled;
+  const actionText = newEnabled ? t('table.action.enable') : t('table.action.disable');
+  const tagName = record.tag || '';
+
+  // ARCH05：使用 i18n 參數功能組裝確認對話框內容
+  Modal.confirm({
+    title: t('toggleEnabledPopMessageBox.title'),
+    content: t('toggleEnabledPopMessageBox.content', { action: actionText, tag: tagName }),
+    async onOk() {
+      // ARCH05：防止重複點擊
+      if (enabledChangingIds.value.has(record.id)) {
+        return;
+      }
+
+      enabledChangingIds.value.add(record.id);
+
+      try {
+        await updateItemTag({
+          tagID: record.id,
+          masterAgent: masterAgent.value,
+          enabled: newEnabled,
+        });
+        message.success(t('updateSuccess'));
+        // ARCH05：啟用/停用後重新載入數據
+        await loadItemTagList();
+      }
+      catch (error) {
+        console.error('更新失敗', error);
+        message.error(t('updateFailed'));
+      }
+      finally {
+        enabledChangingIds.value.delete(record.id);
+      }
+    },
+  });
 };
 
-// 行拖拽排序處理
-const handleRowReorder = (oldIndex: number, newIndex: number) => {
-  const [targetRow] = tableData.value.splice(oldIndex, 1);
-  tableData.value.splice(newIndex, 0, targetRow);
+/**
+ * 行拖拽排序處理（目前未在模板中使用，保留以備未來使用）
+ */
+const _handleRowReorder = (_oldIndex: number, _newIndex: number) => {
+  const [targetRow] = tableData.value.splice(_oldIndex, 1);
+  tableData.value.splice(_newIndex, 0, targetRow);
   tableData.value = tableData.value.map((tag, index) => ({
     ...tag,
     order: index + 1,
@@ -274,7 +388,9 @@ const handleRowReorder = (oldIndex: number, newIndex: number) => {
   isShowOrderSubmitBtn.value = true;
 };
 
-// 提交順序變更
+/**
+ * 提交順序變更
+ */
 const handleOrderSubmit = async () => {
   try {
     const updateTags = tableData.value.map((tag, index) => ({
@@ -284,55 +400,83 @@ const handleOrderSubmit = async () => {
     }));
     await bulkUpdateItemTagOrder({ updateTags });
     message.success(t('orderUpdateSuccess'));
+    // ARCH03：順序更新後重新載入數據
     await loadItemTagList();
-    dynamicTableInstance?.reload();
     isShowOrderSubmitBtn.value = false;
-  } catch (error) {
+  }
+  catch (error) {
     console.error('更新順序失敗', error);
     message.error(t('orderUpdateFailed'));
   }
 };
 
 // 列配置
-const columns = computed(() => getColumns(t, handleEnabledChange));
+const columns = computed(() => getColumns(t));
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - 搜尋區已關閉（search: false）
+ * - 資料直接從後端 API 載入（itemTagList）
+ * - 參數由 Context 的 masterAgent 提供
+ * - 沒有前端過濾或搜尋功能
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
+// ARCH06：監聽 Context 變化，自動觸發表格重新載入
+watch(
+  contextVersion,
+  () => {
+    // ARCH06：當 Context 的 masterAgent 變化時，清空表格數據並重新載入
+    tableData.value = [];
+    masterAgent.value = selectedMasterAgent.value;
+    dynamicTableInstance?.reload();
+  },
+);
+
+// ARCH06：監聽 selectedMasterAgent 變化，自動觸發表格重新載入
+watch(
+  () => selectedMasterAgent.value,
+  (newVal) => {
+    if (newVal) {
+      // ARCH06：更新本地狀態並觸發重新載入
+      masterAgent.value = newVal;
+      tableData.value = [];
+      dynamicTableInstance?.reload();
+    }
+    else {
+      // ARCH06：如果 masterAgent 為空，清空表格數據
+      tableData.value = [];
+      masterAgent.value = '';
+      dynamicTableInstance?.reload();
+    }
+  },
+  { immediate: true }, // ARCH06：立即執行一次，確保初始載入
+);
 
 onMounted(() => {
   fetchMasterAgents();
+  // ARCH06：移除自動查詢，改由 watch 的 immediate: true 處理初始載入
 });
 </script>
 
 <template>
   <div>
-    <div v-if="userStore.level < 4" class="mb-4">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('masterAgent') }}</label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="masterAgent"
-              :options="masterAgentOptions"
-              :disabled="isMasterAgentDisabled"
-              :placeholder="t('selectMasterAgent')"
-              style="width: 200px"
-              @change="handleMasterAgentChange"
-            />
-          </div>
-        </div>
-        <a-button type="primary" @click="openFormModal()">
-          {{ t('add') }}
-        </a-button>
-        <a-button
-          v-if="isShowOrderSubmitBtn"
-          type="warning"
-          @click="handleOrderSubmit"
-        >
-          {{ t('btn.submitOrder') }}
-        </a-button>
-      </div>
-    </div>
-    <div v-else class="mb-4">
+    <div v-if="userStore.level >= 4" class="mb-4">
       <a-alert :message="t('noPermission')" type="warning" show-icon />
     </div>
 
@@ -343,18 +487,50 @@ onMounted(() => {
       :columns="columns"
       :data-request="loadTableData"
       :pagination="false"
+      :auto-height="true"
+      :scroll="{ x: 'max-content' }"
     >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ t('title') }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+      <template #toolbar>
+        <a-space>
+          <a-button type="primary" @click="openFormModal()">
+            {{ t('add') }}
+          </a-button>
+          <a-button
+            v-if="isShowOrderSubmitBtn"
+            type="warning"
+            @click="handleOrderSubmit"
+          >
+            {{ t('btn.submitOrder') }}
+          </a-button>
+        </a-space>
+      </template>
       <template #bodyCell="{ column, record }">
         <template v-if="column.dataIndex === 'enabled'">
-          <Switch
-            :checked="record.enabled"
-            @change="(checked: boolean) => handleEnabledChange(record, checked)"
-          />
+          <!-- ARCH05：改為文字顯示，使用 Tag 元件 -->
+          <Tag :color="record.enabled ? 'green' : 'default'">
+            {{ record.enabled ? t('table.enabledStatus.enabled') : t('table.enabledStatus.disabled') }}
+          </Tag>
         </template>
         <template v-else-if="column.dataIndex === 'ACTION'">
-          <a-space>
+          <a-space :size="8">
             <a-button type="link" size="small" @click="openFormModal(record)">
               {{ t('edit') }}
+            </a-button>
+            <a-button
+              type="link"
+              size="small"
+              :loading="enabledChangingIds.has(record.id)"
+              @click="handleToggleEnabled(record)"
+            >
+              {{ record.enabled ? t('table.action.disable') : t('table.action.enable') }}
             </a-button>
             <a-button type="link" size="small" danger @click="handleDelete(record)">
               {{ t('delete') }}
@@ -396,4 +572,3 @@ onMounted(() => {
   }
 }
 </style>
-

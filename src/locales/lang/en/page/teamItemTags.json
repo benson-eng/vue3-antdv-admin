@@ -24,7 +24,15 @@
     "order": "Order",
     "control": "Control",
     "itemType": "Item Type",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "enabledStatus": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "action": {
+      "enable": "Enable",
+      "disable": "Disable"
+    }
   },
   "form": {
     "tag": "Tag",
@@ -39,6 +47,10 @@
   "removeTagPopMessageBox": {
     "title": "Confirm Delete",
     "content": "Are you sure you want to delete this tag?"
+  },
+  "toggleEnabledPopMessageBox": {
+    "title": "Confirm Action",
+    "content": "Are you sure you want to {action} tag \"{tag}\"?"
   },
   "itemType": {
     "teamBadge": "Team Badge"

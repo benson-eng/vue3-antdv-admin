@@ -24,7 +24,15 @@
     "order": "順序",
     "control": "控制",
     "itemType": "道具類型",
-    "enabled": "啟用"
+    "enabled": "啟用",
+    "enabledStatus": {
+      "enabled": "啟用",
+      "disabled": "停用"
+    },
+    "action": {
+      "enable": "啟用",
+      "disable": "停用"
+    }
   },
   "form": {
     "tag": "標籤",
@@ -39,6 +47,10 @@
   "removeTagPopMessageBox": {
     "title": "確認刪除",
     "content": "您確定要刪除此標籤嗎？"
+  },
+  "toggleEnabledPopMessageBox": {
+    "title": "確認操作",
+    "content": "您確定要{action}標籤「{tag}」嗎？"
   },
   "itemType": {
     "teamBadge": "隊伍徽章"
