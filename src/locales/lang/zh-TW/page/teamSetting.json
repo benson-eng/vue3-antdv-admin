@@ -54,5 +54,11 @@
   },
   "itemType": {
     "teamBadge": "隊伍徽章"
+  },
+  "confirm": {
+    "toggleEnabled": {
+      "title": "確認要{action}「{itemName}」嗎？",
+      "content": "確定要{action}此隊伍徽章嗎？"
+    }
   }
 }

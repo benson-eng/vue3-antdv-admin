@@ -1,6 +1,7 @@
-import { h } from 'vue';
-import type { TableColumn } from '@/components/core/dynamic-table';
 import type { Composer } from 'vue-i18n';
+import type { TableColumn } from '@/components/core/dynamic-table';
+import { Tag } from 'ant-design-vue';
+import { h } from 'vue';
 
 type I18nGlobalTranslation = Composer['t'];
 
@@ -27,14 +28,21 @@ export const getColumns = (
     dataIndex: 'treasureItemID',
     width: 150,
     hideInSearch: true,
+    hideInTable: true, // 不顯示在資料表中
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，確保返回 VNode
+     */
     customRender: ({ record }) => {
+      const id = record?.treasureItemID ?? '';
       return h('span', {
         style: { cursor: 'pointer' },
-        onClick: (e: MouseEvent) => {
-          navigator.clipboard.writeText(record.treasureItemID);
-          // 可以添加提示訊息
+        onClick: (_e: MouseEvent) => {
+          if (id) {
+            navigator.clipboard.writeText(id);
+            // 可以添加提示訊息
+          }
         },
-      }, record.treasureItemID);
+      }, id);
     },
   },
   {
@@ -42,13 +50,21 @@ export const getColumns = (
     dataIndex: 'itemType',
     width: 120,
     hideInSearch: true,
-    customRender: ({ record }) => t(`itemType.${record.itemType}`),
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，若條件不成立請回傳 null
+     */
+    customRender: ({ record }) => {
+      const result = t(`itemType.${record.itemType}`);
+      // 確保返回字符串或 VNode，不可返回 undefined
+      return result ?? h('span', ''); // 若 result 為 undefined，返回空 VNode
+    },
   },
   {
     title: t('table.tagID'),
     dataIndex: 'tag',
     width: 150,
     hideInSearch: true,
+    hideInTable: true, // 不顯示在資料表中
   },
   {
     title: t('table.itemName'),
@@ -61,9 +77,14 @@ export const getColumns = (
     dataIndex: 'teamIcon',
     width: 100,
     hideInSearch: true,
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，若條件不成立請回傳 null
+     */
     customRender: ({ record }) => {
       const imageUrl = record.teamIcon ? `${cdnBaseUrl}${record.teamIcon}` : '';
-      if (!imageUrl) return '-';
+      if (!imageUrl) {
+        return h('span', '-'); // 返回 VNode，不可返回字符串或 undefined
+      }
       return h('img', {
         src: imageUrl,
         style: {
@@ -71,7 +92,7 @@ export const getColumns = (
           width: '50px',
           objectFit: 'contain',
         },
-        alt: record.itemName,
+        alt: record.itemName || '',
       });
     },
   },
@@ -80,9 +101,14 @@ export const getColumns = (
     dataIndex: 'iconUrl',
     width: 100,
     hideInSearch: true,
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，若條件不成立請回傳 null
+     */
     customRender: ({ record }) => {
       const imageUrl = record.iconUrl ? `${cdnBaseUrl}${record.iconUrl}` : '';
-      if (!imageUrl) return '-';
+      if (!imageUrl) {
+        return h('span', '-'); // 返回 VNode，不可返回字符串或 undefined
+      }
       return h('img', {
         src: imageUrl,
         style: {
@@ -90,7 +116,7 @@ export const getColumns = (
           width: '50px',
           objectFit: 'contain',
         },
-        alt: record.itemName,
+        alt: record.itemName || '',
       });
     },
   },
@@ -99,13 +125,16 @@ export const getColumns = (
     dataIndex: 'enabled',
     width: 100,
     hideInSearch: true,
+    /**
+     * Phase 5: 改為文字顯示，使用 Tag 組件提升視覺效果
+     * 【修復規則2】customRender 不可回傳 undefined，確保返回 VNode
+     */
     customRender: ({ record }) => {
       const enabled = !!record.enabled;
-      return h('span', {
-        style: {
-          color: enabled ? 'rgb(133, 206, 97)' : 'rgb(245, 35, 73)',
-        },
-      }, enabled ? t('enable') : t('disable'));
+      const text = enabled ? t('enable') : t('disable');
+      return h(Tag, {
+        color: enabled ? 'success' : 'error',
+      }, text ?? ''); // 確保 text 不為 undefined
     },
   },
   {
@@ -113,10 +142,16 @@ export const getColumns = (
     dataIndex: 'creationDate',
     width: 180,
     hideInSearch: true,
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，若條件不成立請回傳 null
+     */
     customRender: ({ record }) => {
-      if (!record.creationDate) return '-';
+      if (!record.creationDate) {
+        return h('span', '-'); // 返回 VNode，不可返回字符串或 undefined
+      }
       const date = new Date(record.creationDate);
-      return date.toLocaleString('zh-TW');
+      const dateStr = date.toLocaleString('zh-TW');
+      return h('span', dateStr ?? ''); // 確保不返回 undefined
     },
   },
   {
@@ -124,19 +159,24 @@ export const getColumns = (
     dataIndex: 'updatedOn',
     width: 180,
     hideInSearch: true,
+    /**
+     * 【修復規則2】customRender 不可回傳 undefined，若條件不成立請回傳 null
+     */
     customRender: ({ record }) => {
-      if (!record.updatedOn) return '-';
+      if (!record.updatedOn) {
+        return h('span', '-'); // 返回 VNode，不可返回字符串或 undefined
+      }
       const date = new Date(record.updatedOn);
-      return date.toLocaleString('zh-TW');
+      const dateStr = date.toLocaleString('zh-TW');
+      return h('span', dateStr ?? ''); // 確保不返回 undefined
     },
   },
   {
     title: t('table.control'),
-    dataIndex: 'ACTION',
+    key: 'ACTION',
     width: 150,
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
   },
 ];
-

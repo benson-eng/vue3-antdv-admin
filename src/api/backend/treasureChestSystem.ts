@@ -453,7 +453,7 @@ export const updateTeamBadge = (params: {
   itemType: string;
   masterAgent: string;
   iconFile?: File;
-  tagID: number | null;
+  tagID?: number | null;
   teamName: string;
   teamIcon?: File;
 }) => {
@@ -461,7 +461,7 @@ export const updateTeamBadge = (params: {
   formData.append('server', 'treasureChestSystem');
   formData.append('actionName', 'updateTeamBadge');
   
-  // 對齊 Vue2 的 jsonToFormData 行為（includeNullValues: true）
+  // 對齊 Vue2 的 jsonToFormData 行為
   if (params.treasureItemID) {
     formData.append('query[treasureItemID]', params.treasureItemID);
   }
@@ -470,10 +470,9 @@ export const updateTeamBadge = (params: {
   formData.append('query[masterAgent]', params.masterAgent);
   formData.append('query[teamName]', params.teamName);
   
-  // 對齊 Vue2：tagID 為 null 時也要包含（includeNullValues: true）
-  if (params.tagID === null || params.tagID === undefined) {
-    formData.append('query[tagID]', '');
-  } else {
+  // 對齊 Vue2：tagID 為 null 時不包含此欄位（Vue2 會先 delete）
+  // 只有當 tagID 有值時才包含
+  if (params.tagID !== null && params.tagID !== undefined) {
     formData.append('query[tagID]', params.tagID.toString());
   }
   
