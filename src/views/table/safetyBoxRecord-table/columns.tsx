@@ -16,6 +16,7 @@ export function getColumns(
   onMemberPopupScroll?: (e: Event) => void,
   onMemberChange?: (value: string) => void,
   currentAgentID?: () => string,
+  hasSubmitted?: () => boolean,
 ): TableColumn<SafetyBoxRow>[] {
   return [
     // 搜尋欄位：會員
@@ -27,11 +28,32 @@ export function getColumns(
       formItemProps: {
         label: t('labels.member') || '會員',
         component: 'Select',
-        // 使用 rules 定義必填驗證，每個欄位獨立
+        // Submit-driven validation：使用自訂 validator 控制驗證時機
+        // required: true 在 rules 中用於顯示紅色星號（必填標記）
         rules: [
           {
             required: true,
-            message: t('notify.requiredMember') || '請選擇會員',
+            // 這個規則不會真正執行驗證，只是用來顯示紅色星號
+            /**
+             * 實際驗證由下面的 validator 控制
+             */
+            validator: async (_rule: any, value: any) => {
+              // 未按過查詢，不驗證
+              if (!hasSubmitted?.()) {
+                return Promise.resolve();
+              }
+
+              // disabled 時不驗證
+              if (!currentAgentID?.()) {
+                return Promise.resolve();
+              }
+
+              if (!value) {
+                return Promise.reject(t('notify.requiredMember') || '請選擇會員');
+              }
+
+              return Promise.resolve();
+            },
           },
         ],
         componentProps: () => ({
@@ -57,11 +79,27 @@ export function getColumns(
       formItemProps: {
         label: t('label.searchTime') || '查詢時間',
         component: 'RangePicker',
-        // 使用 rules 定義必填驗證，每個欄位獨立
+        // Submit-driven validation：使用自訂 validator 控制驗證時機
+        // required: true 在 rules 中用於顯示紅色星號（必填標記）
         rules: [
           {
             required: true,
-            message: t('notify.requiredSearchTime') || '請選擇查詢時間',
+            // 這個規則不會真正執行驗證，只是用來顯示紅色星號
+            /**
+             * 實際驗證由下面的 validator 控制
+             */
+            validator: async (_rule: any, value: any) => {
+              // 未按過查詢，不驗證
+              if (!hasSubmitted?.()) {
+                return Promise.resolve();
+              }
+
+              if (!value || !Array.isArray(value) || !value[0] || !value[1]) {
+                return Promise.reject(t('notify.requiredSearchTime') || '請選擇查詢時間');
+              }
+
+              return Promise.resolve();
+            },
           },
         ],
         // 預設值：當日前一周 ~ 當日 23:59:59

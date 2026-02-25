@@ -7,7 +7,7 @@ import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-tabl
 import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, inject, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { fuzzyQueryUser } from '@/api/backend/adminSystem/accountSystem';
 import { getSafetyBoxOrder } from '@/api/backend/transactionSystem';
 import { useTable } from '@/components/core/dynamic-table';
@@ -60,6 +60,8 @@ const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserIte
 const memberLastQueryText = ref('');
 const memberLastAccountID = ref('');
 const memberPageSize = 10;
+// Submit-driven validation：只有在按下查詢 Submit 時才觸發驗證
+const hasSubmitted = ref(false);
 
 const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLastQueryText.value = queryText;
@@ -131,6 +133,7 @@ const baseColumns = computed(() => getColumns(
   onMemberPopupScroll,
   onMemberSelectChanged,
   () => currentAgentID.value,
+  () => hasSubmitted.value,
 ));
 
 // 使用表格配置 Hook
@@ -291,11 +294,15 @@ const containerOverflowX = computed(() => {
  * 重置本頁所有查詢條件狀態和表格資料（受控型 Consumer 行為）
  * 當站長切換時，清空狀態但不觸發 API 請求
  */
-const resetPageState = () => {
+const resetPageState = async () => {
+  // 重置提交狀態
+  hasSubmitted.value = false;
   // 重置搜尋表單狀態
+  await nextTick();
   const searchFormRef = tableInstance?.getSearchFormRef?.();
   if (searchFormRef) {
     searchFormRef.resetFields();
+    searchFormRef.clearValidate();
   }
 
   // 注意：不調用 reload，因為這是受控型 Consumer，不應自動觸發查詢
@@ -308,13 +315,16 @@ const resetPageState = () => {
  */
 watch(
   () => contextVersion.value,
-  () => {
+  async () => {
     // 重置頁面狀態（清空查詢條件和表格資料，但不觸發 API）
-    resetPageState();
+    await resetPageState();
   },
 );
 
 const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
+  // Submit-driven validation：標記使用者已經按下查詢
+  hasSubmitted.value = true;
+
   const { memberID, searchTime } = params;
 
   // Guard：必填條件不足，不查詢
@@ -384,6 +394,25 @@ const searchModeConfig = computed(() => {
   };
   return configs[mode];
 });
+
+// ============ 初始化 ============
+onMounted(async () => {
+  // 初始化時清除驗證狀態並覆寫 resetFields 方法
+  await nextTick();
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.clearValidate();
+    // 覆寫 resetFields 方法，在 reset 時重置提交狀態
+    const originalResetFields = searchFormRef.resetFields;
+    searchFormRef.resetFields = async (...args: any[]) => {
+      hasSubmitted.value = false;
+      return originalResetFields.apply(searchFormRef, args);
+    };
+  }
+
+  // 初始化時重置提交狀態，確保進入頁面不顯示紅字
+  hasSubmitted.value = false;
+});
 </script>
 
 <template>
@@ -397,8 +426,7 @@ const searchModeConfig = computed(() => {
         :data-request="loadTableData"
         :scroll="{ x: tableConfig.scrollX.value }"
         :form-props="{
-          validateTrigger: ['change', 'submit'],
-          validateOnRuleChange: false,
+          validateTrigger: ['submit'],
         }"
       >
         <template #headerTitle>

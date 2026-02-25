@@ -500,8 +500,10 @@ if (memberSearchCol) {
     label: t('labels.member') || '會員',
     component: 'Select',
     order: 1,
+    // required: true 在 rules 中用於顯示紅色星號（必填標記）
     rules: [
       {
+        required: true,
         validator: async (_rule, value) => {
           if (!agentID.value) {
             return Promise.resolve();

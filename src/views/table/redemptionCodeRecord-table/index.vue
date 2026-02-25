@@ -471,8 +471,10 @@ if (memberSearchCol) {
     label: t('labels.member') || '會員',
     component: 'Select',
     order: 0,
+    // required: true 在 rules 中用於顯示紅色星號（必填標記）
     rules: [
       {
+        required: true,
         validator: async (_rule, value) => {
           // 未按過查詢，不驗證
           if (!hasSubmitted.value) {
