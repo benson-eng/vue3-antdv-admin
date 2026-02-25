@@ -51,6 +51,8 @@ const memberOptions = ref<{ label: string; value: string; raw: FuzzyQueryUserIte
 const memberLastQueryText = ref('');
 const memberLastAccountID = ref('');
 const memberPageSize = 10;
+// Submit-driven validation：只有在按下查詢 Submit 時才觸發驗證
+const hasSubmitted = ref(false);
 
 const fetchMemberOptions = async (queryText: string, append = false) => {
   const masterAgent = selectedMasterAgent.value;
@@ -136,6 +138,7 @@ const baseColumnsWithAction = computed<TableColumnItem[]>(() =>
     () => memberOptions.value,
     () => memberLoading.value,
     () => currentAgentID.value,
+    () => hasSubmitted.value,
     onMemberSearch,
     onMemberPopupScroll,
     handleRemove,
@@ -295,13 +298,28 @@ const scrollConfig = computed(() => {
 });
 
 // 在 mounted + nextTick 後設定 scroll.y，啟用 fixed header
-onMounted(() => {
-  nextTick(() => {
-    // 設定一個合理的 scroll.y 值，啟用 vertical scroll 和 fixed header
-    // 使用 window.innerHeight 減去估算的 header、搜尋區、padding 等高度
-    // 約 400px 作為預設值，實際高度會由表格自動計算
-    scrollY.value = 400;
-  });
+onMounted(async () => {
+  await nextTick();
+  // 設定一個合理的 scroll.y 值，啟用 vertical scroll 和 fixed header
+  // 使用 window.innerHeight 減去估算的 header、搜尋區、padding 等高度
+  // 約 400px 作為預設值，實際高度會由表格自動計算
+  scrollY.value = 400;
+
+  // 初始化時清除驗證狀態並覆寫 resetFields 方法
+  await nextTick();
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.clearValidate();
+    // 覆寫 resetFields 方法，在 reset 時重置提交狀態
+    const originalResetFields = searchFormRef.resetFields;
+    searchFormRef.resetFields = async (...args: any[]) => {
+      hasSubmitted.value = false;
+      return originalResetFields.apply(searchFormRef, args);
+    };
+  }
+
+  // 初始化時重置提交狀態，確保進入頁面不顯示紅字
+  hasSubmitted.value = false;
 });
 
 /* ================= Data ================= */
@@ -311,6 +329,9 @@ interface TableListResponse {
 }
 
 const loadTableData = async (params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  // Submit-driven validation：標記使用者已經按下查詢
+  hasSubmitted.value = true;
+
   const memberID = params.memberID;
   if (!memberID) {
     return { items: [], meta: { totalItems: 0 } };
@@ -342,17 +363,38 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>): Prom
 };
 
 /* ================= Watch ================= */
-watch(contextVersion, () => {
+watch(contextVersion, async () => {
+  // 重置提交狀態
+  hasSubmitted.value = false;
+  // 清空會員相關狀態
   memberOptions.value = [];
+  memberLastQueryText.value = '';
+  memberLastAccountID.value = '';
+  // 重置搜尋表單
+  await nextTick();
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.resetFields();
+    searchFormRef.clearValidate();
+  }
   tableInstance?.reload?.(true);
 });
 
 watch(
   () => selectedMasterAgent.value,
   async (val) => {
+    // 重置提交狀態
+    hasSubmitted.value = false;
     if (!val) {
       currentAgentID.value = '';
       agentList.value = [];
+      // 重置搜尋表單
+      await nextTick();
+      const searchFormRef = tableInstance?.getSearchFormRef?.();
+      if (searchFormRef) {
+        searchFormRef.resetFields();
+        searchFormRef.clearValidate();
+      }
       return;
     }
     const agents = await getAgentListByMasterAgent({ masterAgent: val });
@@ -365,6 +407,14 @@ watch(
     currentAgentID.value = first
       ? `${first.value.includes('.') ? first.value.split('.')[0] : first.value}.${val}`
       : val;
+
+    // 重置搜尋表單
+    await nextTick();
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+      searchFormRef.clearValidate();
+    }
   },
   { immediate: true },
 );

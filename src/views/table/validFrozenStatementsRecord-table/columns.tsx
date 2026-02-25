@@ -36,6 +36,7 @@ export const getBaseColumns = (
   memberOptions: () => MemberSearchOption[],
   memberLoading: () => boolean,
   currentAgentID: () => string,
+  hasSubmitted: () => boolean,
   onMemberSearch: (text: string) => void,
   onMemberPopupScroll: (e: Event) => void,
 ): TableColumnItem[] => {
@@ -49,8 +50,28 @@ export const getBaseColumns = (
       formItemProps: {
         label: t('labels.member') || '會員',
         component: 'Select',
-        required: true,
-        rules: [{ required: true, message: t('notify.needAccount') }],
+        // Submit-driven validation：使用自訂 validator
+        rules: [
+          {
+            validator: async (_rule: any, value: any) => {
+              // 未按過查詢，不驗證
+              if (!hasSubmitted()) {
+                return Promise.resolve();
+              }
+
+              // disabled 時不驗證
+              if (!currentAgentID()) {
+                return Promise.resolve();
+              }
+
+              if (!value) {
+                return Promise.reject(t('notify.needAccount'));
+              }
+
+              return Promise.resolve();
+            },
+          },
+        ],
         componentProps: () => ({
           options: memberOptions(),
           loading: memberLoading(),
@@ -151,6 +172,7 @@ export const getBaseColumnsWithAction = (
   memberOptions: () => MemberSearchOption[],
   memberLoading: () => boolean,
   currentAgentID: () => string,
+  hasSubmitted: () => boolean,
   onMemberSearch: (text: string) => void,
   onMemberPopupScroll: (e: Event) => void,
   handleRemove: (record: TableListItem) => void,
@@ -161,6 +183,7 @@ export const getBaseColumnsWithAction = (
     memberOptions,
     memberLoading,
     currentAgentID,
+    hasSubmitted,
     onMemberSearch,
     onMemberPopupScroll,
   );

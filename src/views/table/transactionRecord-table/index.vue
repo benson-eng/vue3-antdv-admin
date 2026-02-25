@@ -7,8 +7,8 @@
  * - 移除所有 Vue2 搜尋模型殘留（query/appliedQuery 雙狀態、handleFilter/handleReset 等）
  *
  * ARCH04：DynamicTable 搜尋必填欄位對齊
- * - memberID（會員）欄位已設定為必填（required: true）
- * - 使用 DynamicTable 內建 Form 驗證機制
+ * - memberID（會員）欄位已設定為必填（submit-driven validation）
+ * - 使用自訂 validator，只有在按下查詢 Submit 時才觸發驗證
  * - 未填寫必填欄位時不會觸發 API
  *
  * ARCH05：DynamicTable Vertical Scroll / Fixed Header 穩定化
@@ -113,6 +113,8 @@ const memberLastAccountID = ref('');
 const memberPageSize = 10;
 // 用於儲存選中的會員暱稱（用於表格顯示）
 const selectedMemberNickname = ref('');
+// Submit-driven validation：只有在按下查詢 Submit 時才觸發驗證
+const hasSubmitted = ref(false);
 
 // 注意：currentAgentID 已移除，改為使用 Breadcrumb Context 的 selectedMasterAgent
 
@@ -455,9 +457,28 @@ const searchOnlyColumns = computed<TableColumn<ColumnsRowData>[]>(() => [
       label: t('labels.member') || '會員',
       component: 'Select',
       order: 0,
-      // ARCH04：必填欄位設定
-      required: true,
-      rules: [{ required: true, message: t('notify.needAccount') || '會員欄位不能為空' }],
+      // Submit-driven validation：使用自訂 validator
+      rules: [
+        {
+          validator: async (_rule, value) => {
+            // 未按過查詢，不驗證
+            if (!hasSubmitted.value) {
+              return Promise.resolve();
+            }
+
+            // disabled 時不驗證
+            if (!selectedMasterAgent.value) {
+              return Promise.resolve();
+            }
+
+            if (!value) {
+              return Promise.reject(t('notify.needAccount') || '會員欄位不能為空');
+            }
+
+            return Promise.resolve();
+          },
+        },
+      ],
       componentProps: () => ({
         options: memberOptions.value,
         loading: memberLoading.value,
@@ -719,6 +740,9 @@ const searchModeConfig = computed(() => {
 });
 
 const loadTableData = async (params: any) => {
+  // Submit-driven validation：標記使用者已經按下查詢
+  hasSubmitted.value = true;
+
   // 從 DynamicTable 的搜尋參數中獲取查詢條件
   // 注意：DynamicTable 會將表單值直接放在 params 中，而不是 params.searchParams
   // 表單欄位名稱對應 searchField（memberID, searchType）
@@ -873,6 +897,8 @@ const loadTableData = async (params: any) => {
 watch(
   () => contextVersion.value,
   async () => {
+    // 重置提交狀態
+    hasSubmitted.value = false;
     // 清空會員相關狀態
     memberOptions.value = [];
     memberLastQueryText.value = '';
@@ -889,6 +915,7 @@ watch(
     const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
+      searchFormRef.clearValidate();
       // 設置預設值（searchType 預設為 'coin'）
       await nextTick();
       searchFormRef.setFieldsValue({
@@ -926,6 +953,22 @@ onMounted(async () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize);
   }
+
+  // 初始化時清除驗證狀態並覆寫 resetFields 方法
+  await nextTick();
+  const searchFormRef = (dynamicTableInstance as any)?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.clearValidate();
+    // 覆寫 resetFields 方法，在 reset 時重置提交狀態
+    const originalResetFields = searchFormRef.resetFields;
+    searchFormRef.resetFields = async (...args: any[]) => {
+      hasSubmitted.value = false;
+      return originalResetFields.apply(searchFormRef, args);
+    };
+  }
+
+  // 初始化時重置提交狀態，確保進入頁面不顯示紅字
+  hasSubmitted.value = false;
 });
 
 /**
