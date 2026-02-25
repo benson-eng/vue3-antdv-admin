@@ -100,7 +100,8 @@ const memberLastAccountID = ref('');
 const memberPageSize = 10;
 // ARCH03-01：保留 sNickname 用於顯示（從 memberID 解析）
 const sNickname = ref('');
-
+// Submit-driven validation：只有在按下查詢 Submit 時才觸發驗證
+const hasSubmitted = ref(false);
 const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLastQueryText.value = queryText;
 
@@ -470,8 +471,27 @@ if (memberSearchCol) {
     label: t('labels.member') || '會員',
     component: 'Select',
     order: 0,
-    required: true,
-    rules: [{ required: true, message: t('notify.needAccount') || '會員欄位不能為空' }],
+    rules: [
+      {
+        validator: async (_rule, value) => {
+          // 未按過查詢，不驗證
+          if (!hasSubmitted.value) {
+            return Promise.resolve();
+          }
+
+          // disabled 時不驗證
+          if (!agentID.value) {
+            return Promise.resolve();
+          }
+
+          if (!value) {
+            return Promise.reject(t('notify.needAccount'));
+          }
+
+          return Promise.resolve();
+        },
+      },
+    ],
     componentProps: () => ({
       options: memberOptions.value,
       loading: memberLoading.value,
@@ -579,6 +599,9 @@ const fetchAgentList = async (masterAgent: string) => {
  * ARCH03-01：loadTableData 使用 DynamicTable formSchemas 的值
  */
 const loadTableData = async (params: any) => {
+  // Submit-driven validation：標記使用者已經按下查詢
+  hasSubmitted.value = true;
+
   const masterAgent = String(selectedMasterAgent.value || '').trim();
 
   /** 從 formSchemas 獲取搜尋條件 */
@@ -778,10 +801,14 @@ const handleMasterAgentChange = async (masterAgent: string) => {
 
   if (!masterAgent) {
     agentID.value = '';
+    // 重置提交狀態
+    hasSubmitted.value = false;
     // 重置搜尋表單並觸發 reload
+    await nextTick();
     const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
+      searchFormRef.clearValidate();
     }
     dynamicTableInstance?.reload(true);
     return;
@@ -793,10 +820,14 @@ const handleMasterAgentChange = async (masterAgent: string) => {
   // 如果有選擇總代理，獲取代理商列表
   await fetchAgentList(masterAgent);
 
+  // 重置提交狀態
+  hasSubmitted.value = false;
   // ARCH03-01：重置搜尋表單（清空其他搜尋條件）
+  await nextTick();
   const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
   if (searchFormRef) {
     searchFormRef.resetFields();
+    searchFormRef.clearValidate();
   }
 
   // 如果有代理商，自動選擇第一個並更新 agentID
@@ -829,11 +860,15 @@ watch(
  */
 watch(
   () => contextVersion.value,
-  () => {
+  async () => {
+    // 重置提交狀態
+    hasSubmitted.value = false;
     // 重置搜尋表單並自動觸發 reload
+    await nextTick();
     const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
+      searchFormRef.clearValidate();
     }
     dynamicTableInstance?.reload(true);
   },
@@ -841,15 +876,28 @@ watch(
 
 // ============ 初始化 ============
 onMounted(async () => {
-  // 從 Breadcrumb Context 獲取站長值並初始化
   const masterAgent = selectedMasterAgent.value;
   if (masterAgent) {
     await handleMasterAgentChange(masterAgent);
   }
 
-  // ARCH05：於 mounted + nextTick 後計算並設定 scroll.y
-  // 確保 DynamicTable 已 render，layout 已穩定後再啟用 fixed header
   calculateScrollY();
+
+  await nextTick();
+
+  const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.clearValidate();
+    // 覆寫 resetFields 方法，在 reset 時重置提交狀態
+    const originalResetFields = searchFormRef.resetFields;
+    searchFormRef.resetFields = async (...args: any[]) => {
+      hasSubmitted.value = false;
+      return originalResetFields.apply(searchFormRef, args);
+    };
+  }
+
+  // 初始化時重置提交狀態，確保進入頁面不顯示紅字
+  hasSubmitted.value = false;
 });
 
 /**
