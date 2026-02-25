@@ -8,9 +8,7 @@ import type { LoadDataParams, TableColumn } from '@/components/core/dynamic-tabl
 import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-// 【暫時停用】nextTick 暫時未使用（代理欄位已備註），但程式碼保留
-import { computed, inject, onMounted, ref, watch } from 'vue';
-// import { nextTick } from 'vue'; // 備註：代理欄位恢復時需要取消備註
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { getAgentListByMasterAgent } from '@/api/backend/adminAccount/agent';
 import { queryTokens } from '@/api/backend/adminAccount/token';
 import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
@@ -502,8 +500,19 @@ if (memberSearchCol) {
     label: t('labels.member') || '會員',
     component: 'Select',
     order: 1,
-    required: true,
-    rules: [{ required: true, message: t('notify.needAccount') }],
+    rules: [
+      {
+        validator: async (_rule, value) => {
+          if (!agentID.value) {
+            return Promise.resolve();
+          }
+          if (!value) {
+            return Promise.reject(t('notify.needAccount'));
+          }
+          return Promise.resolve();
+        },
+      },
+    ],
     componentProps: () => ({
       options: memberOptions.value,
       loading: memberLoading.value,
@@ -940,6 +949,49 @@ const fetchAgentList = async (masterAgent: string) => {
  * ============ 事件處理 ============
  */
 /**
+ * ARCH03-01：初始化站長相關資料（僅資料準備，不觸發查詢）
+ * 用於 onMounted 階段，確保初次進入時不自動查詢
+ */
+const initializeMasterAgentData = async (masterAgent: string) => {
+  agentList.value = [];
+  tokenList.value = [];
+  agentID.value = '';
+  memberOptions.value = [];
+  memberLastQueryText.value = '';
+  memberLastAccountID.value = '';
+
+  if (!masterAgent) {
+    return;
+  }
+
+  await setCurrencyTypeList(masterAgent);
+  await setTreasureItemList(masterAgent);
+  await getTokenList(masterAgent);
+
+  // 如果有選擇總代理，獲取代理商列表
+  await fetchAgentList(masterAgent);
+
+  // 如果有代理商，自動選擇第一個並更新 agentID
+  if (agentList.value.length > 0 && userStore.level <= 4) {
+    const firstAgent = agentList.value[0].value;
+    const agentAccount = firstAgent.includes('.') ? firstAgent.split('.')[0] : firstAgent;
+    agentID.value = `${agentAccount}.${masterAgent}`;
+  }
+  else {
+    agentID.value = masterAgent;
+  }
+
+  // 重置搜尋表單（清空所有搜尋條件並清除驗證狀態）
+  await nextTick();
+  const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.resetFields();
+    // 明確清除驗證狀態，確保不會顯示紅字
+    searchFormRef.clearValidate();
+  }
+};
+
+/**
  * ARCH03-01：處理站長切換（從 Breadcrumb Context）
  * 更新 agentID 並自動觸發 reload
  */
@@ -950,6 +1002,7 @@ const handleMasterAgentChange = async (masterAgent: string) => {
   if (!masterAgent) {
     agentID.value = '';
     // 重置搜尋表單並觸發 reload
+    await nextTick();
     const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
@@ -966,6 +1019,7 @@ const handleMasterAgentChange = async (masterAgent: string) => {
   await fetchAgentList(masterAgent);
 
   // ARCH03-01：重置搜尋表單（清空其他搜尋條件）
+  await nextTick();
   const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
   if (searchFormRef) {
     searchFormRef.resetFields();
@@ -1025,8 +1079,9 @@ watch(
  */
 watch(
   () => contextVersion.value,
-  () => {
+  async () => {
     // 重置搜尋表單並自動觸發 reload
+    await nextTick();
     const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
@@ -1037,10 +1092,17 @@ watch(
 
 // ============ 初始化 ============
 onMounted(async () => {
-  // 從 Breadcrumb Context 獲取站長值並初始化
+  // ARCH03-01：受控型搜尋模型 - 初次進入時僅做資料初始化，不觸發查詢
+  // 使用 Breadcrumb Context 的站長值進行初始化
   const masterAgent = selectedMasterAgent.value;
   if (masterAgent) {
-    await handleMasterAgentChange(masterAgent);
+    await initializeMasterAgentData(masterAgent);
+  }
+  // 確保表單完全渲染後，再次清除驗證狀態
+  await nextTick();
+  const searchFormRef = dynamicTableInstance?.getSearchFormRef?.();
+  if (searchFormRef) {
+    searchFormRef.clearValidate();
   }
 });
 
@@ -1085,12 +1147,6 @@ const searchModeConfig = computed(() => {
 
 <template>
   <div class="app-container mission-record-table">
-    <div class="filter-container">
-      <div class="wrap">
-        <!-- ARCH03-01：代理商選擇器已移至 DynamicTable 搜尋區 -->
-      </div>
-    </div>
-
     <div
       class="table-container"
       :style="{ overflowX: containerOverflowX }"
