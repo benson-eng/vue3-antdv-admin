@@ -542,6 +542,16 @@ watch(
   { deep: true, flush: 'post' },
 );
 
+// 類型 B：有搜尋區頁面 - 使用 computed 組合 scroll 對象
+// 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+// useScroll 會在 autoHeight 啟用時自動計算並設置 scroll.y
+const tableScroll = computed(() => {
+  return {
+    x: tableConfig.scrollX.value,
+    // 不傳入 y，讓 useScroll 根據 autoHeight: true 自動計算
+  };
+});
+
 // 計算 container 的 overflow-x 樣式
 // container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
 // 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
@@ -617,7 +627,8 @@ void Modal;
         row-key="id"
         :data-request="loadTableData"
         :columns="columns"
-        :scroll="{ x: tableConfig.scrollX.value }"
+        :scroll="tableScroll"
+        :auto-height="true"
         :form-props="{
           showSubmitButton: true,
           showResetButton: true,
