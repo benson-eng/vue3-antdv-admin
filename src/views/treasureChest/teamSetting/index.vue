@@ -1,49 +1,179 @@
+<!--
+[DEBUG MODE ENABLED]
+觀測點清單：
+1. watch(selectedMasterAgent) - 監聽 masterAgent 變化，記錄 newVal、stack trace，處理初始載入（immediate: true）
+2. watch(contextVersion) - 監聽 Context 變化，記錄 new/old 值、stack trace（僅 debug，不觸發 reload）
+3. handleFormSubmit() - 記錄觸發來源
+4. loadTableData() - 記錄每次呼叫（params、masterAgent、開始/結束/耗時），節流 trace
+5. loadItemTagList() - 記錄每次呼叫（masterAgent、開始/結束/耗時）
+6. 重複呼叫檢測 - 10秒內計數，超過5次發出警告
+-->
+
 <script setup lang="ts">
-import type { UploadFile } from 'ant-design-vue';
-import type { DefaultOptionType } from 'ant-design-vue/es/select';
-import type { TeamBadgeItem } from './columns';
+import type { TableColumnItem, TeamBadgeItem } from './columns';
 import type { ItemTag } from '@/api/backend/treasureChestSystem';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
-import { UploadOutlined } from '@ant-design/icons-vue';
-import { message, Switch, Upload } from 'ant-design-vue';
-import { computed, nextTick, onMounted, ref } from 'vue';
-import { getMasterAgentList } from '@/api/backend/adminAccount/admin';
+import { message, Modal, Tag } from 'ant-design-vue';
+import { computed, inject, ref, watch } from 'vue';
 import {
   addItemTag,
   addTeamBadge,
   disableTreasureItem,
-
   itemTagList,
   treasureItemList,
   updateTeamBadge,
   updateTreasureItem,
 } from '@/api/backend/treasureChestSystem';
 import { useTable } from '@/components/core/dynamic-table';
+import ImageUploadField from '@/components/system/ImageUploadField.vue';
 import { useI18n } from '@/hooks/useI18n';
-import { useUserStore } from '@/store/modules/user';
+import { ImageSpec } from '@/system/image/imageSpec';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 import { getColumns } from './columns';
+import { getSearchSchemas } from './formSchemas';
 
 defineOptions({
   name: 'TeamSetting',
 });
 
-const { t } = useI18n('page.teamSetting');
-const userStore = useUserStore();
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
-const [DynamicTable, dynamicTableInstance] = useTable({
-  formProps: { autoSubmitOnEnter: true },
+const { t } = useI18n('page.teamSetting');
+
+// ========== Context Consumer 純化重構 ==========
+// 【Context 類型】：100% 純 Context Consumer
+// - 完全依賴 Breadcrumb Context，無任何 page-level 邏輯
+// - 所有 masterAgent 來源統一為 selectedMasterAgent
+// - 單向資料流：Context → watch → reload → loadTableData
+// ==================================================
+
+// 從 Layout 根元件 provide 取得站長選單狀態（Breadcrumb Context）
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值（唯一資料來源）
+const selectedMasterAgent = computed(() => {
+  const v = masterAgentCtx?.selectedMasterAgent.value;
+  if (v) {
+    return String(v).trim();
+  }
+  return '';
 });
 
-// 總代理選擇
-const masterAgent = ref<string>('');
-const masterAgentOptions = ref<DefaultOptionType[]>([]);
-const isMasterAgentDisabled = computed(() => userStore.level >= 4);
+// 使用 computed 取得 contextVersion（用於監聽變化）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
-// 表格數據
-const tableData = ref<TeamBadgeItem[]>([]);
+// ========== DEBUG INSTRUMENTATION ==========
+let debugSeq = 0;
+const debugLogPrefix = '[TeamSetting Debug]';
+
+interface CallRecord {
+  trigger: string;
+  timestamp: number;
+  masterAgent: string;
+  contextVersion: number;
+}
+
+const callHistory: CallRecord[] = [];
+/** 10秒時間窗口 */
+const WINDOW_MS = 10000;
+const WARNING_THRESHOLD = 5;
+
+/**
+ * 時間戳格式化
+ */
+const getTimestamp = () => {
+  const now = new Date();
+  return `${now.toISOString().substring(11, 23)}`;
+};
+
+/**
+ * 統一格式的 debug log
+ */
+const debugLog = (event: string, data: Record<string, any>) => {
+  debugSeq++;
+  const masterAgent = selectedMasterAgent.value;
+  const ctxVersion = contextVersion.value;
+  console.log(
+    `${debugLogPrefix} [${debugSeq}] [${getTimestamp()}] ${event}`,
+    {
+      masterAgent: masterAgent || '(empty)',
+      contextVersion: ctxVersion,
+      ...data,
+    },
+  );
+};
+
+/**
+ * 記錄呼叫歷史（用於重複檢測）
+ */
+const recordCall = (trigger: string) => {
+  const now = Date.now();
+  callHistory.push({
+    trigger,
+    timestamp: now,
+    masterAgent: selectedMasterAgent.value || '(empty)',
+    contextVersion: contextVersion.value,
+  });
+
+  // 清理超過10秒的記錄
+  const cutoff = now - WINDOW_MS;
+  while (callHistory.length > 0 && callHistory[0].timestamp < cutoff) {
+    callHistory.shift();
+  }
+
+  // 檢查是否超過閾值
+  const recentCalls = callHistory.filter(r => r.timestamp >= cutoff);
+  if (recentCalls.length > WARNING_THRESHOLD) {
+    console.warn(
+      `${debugLogPrefix} [WARNING] 10秒內 ${trigger} 被呼叫 ${recentCalls.length} 次！`,
+      {
+        recentCalls: recentCalls.slice(-5).map(r => ({
+          trigger: r.trigger,
+          time: new Date(r.timestamp).toISOString().substring(11, 23),
+          masterAgent: r.masterAgent,
+          contextVersion: r.contextVersion,
+        })),
+      },
+    );
+  }
+};
+
+/**
+ * loadTableData trace 節流（同一輪只印一次）
+ */
+let lastLoadTableDataTrace = 0;
+const TRACE_THROTTLE_MS = 100;
+// ===========================================
+
+const [DynamicTable, dynamicTableInstance] = useTable({
+  search: false,
+  immediate: false,
+  formProps: {
+    schemas: getSearchSchemas(t),
+    showSubmitButton: true,
+    showResetButton: true,
+    showAdvancedButton: true,
+    submitOnReset: false,
+  },
+  fetchConfig: {
+    listField: 'items' as const,
+    totalField: 'total' as any,
+  },
+});
+
+// 表格 loading 狀態
 const loading = ref(false);
-// 追蹤當前載入數據的 masterAgent，用於判斷是否需要重新載入
-const loadedMasterAgent = ref<string>('');
+
+// 啟用/停用操作的 loading 狀態（防止重複點擊）
+const enabledChangingIds = ref<Set<string>>(new Set());
 
 // 標籤列表
 const itemTagListData = ref<ItemTag[]>([]);
@@ -52,125 +182,54 @@ const itemTagListObj = ref<Record<string, number>>({});
 // CDN Base URL
 const cdnBaseUrl = import.meta.env.VITE_APP_CDN_BASE_URL || '';
 
-// 表單相關
-const dialogFormVisible = ref(false);
-const dialogForm = ref<{
-  treasureItemID?: string;
-  itemName: string;
-  tagID: number | null;
-}>({
-  itemName: '',
-  tagID: null,
-});
-
-const teamIconUrl = ref<string>('');
-const teamIconFile = ref<File | undefined>(undefined);
-const isChangeTeamIcon = ref(false);
-
-const iconFileUrl = ref<string>('');
-const iconFile = ref<File | undefined>(undefined);
-const isChangeIconFile = ref(false);
-
-const mode = ref<'create' | 'edit' | 'view'>('create');
-const disabledConfirm = ref(false);
-
 // 標籤彈窗
 const isTagDialog = ref(false);
 const newItemTag = ref('');
 
-/**
- * 載入隊伍徽章列表（不觸發表格重新載入，避免無限迴圈）
- */
-const loadData = async (skipReload = false) => {
-  if (!masterAgent.value) {
-    tableData.value = [];
-    if (!skipReload) {
-      dynamicTableInstance?.reload();
-    }
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const res = await treasureItemList({ masterAgent: masterAgent.value });
-
-    console.log('treasureItemList API 回傳:', res);
-    console.log('res.data:', res.data);
-    console.log('res.rows:', (res as any).rows);
-
-    // 對齊 Vue2 邏輯：過濾出 teamBadge 類型的項目
-    // Vue2: res.data.rows.reduce((acc: any[], r) => { if (r.type === "teamBadge") { ... } })
-    // 根據實際 API 回傳格式，可能是 res.data.rows 或 res.rows
-    // 從控制台日誌看，res 可能是 { rows: Array(2) } 或 { data: { rows: Array(2) } }
-    let rows: any[] = [];
-    if ((res as any).rows && Array.isArray((res as any).rows)) {
-      // 如果 res 直接有 rows 屬性（如 { rows: [...] }）
-      rows = (res as any).rows;
-    }
-    else if (res.data?.rows && Array.isArray(res.data.rows)) {
-      // 如果 res 有 data.rows（如 { data: { rows: [...] } }）
-      rows = res.data.rows;
-    }
-    else if (res.data && Array.isArray(res.data)) {
-      // 如果 res.data 直接是陣列
-      rows = res.data;
-    }
-    console.log('解析後的 rows:', rows);
-
-    const teamBadgeItems: TeamBadgeItem[] = [];
-
-    rows.forEach((row: any) => {
-      if (row.type === 'teamBadge' && row.items) {
-        console.log('找到 teamBadge 類型的 row:', row);
-        row.items.forEach((item: any) => {
-          // 對齊 Vue2 邏輯：只顯示 enabled === 1 的項目
-          // Vue2: if (item.enabled === 1) { inItem.push(item); }
-          if (item.enabled === 1) {
-            teamBadgeItems.push({
-              treasureItemID: item.treasureItemID,
-              itemName: item.itemName,
-              itemType: item.itemType || 'teamBadge',
-              tag: item.tag || null,
-              teamIcon: item.teamIcon || '',
-              iconUrl: item.iconUrl || '',
-              enabled: item.enabled,
-              creationDate: item.creationDate,
-              updatedOn: item.updatedOn,
-            });
-          }
-        });
-      }
-    });
-
-    console.log('過濾後的 teamBadge 項目:', teamBadgeItems);
-    tableData.value = teamBadgeItems;
-    // 只有在明確需要時才觸發重新載入，避免在 loadTableData 中造成無限迴圈
-    if (!skipReload) {
-      dynamicTableInstance?.reload();
-    }
-  }
-  catch (error) {
-    console.error('載入隊伍徽章列表失敗', error);
-    message.error(t('loadFailed'));
-    tableData.value = [];
-  }
-  finally {
-    loading.value = false;
-  }
-};
+// Modal 狀態
+const newDialogFormVisible = ref(false);
+const newDialogForm = ref<{
+  treasureItemID?: string;
+  itemName: string;
+  tagID: number | null;
+  teamIcon: File | null;
+  iconFile: File | null;
+}>({
+  itemName: '',
+  tagID: null,
+  teamIcon: null,
+  iconFile: null,
+});
+const newDialogMode = ref<'create' | 'edit' | 'view'>('create');
+const newDialogConfirmLoading = ref(false);
+// 編輯模式下追蹤圖片是否被修改
+const newDialogIsChangeTeamIcon = ref(false);
+const newDialogIsChangeIconFile = ref(false);
+// 編輯模式下保存原始圖片 URL（用於顯示預覽）
+const newDialogTeamIconUrl = ref<string>('');
+const newDialogIconFileUrl = ref<string>('');
 
 /**
- * 載入標籤列表
+ * 載入標籤列表（使用 Context 的 masterAgent）
  */
 const loadItemTagList = async () => {
-  if (!masterAgent.value) {
+  const startTime = Date.now();
+  const masterAgent = selectedMasterAgent.value;
+  const ctxVersion = contextVersion.value;
+
+  recordCall('loadItemTagList');
+  debugLog('loadItemTagList START', { masterAgent: masterAgent || '(empty)', contextVersion: ctxVersion });
+
+  if (!masterAgent) {
     itemTagListData.value = [];
     itemTagListObj.value = {};
+    const duration = Date.now() - startTime;
+    debugLog('loadItemTagList END (empty masterAgent)', { duration: `${duration}ms` });
     return;
   }
 
   try {
-    const res: any = await itemTagList({ masterAgent: masterAgent.value });
+    const res: any = await itemTagList({ masterAgent });
     let dataArray: ItemTag[] = [];
 
     if (Array.isArray(res)) {
@@ -192,84 +251,151 @@ const loadItemTagList = async () => {
     filteredData.forEach((item) => {
       itemTagListObj.value[item.tag] = item.id;
     });
+
+    const duration = Date.now() - startTime;
+    debugLog('loadItemTagList END', { duration: `${duration}ms`, itemCount: filteredData.length });
   }
   catch (error) {
+    const duration = Date.now() - startTime;
     console.error('載入標籤列表失敗', error);
+    debugLog('loadItemTagList ERROR', { duration: `${duration}ms`, error });
   }
 };
 
 /**
- * 獲取總代理列表
+ * 處理表單提交（查詢按鈕）
  */
-const fetchMasterAgents = async () => {
-  const list = await getMasterAgentList();
-  masterAgentOptions.value = (list || []).map(i => ({ label: i.account, value: i.account }));
+const handleFormSubmit = () => {
+  recordCall('handleFormSubmit');
+  debugLog('handleFormSubmit', {});
+  console.trace(`${debugLogPrefix} handleFormSubmit stack trace`);
+  dynamicTableInstance?.reload(true);
+};
 
-  // 如果用戶等級 >= 4，自動選擇第一個總代理
-  // 對齊 Vue2：AgentIDSelector 會自動觸發 onMasterAgentChanged
-  if (userStore.level >= 4 && list && list.length > 0) {
-    masterAgent.value = list[0].account;
-    // 初始化時需要載入標籤列表和資料
-    await Promise.all([loadData(true), loadItemTagList()]);
-    // 等待表格組件初始化後再觸發一次 reload，確保表格顯示數據
-    // 使用 nextTick 確保 DOM 更新完成
-    await nextTick();
-    dynamicTableInstance?.reload();
+// 列配置
+const baseColumns = computed<TableColumnItem[]>(() => {
+  const cols = getColumns(t, cdnBaseUrl);
+  return Array.isArray(cols) ? cols.filter(Boolean) : [];
+});
+
+// 使用表格配置 Hook（計算 scroll.x）
+const tableConfig = useTableConfig(baseColumns as any);
+
+/**
+ * 計算 scroll 配置（AutoHeight 模式）
+ * 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+ */
+const tableScroll = computed(() => {
+  const x = tableConfig.scrollX.value;
+
+  if (x == null || Number.isNaN(x) || !Number.isFinite(x) || (typeof x === 'number' && x <= 0)) {
+    return {};
   }
-};
 
-// 總代理變更處理
+  return { x };
+});
+
 /**
- * 對齊 Vue2：onMasterAgentChanged 中調用 getTreasureItemList 和 getItemTagList
+ * 載入表格數據（純函數 Pure Function）
+ * - 直接調用 API，處理資料，返回給 DynamicTable
+ * - 不修改任何 reactive 狀態（除了必要的 loading 狀態）
+ * - 不調用 reload()
+ * - 不依賴中介資料來源
+ * - 唯一資料來源：selectedMasterAgent.value
  */
-const handleMasterAgentChange = async (value: string) => {
-  masterAgent.value = value;
-  // 清空現有數據和載入標記，強制重新載入
-  tableData.value = [];
-  loadedMasterAgent.value = '';
-  // 載入標籤列表
-  await loadItemTagList();
-  // 手動觸發一次表格重新載入，loadTableData 會檢查 masterAgent 變更並重新載入數據
-  // 對齊 Vue2：DataTable 綁定 :data，數據更新時自動更新
-  dynamicTableInstance?.reload();
-};
+const loadTableData = async (_params: LoadDataParams) => {
+  const startTime = Date.now();
+  const masterAgent = selectedMasterAgent.value;
+  const ctxVersion = contextVersion.value;
 
-// 載入表格數據
-// 對齊 Vue2：DataTable 直接綁定 :data="treasureItemList"，當數據更新時表格自動更新
-/**
- * Vue3：DynamicTable 使用 :data-request，需要返回數據
- */
-const loadTableData = async (params: LoadDataParams) => {
-  console.log('loadTableData 被調用, masterAgent:', masterAgent.value, 'loadedMasterAgent:', loadedMasterAgent.value, 'tableData.length:', tableData.value.length);
+  recordCall('loadTableData');
 
-  if (!masterAgent.value) {
-    console.log('沒有 masterAgent，返回空數據');
-    loadedMasterAgent.value = '';
-    tableData.value = [];
+  // 節流 trace：同一輪（100ms內）只印一次
+  const now = Date.now();
+  if (now - lastLoadTableDataTrace > TRACE_THROTTLE_MS) {
+    console.trace(`${debugLogPrefix} loadTableData stack trace`);
+    lastLoadTableDataTrace = now;
+  }
+
+  debugLog('loadTableData START', {
+    masterAgent: masterAgent || '(empty)',
+    contextVersion: ctxVersion,
+    params: JSON.stringify(_params).substring(0, 100),
+  });
+
+  if (!masterAgent) {
+    const duration = Date.now() - startTime;
+    debugLog('loadTableData END (empty masterAgent)', { duration: `${duration}ms`, items: 0, total: 0 });
     return {
-      ...params,
       items: [],
       total: 0,
     };
   }
 
-  // 對齊 Vue2 邏輯：當 masterAgent 變更時，總是重新載入數據
-  // 如果 masterAgent 變更了，或者數據為空，需要重新載入
-  if (loadedMasterAgent.value !== masterAgent.value || tableData.value.length === 0) {
-    console.log('masterAgent 變更或數據為空，開始載入數據');
-    // 載入數據但不觸發表格重新載入（skipReload = true），避免無限迴圈
-    // 因為表格組件會自動處理返回的數據
-    await loadData(true);
-    loadedMasterAgent.value = masterAgent.value;
-    console.log('數據載入完成，tableData.length:', tableData.value.length, 'items:', tableData.value);
-  }
+  loading.value = true;
 
-  // 返回當前數據
-  return {
-    ...params,
-    items: tableData.value,
-    total: tableData.value.length,
-  };
+  try {
+    const res: any = await treasureItemList({ masterAgent });
+
+    let rows: any[] = [];
+
+    if (Array.isArray(res?.rows)) {
+      rows = res.rows;
+    }
+    else if (Array.isArray(res?.data?.rows)) {
+      rows = res.data.rows;
+    }
+    else if (Array.isArray(res?.data)) {
+      rows = res.data;
+    }
+
+    const teamBadgeItems: TeamBadgeItem[] = [];
+
+    rows.forEach((row: any) => {
+      if (row.type === 'teamBadge' && row.items) {
+        row.items.forEach((item: any) => {
+          if (item.enabled === 1) {
+            teamBadgeItems.push({
+              treasureItemID: item.treasureItemID,
+              itemName: item.itemName,
+              itemType: item.itemType || 'teamBadge',
+              tag: item.tag || null,
+              teamIcon: item.teamIcon || '',
+              iconUrl: item.iconUrl || '',
+              enabled: item.enabled,
+              creationDate: item.creationDate,
+              updatedOn: item.updatedOn,
+            });
+          }
+        });
+      }
+    });
+
+    const duration = Date.now() - startTime;
+    debugLog('loadTableData END', {
+      duration: `${duration}ms`,
+      items: teamBadgeItems.length,
+      total: teamBadgeItems.length,
+    });
+
+    return {
+      items: teamBadgeItems,
+      total: teamBadgeItems.length,
+    };
+  }
+  catch (error) {
+    const duration = Date.now() - startTime;
+    console.error('載入隊伍徽章列表失敗', error);
+    message.error(t('loadFailed'));
+    debugLog('loadTableData ERROR', { duration: `${duration}ms`, error });
+    return {
+      items: [],
+      total: 0,
+    };
+  }
+  finally {
+    loading.value = false;
+  }
 };
 
 /**
@@ -295,164 +421,128 @@ const imageUrl = (url: string): string => {
 /**
  * 打開新增/編輯表單彈窗
  */
-const openFormModal = (record?: TeamBadgeItem) => {
+const openNewFormModal = (record?: TeamBadgeItem) => {
   if (record) {
-    // 編輯模式
-    mode.value = 'edit';
-    dialogForm.value = {
+    newDialogMode.value = 'edit';
+    newDialogForm.value = {
       treasureItemID: record.treasureItemID,
       itemName: record.itemName,
       tagID: getTagID(record.tag),
+      teamIcon: null,
+      iconFile: null,
     };
-    teamIconUrl.value = imageUrl(record.teamIcon);
-    iconFileUrl.value = imageUrl(record.iconUrl);
-    isChangeTeamIcon.value = false;
-    isChangeIconFile.value = false;
+    // 載入現有圖片 URL（用於顯示預覽）
+    newDialogTeamIconUrl.value = imageUrl(record.teamIcon);
+    newDialogIconFileUrl.value = imageUrl(record.iconUrl);
+    newDialogIsChangeTeamIcon.value = false;
+    newDialogIsChangeIconFile.value = false;
   }
   else {
-    // 新增模式
-    mode.value = 'create';
-    dialogForm.value = {
+    newDialogMode.value = 'create';
+    newDialogForm.value = {
       itemName: '',
       tagID: null,
+      teamIcon: null,
+      iconFile: null,
     };
-    teamIconUrl.value = '';
-    iconFileUrl.value = '';
-    teamIconFile.value = undefined;
-    iconFile.value = undefined;
-    isChangeTeamIcon.value = false;
-    isChangeIconFile.value = false;
+    newDialogTeamIconUrl.value = '';
+    newDialogIconFileUrl.value = '';
+    newDialogIsChangeTeamIcon.value = false;
+    newDialogIsChangeIconFile.value = false;
   }
-  dialogFormVisible.value = true;
+  newDialogFormVisible.value = true;
 };
 
 /**
  * 關閉表單彈窗
  */
-const closeFormModal = () => {
-  dialogFormVisible.value = false;
-  dialogForm.value = {
+const closeNewFormModal = () => {
+  newDialogFormVisible.value = false;
+  newDialogForm.value = {
     itemName: '',
     tagID: null,
+    teamIcon: null,
+    iconFile: null,
   };
-  teamIconUrl.value = '';
-  iconFileUrl.value = '';
-  teamIconFile.value = undefined;
-  iconFile.value = undefined;
-  isChangeTeamIcon.value = false;
-  isChangeIconFile.value = false;
-};
-
-/**
- * 處理圖片上傳
- */
-const handleBeforeUpload = (file: UploadFile, type: 'teamIcon' | 'iconFile') => {
-  const fileObj = file.originFileObj || (file as any).originFile || file;
-
-  if (!fileObj) {
-    message.error('無法讀取文件，請重試或選擇其他圖片');
-    return false;
-  }
-
-  // 驗證文件類型
-  const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-  if (!fileObj.type || !validImageTypes.includes(fileObj.type.toLowerCase())) {
-    message.error('不支援的圖片格式。請選擇 JPG、PNG、GIF 或 WEBP 格式');
-    return false;
-  }
-
-  // 驗證文件大小（限制 5MB）
-  const maxSize = 5 * 1024 * 1024;
-  if (fileObj.size > maxSize) {
-    message.error('圖片大小不能超過 5MB');
-    return false;
-  }
-
-  // 使用 FileReader 讀取文件並顯示預覽
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    if (e.target?.result) {
-      if (type === 'teamIcon') {
-        teamIconUrl.value = e.target.result as string;
-        teamIconFile.value = fileObj;
-        isChangeTeamIcon.value = true;
-      }
-      else {
-        iconFileUrl.value = e.target.result as string;
-        iconFile.value = fileObj;
-        isChangeIconFile.value = true;
-      }
-      message.success('圖片預覽已加載');
-    }
-  };
-  reader.onerror = () => {
-    message.error('圖片讀取失敗，請重試');
-  };
-  reader.readAsDataURL(fileObj);
-
-  return false; // 阻止自動上傳
+  newDialogTeamIconUrl.value = '';
+  newDialogIconFileUrl.value = '';
+  newDialogIsChangeTeamIcon.value = false;
+  newDialogIsChangeIconFile.value = false;
 };
 
 /**
  * 處理表單提交
  */
-const handleFormSubmit = async () => {
-  if (!dialogForm.value.itemName) {
+const handleNewDialogFormSubmit = async () => {
+  if (!newDialogForm.value.itemName) {
     message.error(t('form.itemNameRequired'));
     return;
   }
 
-  if (mode.value === 'create') {
-    if (!teamIconFile.value || !iconFile.value) {
+  if (newDialogMode.value === 'create') {
+    if (!newDialogForm.value.teamIcon || !newDialogForm.value.iconFile) {
       message.error(t('form.imageRequired'));
       return;
     }
   }
 
-  disabledConfirm.value = true;
+  const masterAgent = selectedMasterAgent.value;
+  if (!masterAgent) {
+    message.error(t('selectMasterAgent') || '請先選擇站長');
+    return;
+  }
+
+  newDialogConfirmLoading.value = true;
 
   try {
-    if (mode.value === 'create') {
+    if (newDialogMode.value === 'create') {
       const submitData = {
-        masterAgent: masterAgent.value,
-        itemName: dialogForm.value.itemName,
-        teamName: dialogForm.value.itemName,
+        masterAgent,
+        itemName: newDialogForm.value.itemName,
+        teamName: newDialogForm.value.itemName,
         itemType: 'teamBadge',
-        teamIcon: teamIconFile.value!,
-        iconFile: iconFile.value!,
-        tagID: dialogForm.value.tagID || null,
+        teamIcon: newDialogForm.value.teamIcon!,
+        iconFile: newDialogForm.value.iconFile!,
+        tagID: newDialogForm.value.tagID || null,
       };
 
       await addTeamBadge(submitData);
       message.success(t('createSuccess'));
     }
     else {
+      // 編輯模式
+      if (!newDialogForm.value.treasureItemID) {
+        message.error('缺少必要參數');
+        return;
+      }
+
+      // 對齊 Vue2 的邏輯：構建 submitData
       const submitData: any = {
-        treasureItemID: dialogForm.value.treasureItemID,
-        masterAgent: masterAgent.value,
-        itemName: dialogForm.value.itemName,
-        teamName: dialogForm.value.itemName,
+        treasureItemID: newDialogForm.value.treasureItemID,
+        masterAgent,
+        itemName: newDialogForm.value.itemName,
+        teamName: newDialogForm.value.itemName,
         itemType: 'teamBadge',
-        tagID: dialogForm.value.tagID === null || dialogForm.value.tagID === undefined ? null : dialogForm.value.tagID,
       };
 
-      if (isChangeIconFile.value && iconFile.value) {
-        submitData.iconFile = iconFile.value;
+      // 對齊 Vue2：tagID 為 null 時不包含此欄位（會先 delete）
+      if (newDialogForm.value.tagID !== null && newDialogForm.value.tagID !== undefined) {
+        submitData.tagID = newDialogForm.value.tagID;
       }
-      if (isChangeTeamIcon.value && teamIconFile.value) {
-        submitData.teamIcon = teamIconFile.value;
+
+      // 只有當圖片被修改時才上傳新圖片
+      if (newDialogIsChangeIconFile.value && newDialogForm.value.iconFile) {
+        submitData.iconFile = newDialogForm.value.iconFile;
+      }
+      if (newDialogIsChangeTeamIcon.value && newDialogForm.value.teamIcon) {
+        submitData.teamIcon = newDialogForm.value.teamIcon;
       }
 
       await updateTeamBadge(submitData);
       message.success(t('updateSuccess'));
     }
 
-    closeFormModal();
-    // 清空現有數據，強制重新載入
-    tableData.value = [];
-    // 重新載入數據（不觸發 reload，因為下面會手動觸發）
-    await loadData(true);
-    // 手動觸發表格重新載入
+    closeNewFormModal();
     dynamicTableInstance?.reload();
   }
   catch (error) {
@@ -460,42 +550,62 @@ const handleFormSubmit = async () => {
     message.error(t('saveFailed'));
   }
   finally {
-    setTimeout(() => {
-      disabledConfirm.value = false;
-    }, 1000);
+    newDialogConfirmLoading.value = false;
   }
 };
 
 /**
- * 啟用/禁用項目
+ * 啟用/禁用項目（帶確認對話框、loading 狀態、防連點機制）
  */
-const handleEnabledChange = async (record: TeamBadgeItem, enabled: boolean) => {
-  try {
-    if (enabled) {
-      await updateTreasureItem({
-        treasureItemID: record.treasureItemID,
-        masterAgent: masterAgent.value,
-        enabled: true,
-      });
-    }
-    else {
-      await disableTreasureItem({
-        treasureItemID: record.treasureItemID,
-        masterAgent: masterAgent.value,
-      });
-    }
-    message.success(t('updateSuccess'));
-    // 清空現有數據，強制重新載入
-    tableData.value = [];
-    // 重新載入數據（不觸發 reload，因為下面會手動觸發）
-    await loadData(true);
-    // 手動觸發表格重新載入
-    dynamicTableInstance?.reload();
+const handleToggleEnabled = (record: TeamBadgeItem) => {
+  const itemId = record.treasureItemID;
+
+  if (enabledChangingIds.value.has(itemId)) {
+    return;
   }
-  catch (error) {
-    console.error('更新失敗', error);
-    message.error(t('updateFailed'));
+
+  const masterAgent = selectedMasterAgent.value;
+  if (!masterAgent) {
+    message.error(t('selectMasterAgent') || '請先選擇站長');
+    return;
   }
+
+  const isEnabled = Boolean(record.enabled);
+  const action = isEnabled ? t('disable') : t('enable');
+  const itemName = record.itemName || '';
+
+  Modal.confirm({
+    title: t('confirm.toggleEnabled.title', { action, itemName }) || `確認要${action}「${itemName}」嗎？`,
+    content: t('confirm.toggleEnabled.content', { action, itemName }) || `確定要${action}此隊伍徽章嗎？`,
+    async onOk() {
+      enabledChangingIds.value.add(itemId);
+
+      try {
+        if (isEnabled) {
+          await disableTreasureItem({
+            treasureItemID: record.treasureItemID,
+            masterAgent,
+          });
+        }
+        else {
+          await updateTreasureItem({
+            treasureItemID: record.treasureItemID,
+            masterAgent,
+            enabled: true,
+          });
+        }
+        message.success(t('updateSuccess'));
+        dynamicTableInstance?.reload();
+      }
+      catch (error) {
+        console.error('更新失敗', error);
+        message.error(t('updateFailed'));
+      }
+      finally {
+        enabledChangingIds.value.delete(itemId);
+      }
+    },
+  });
 };
 
 /**
@@ -523,9 +633,15 @@ const handleTagSubmit = async () => {
     return;
   }
 
+  const masterAgent = selectedMasterAgent.value;
+  if (!masterAgent) {
+    message.error(t('selectMasterAgent') || '請先選擇站長');
+    return;
+  }
+
   try {
     await addItemTag({
-      masterAgent: masterAgent.value,
+      masterAgent,
       tag: newItemTag.value,
       itemType: 'teamBadge',
     });
@@ -539,61 +655,156 @@ const handleTagSubmit = async () => {
   }
 };
 
-// 列配置
-const columns = computed(() => getColumns(t, cdnBaseUrl));
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+const columns = computed<TableColumnItem[]>(() => {
+  const src = Array.isArray(baseColumns.value) ? baseColumns.value : [];
 
-onMounted(() => {
-  fetchMasterAgents();
+  return src
+    .filter((col): col is TableColumnItem => col != null)
+    .map((col) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+      const normalized: TableColumnItem = {
+        ...col,
+        hideInTable: !isVisible,
+      };
+
+      return normalized;
+    });
 });
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
+/**
+ * 表格 locale 配置（空資料顯示）
+ */
+const tableLocale = computed(() => ({
+  emptyText: '查無資料',
+}));
+
+/**
+ * 監聽 selectedMasterAgent 變化，自動觸發表格重新載入
+ * 對齊 TeamItemTags 的載入模型，確保初次進頁自動載入
+ */
+watch(
+  () => selectedMasterAgent.value,
+  async (newVal) => {
+    recordCall('watch(selectedMasterAgent)');
+    debugLog('watch(selectedMasterAgent) TRIGGERED', {
+      newVal: newVal || '(empty)',
+      contextVersion: contextVersion.value,
+    });
+    console.trace(`${debugLogPrefix} watch(selectedMasterAgent) stack trace`);
+
+    if (newVal) {
+      // 當 masterAgent 有值時，載入標籤列表並觸發表格重新載入
+      debugLog('watch(selectedMasterAgent): calling loadItemTagList', { hasAwait: true });
+      await loadItemTagList();
+      debugLog('watch(selectedMasterAgent): calling reload', {});
+      dynamicTableInstance?.reload(true);
+    }
+    else {
+      // 當 masterAgent 為空時，清空標籤列表並觸發表格重新載入（顯示空資料）
+      debugLog('watch(selectedMasterAgent): clearing data and reloading', {});
+      itemTagListData.value = [];
+      itemTagListObj.value = {};
+      dynamicTableInstance?.reload(true);
+    }
+  },
+  { immediate: true }, // 立即執行一次，確保初始載入
+);
+
+/**
+ * 監聽 contextVersion 變更（僅用於 debug 追蹤）
+ * 注意：已移除 reload 和 loadItemTagList 呼叫，避免與 watch(selectedMasterAgent) 雙觸發
+ */
+watch(
+  () => contextVersion.value,
+  (newVal, oldVal) => {
+    const masterAgent = selectedMasterAgent.value;
+    recordCall('watch(contextVersion)');
+    debugLog('watch(contextVersion) TRIGGERED (no action, only debug)', {
+      newVal,
+      oldVal,
+      masterAgent: masterAgent || '(empty)',
+    });
+    console.trace(`${debugLogPrefix} watch(contextVersion) stack trace`);
+    // 注意：已移除 loadItemTagList() 和 reload() 呼叫，避免雙觸發
+    // selectedMasterAgent 的變化會自動觸發 watch(selectedMasterAgent)
+  },
+);
 </script>
 
 <template>
   <div>
-    <div v-if="userStore.level < 4" class="mb-4">
-      <div class="mb-4 flex items-center gap-4">
-        <div class="input_group">
-          <div class="txt">
-            <label>{{ t('masterAgent') }}</label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="masterAgent"
-              :options="masterAgentOptions"
-              :disabled="isMasterAgentDisabled"
-              :placeholder="t('selectMasterAgent')"
-              style="width: 200px"
-              @change="handleMasterAgentChange"
-            />
-          </div>
-        </div>
-        <a-button type="primary" @click="openFormModal()">
-          {{ t('add') }}
-        </a-button>
-      </div>
-    </div>
-    <div v-else class="mb-4">
-      <a-alert :message="t('noPermission')" type="warning" show-icon />
-    </div>
-
+    <!-- Context Consumer 純化：移除所有 page-level 站長選擇器 -->
+    <!-- 權限控制應交由 Breadcrumb 或路由層處理 -->
     <DynamicTable
-      v-if="userStore.level < 4"
+      v-show="true"
       row-key="treasureItemID"
-      :header-title="t('title')"
       :columns="columns"
       :data-request="loadTableData"
       :loading="loading"
       :pagination="false"
+      :scroll="tableScroll"
+      :auto-height="true"
+      :locale="tableLocale"
+      @search="handleFormSubmit"
     >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ t('title') }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+      <template #toolbar>
+        <a-space>
+          <a-button
+            type="primary"
+            @click="openNewFormModal()"
+          >
+            {{ t('add') }}
+          </a-button>
+        </a-space>
+      </template>
       <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'enabled'">
-          <Switch
-            :checked="!!record.enabled"
-            @change="(checked: boolean) => handleEnabledChange(record, checked)"
-          />
-        </template>
-        <template v-else-if="column.dataIndex === 'ACTION'">
+        <template v-if="column.key === 'ACTION'">
           <a-space>
-            <a-button type="link" size="small" @click="openFormModal(record)">
+            <a-button
+              type="link"
+              size="small"
+              :danger="!!record.enabled"
+              :loading="enabledChangingIds.has(record.treasureItemID)"
+              :disabled="enabledChangingIds.has(record.treasureItemID)"
+              @click="handleToggleEnabled(record)"
+            >
+              {{ record.enabled ? t('disable') : t('enable') }}
+            </a-button>
+            <a-button
+              type="link"
+              size="small"
+              :disabled="enabledChangingIds.has(record.treasureItemID)"
+              @click="openNewFormModal(record)"
+            >
               {{ t('edit') }}
             </a-button>
           </a-space>
@@ -624,36 +835,38 @@ onMounted(() => {
 
     <!-- 表單彈窗 -->
     <a-modal
-      v-model:open="dialogFormVisible"
-      :title="mode === 'create' ? t('formTitle.create') : t('formTitle.edit')"
-      width="700"
-      :confirm-loading="disabledConfirm"
+      v-model:open="newDialogFormVisible"
+      :title="newDialogMode === 'create' ? t('formTitle.create') : t('formTitle.edit')"
+      width="550"
+      :confirm-loading="newDialogConfirmLoading"
       :mask-closable="false"
-      @ok="handleFormSubmit"
-      @cancel="closeFormModal"
+      :centered="true"
+      @ok="handleNewDialogFormSubmit"
+      @cancel="closeNewFormModal"
     >
       <a-form
-        :model="dialogForm"
+        :model="newDialogForm"
         :label-col="{ span: 6 }"
         :wrapper-col="{ span: 18 }"
       >
         <a-form-item :label="t('form.itemName')" required>
           <a-input
-            v-model:value="dialogForm.itemName"
+            v-model:value="newDialogForm.itemName"
             :placeholder="t('form.itemNamePlaceholder')"
-            :disabled="mode === 'view'"
+            :disabled="newDialogMode === 'view'"
           />
         </a-form-item>
 
         <a-form-item :label="t('form.tagID')">
           <div class="flex items-center gap-2">
             <a-select
-              v-model:value="dialogForm.tagID"
-              :options="itemTagListData.map(tag => ({ label: tag.tag, value: tag.id }))"
+              :value="newDialogForm.tagID !== null ? newDialogForm.tagID : undefined"
+              :options="itemTagListData.filter(Boolean).map(tag => ({ label: tag.tag || '', value: tag.id })).filter((opt): opt is { label: string; value: number } => opt.value != null)"
               :placeholder="t('form.tagIDPlaceholder')"
               allow-clear
               style="width: 310px"
-              :disabled="mode === 'view'"
+              :disabled="newDialogMode === 'view'"
+              @change="(val: number | undefined) => { newDialogForm.tagID = val ?? null; }"
             />
             <a-button type="primary" @click="openTagDialog">
               {{ t('form.createTag') }}
@@ -661,62 +874,34 @@ onMounted(() => {
           </div>
         </a-form-item>
 
-        <a-form-item :label="t('form.teamIcon')" required>
-          <div class="uploader-container">
-            <Upload
-              :before-upload="(file) => handleBeforeUpload(file, 'teamIcon')"
-              :show-upload-list="false"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-            >
-              <a-button :disabled="mode === 'view'">
-                <template #icon>
-                  <UploadOutlined />
-                </template>
-                {{ t('form.upload') }}
-              </a-button>
-            </Upload>
-            <div v-if="teamIconUrl" class="preview-image">
-              <img :src="teamIconUrl" alt="teamIcon" style="width: 240px; height: 240px; object-fit: contain; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px; background: #fafafa;">
-              <a-button
-                v-if="mode !== 'view'"
-                type="text"
-                danger
-                size="small"
-                @click="teamIconUrl = ''; teamIconFile = undefined; isChangeTeamIcon = false;"
-              >
-                {{ t('form.remove') }}
-              </a-button>
-            </div>
+        <a-form-item :label="t('form.teamIcon')" :required="newDialogMode === 'create'">
+          <div v-if="newDialogMode === 'edit' && newDialogTeamIconUrl && !newDialogIsChangeTeamIcon" class="edit-image-preview">
+            <img :src="newDialogTeamIconUrl" alt="teamIcon" class="preview-image">
+            <a-button type="link" size="small" @click="newDialogIsChangeTeamIcon = true">
+              更換圖片
+            </a-button>
           </div>
+          <ImageUploadField
+            v-if="newDialogMode === 'create' || newDialogIsChangeTeamIcon"
+            v-model="newDialogForm.teamIcon"
+            :spec="ImageSpec.TEAM_BADGE"
+            @update:model-value="(val) => { newDialogForm.teamIcon = val; if (val) newDialogIsChangeTeamIcon = true; }"
+          />
         </a-form-item>
 
-        <a-form-item :label="t('form.iconFile')" required>
-          <div class="uploader-container">
-            <Upload
-              :before-upload="(file) => handleBeforeUpload(file, 'iconFile')"
-              :show-upload-list="false"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-            >
-              <a-button :disabled="mode === 'view'">
-                <template #icon>
-                  <UploadOutlined />
-                </template>
-                {{ t('form.upload') }}
-              </a-button>
-            </Upload>
-            <div v-if="iconFileUrl" class="preview-image">
-              <img :src="iconFileUrl" alt="iconFile" style="width: 240px; height: 240px; object-fit: contain; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px; background: #fafafa;">
-              <a-button
-                v-if="mode !== 'view'"
-                type="text"
-                danger
-                size="small"
-                @click="iconFileUrl = ''; iconFile = undefined; isChangeIconFile = false;"
-              >
-                {{ t('form.remove') }}
-              </a-button>
-            </div>
+        <a-form-item :label="t('form.iconFile')" :required="newDialogMode === 'create'">
+          <div v-if="newDialogMode === 'edit' && newDialogIconFileUrl && !newDialogIsChangeIconFile" class="edit-image-preview">
+            <img :src="newDialogIconFileUrl" alt="iconFile" class="preview-image">
+            <a-button type="link" size="small" @click="newDialogIsChangeIconFile = true">
+              更換圖片
+            </a-button>
           </div>
+          <ImageUploadField
+            v-if="newDialogMode === 'create' || newDialogIsChangeIconFile"
+            v-model="newDialogForm.iconFile"
+            :spec="ImageSpec.TEAM_BADGE"
+            @update:model-value="(val) => { newDialogForm.iconFile = val; if (val) newDialogIsChangeIconFile = true; }"
+          />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -724,39 +909,19 @@ onMounted(() => {
 </template>
 
 <style lang="less" scoped>
-.input_group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .txt {
-    min-width: 80px;
-    text-align: right;
-
-    label {
-      margin: 0;
-      font-weight: normal;
-    }
-  }
-
-  .my_input {
-    width: 200px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-}
-
-.uploader-container {
-  margin: 10px 0;
+.edit-image-preview {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 
   .preview-image {
-    position: relative;
-    display: inline-block;
-    margin-top: 10px;
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    padding: 4px;
+    background: #fafafa;
   }
 }
 </style>

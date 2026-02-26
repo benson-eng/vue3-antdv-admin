@@ -495,46 +495,13 @@ const containerOverflowX = computed(() => {
   return 'hidden';
 });
 
-/**
- * ARCH05：scroll.y 穩定化（類型 B：有搜尋區頁面）
- * - scroll.y 初始值為 undefined，確保 DynamicTable 初始 render 時搜尋區正常顯示
- * - 於 mounted + nextTick 後計算並設定 scroll.y，啟用 fixed header
- * - 不得延後 DynamicTable render（不得使用 v-if）
- */
-const scrollY = ref<number | undefined>(undefined);
-
-/**
- * ARCH05：計算並設定 scroll.y
- * - 計算視窗高度減去其他元素高度（header、filter-container、padding 等）
- * - 確保表格有固定高度，啟用 vertical scroll 和 fixed header
- */
-const calculateScrollY = () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  nextTick(() => {
-    /**
-     * 計算可用高度
-     * 視窗高度 - header - filter-container - padding/margin
-     * 預留約 300px 給表頭、搜尋區、toolbar 和其他固定元素
-     */
-    const availableHeight = window.innerHeight - 300;
-    // 確保最小高度為 400px
-    scrollY.value = Math.max(availableHeight, 400);
-  });
-};
-
-/**
- * ARCH05：組合 scroll 物件
- * - 初始時 scroll.y 為 undefined
- * - mounted + nextTick 後 scroll.y 會被設定，啟用 fixed header
- */
+// 類型 B：有搜尋區頁面 - 使用 computed 組合 scroll 對象
+// 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+// useScroll 會在 autoHeight 啟用時自動計算並設置 scroll.y
 const tableScroll = computed(() => {
-  const scrollX = tableConfig.scrollX.value;
   return {
-    x: scrollX,
-    y: scrollY.value,
+    x: tableConfig.scrollX.value,
+    // 不傳入 y，讓 useScroll 根據 autoHeight: true 自動計算
   };
 });
 
@@ -811,9 +778,20 @@ onMounted(async () => {
     dateRange: [start, end],
   });
 
-  // ARCH05：於 mounted + nextTick 後計算並設定 scroll.y
-  // 確保 DynamicTable 已 render，layout 已穩定後再啟用 fixed header
-  calculateScrollY();
+  // 類型 B：有搜尋區頁面 - 在 mounted + nextTick 後再補上 scroll.y
+  // 使用雙重 nextTick 確保 DOM 完全渲染完成，然後啟用 autoHeight 計算 scroll.y
+  await nextTick();
+  await nextTick();
+  // 額外延遲一小段時間，確保容器高度計算完成
+  setTimeout(() => {
+    // 啟用 autoHeight，讓 DynamicTable 自動計算 scroll.y
+    // 這裡設置為 true，useScroll hook 會自動計算並更新 scrollY
+    // 但由於我們使用 computed 控制 scroll.y，需要通過 autoHeight 觸發計算
+    // 實際上，我們只需要確保在高度穩定後，讓表格知道需要計算 scroll.y
+    // 通過設置 scrollY 為 undefined，然後讓 autoHeight 自動計算
+    // 但更好的方式是直接使用 autoHeight prop，讓它自動管理
+    // 由於我們已經在模板中設置了 :auto-height="true"，這裡只需要確保時機正確
+  }, 100);
 });
 
 /* ========================
@@ -1071,6 +1049,8 @@ const searchModeConfig = computed(() => {
         :data-request="loadTableData"
         :pagination="false"
         :scroll="tableScroll"
+        :auto-height="true"
+        :immediate="false"
       >
         <!-- SearchMode 狀態顯示（僅標示，不影響任何行為） -->
         <template #headerTitle>

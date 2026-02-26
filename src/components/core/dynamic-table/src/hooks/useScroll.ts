@@ -1,21 +1,26 @@
-import { computed, ref, type Ref } from 'vue';
-import { debounce, isBoolean, isString } from 'lodash-es';
-import { useMutationObserver, useResizeObserver } from '@vueuse/core';
+import type { Ref } from 'vue';
 import type { DynamicTableProps } from '../dynamic-table';
+import { useMutationObserver, useResizeObserver } from '@vueuse/core';
+import { debounce, isBoolean, isString } from 'lodash-es';
+import { computed, ref } from 'vue';
 
-type UseScrollParams = {
+interface UseScrollParams {
   props: DynamicTableProps;
   containerElRef: Ref<HTMLDivElement | null>;
-};
+}
 
 export type UseScrollType = ReturnType<typeof useScroll>;
 
-// 传入的元素是否有position属性
+/**
+ * 传入的元素是否有position属性
+ */
 const hasPosition = (divElement: HTMLDivElement) => {
   return divElement instanceof HTMLDivElement && divElement.style.position !== '';
 };
 
-// 获取元素到顶部距离-通用方法
+/**
+ * 获取元素到顶部距离-通用方法
+ */
 export const getPositionTop = (node: HTMLElement, stopElement?: HTMLDivElement) => {
   let top = node.offsetTop;
   let parent = node.offsetParent as HTMLElement;
@@ -38,17 +43,19 @@ export const useScroll = ({ props, containerElRef }: UseScrollParams) => {
   });
 
   const getScrollY = debounce(() => {
-    if (!props.autoHeight || !containerElRef.value) return;
+    if (!props.autoHeight || !containerElRef.value) {
+      return;
+    }
     let paginationHeight = 0;
     const paginationEl = containerElRef.value.querySelector<HTMLDivElement>('.ant-pagination');
     if (paginationEl) {
       const { offsetHeight } = paginationEl;
       const { marginTop, marginBottom } = getComputedStyle(paginationEl);
-      paginationHeight = offsetHeight + parseInt(marginTop) + parseInt(marginBottom);
+      paginationHeight = offsetHeight + Number.parseInt(marginTop) + Number.parseInt(marginBottom);
     }
-    const bodyEl =
-      containerElRef.value.querySelector<HTMLDivElement>('.ant-table-body') ||
-      containerElRef.value.querySelector<HTMLDivElement>('.ant-table-tbody');
+    const bodyEl
+      = containerElRef.value.querySelector<HTMLDivElement>('.ant-table-body')
+        || containerElRef.value.querySelector<HTMLDivElement>('.ant-table-tbody');
     if (bodyEl) {
       let rootElHeight = document.documentElement.offsetHeight;
       let posTopHeight = getPositionTop(bodyEl as HTMLDivElement);

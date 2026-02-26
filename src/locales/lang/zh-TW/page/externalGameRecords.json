@@ -1,4 +1,5 @@
 {
+  "title": "外部遊戲紀錄",
   "labels": {
     "masterAgent": "總代理",
     "agent": "代理商",
@@ -16,7 +17,9 @@
     "buyFeature": "購買特色遊戲",
     "betType": "押注種類",
     "searchTime": "查詢時間",
-    "platform": "平台"
+    "platform": "平台",
+    "accountID": "帳戶ID",
+    "nickName": "暱稱"
   },
   "betType": {
     "NormalGame": "主遊戲",

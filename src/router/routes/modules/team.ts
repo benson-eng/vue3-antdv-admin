@@ -19,6 +19,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.team.teamItemTags'),
           icon: 'ant-design:tags-outlined',
+          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+          showMasterAgent: true,
         },
       },
       {
@@ -28,6 +30,8 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: t('routes.team.teamSetting'),
           icon: 'ant-design:setting-outlined',
+          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+          showMasterAgent: true,
         },
       },
     ],
@@ -35,4 +39,3 @@ const routes: RouteRecordRaw[] = [
 ];
 
 export default routes;
-

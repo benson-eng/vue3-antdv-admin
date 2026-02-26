@@ -6,9 +6,25 @@
     "eventID": "Event ID",
     "playDateTime": "Play Date Time",
     "spending": "Spending",
-    "gain": "Gain"
+    "spendingType": "Spending Type",
+    "spendingItem": "Spending Item",
+    "spendingAmount": "Spending Amount",
+    "gain": "Gain",
+    "gainType": "Gain Type",
+    "gainItem": "Gain Item",
+    "gainAmount": "Gain Amount",
+    "accountID": "Account ID",
+    "nickName": "Nickname",
+    "agentPlaceholder": "Please select agent",
+    "memberPlaceholder": "00001314 - John Doe",
+    "type": "Type",
+    "currencyType": "Currency Type",
+    "balance": "Amount",
+    "item": "Item",
+    "token": "Token"
   },
   "tables": {
+    "id": "ID",
     "roundID": "Round ID",
     "eventID": "Event ID",
     "memberID": "Member ID",
@@ -19,7 +35,8 @@
     "gainType": "Gain Type",
     "gainDetails": "Gain Details",
     "gainAmount": "Gain Amount",
-    "playDateTime": "Play Date Time"
+    "playDateTime": "Play Date Time",
+    "unknown": "Unknown"
   },
   "awardType": {
     "Currency": "Currency",
@@ -27,7 +44,7 @@
     "Token": "Token"
   },
   "notify": {
-    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields are required",
+    "masterAgentAndAgentFieldMissed": "Master Agent and Agent fields cannot be empty",
     "connectionError": "Connection Error"
   },
   "search": "Search",

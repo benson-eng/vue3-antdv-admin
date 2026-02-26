@@ -1,6 +1,6 @@
-import type { TableColumn } from '@/components/core/dynamic-table';
-import type { ItemTag } from '@/api/backend/treasureChestSystem';
 import type { Composer } from 'vue-i18n';
+import type { ItemTag } from '@/api/backend/treasureChestSystem';
+import type { TableColumn } from '@/components/core/dynamic-table';
 
 type I18nGlobalTranslation = Composer['t'];
 
@@ -8,13 +8,13 @@ export type TableColumnItem = TableColumn<ItemTag>;
 
 export const getColumns = (
   t: I18nGlobalTranslation,
-  onEnabledChange: (record: ItemTag, enabled: boolean) => void,
 ): TableColumnItem[] => [
   {
     title: t('table.tagID'),
     dataIndex: 'id',
     width: 100,
     hideInSearch: true,
+    hideInTable: true,
   },
   {
     title: t('table.itemType'),
@@ -34,6 +34,7 @@ export const getColumns = (
     dataIndex: 'order',
     width: 100,
     hideInSearch: true,
+    hideInTable: true,
   },
   {
     title: t('table.enabled'),
@@ -50,6 +51,3 @@ export const getColumns = (
     hideInSearch: true,
   },
 ];
-
-
-
