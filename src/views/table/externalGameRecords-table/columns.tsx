@@ -66,15 +66,6 @@ export function createBaseColumns(options: CreateColumnsOptions): TableColumnIte
       },
     },
     {
-      title: t('labels.memberID'),
-      dataIndex: 'memberID',
-      /** 彈性寬度欄位（對齊 agent 頁策略） */
-      flexible: true,
-      /** flexible 欄位必須設定 minWidth，避免初始 render 時被壓縮為 0 */
-      minWidth: 200,
-      width: 200,
-    },
-    {
       title: t('labels.accountID') || '帳戶ID',
       dataIndex: 'accountID',
       /** 彈性寬度欄位（對齊 agent 頁策略） */
@@ -196,13 +187,13 @@ export function useExternalGameRecordsColumns(options: CreateColumnsOptions) {
 
   // 根據 visibleColumnKeys 設置欄位的 hideInTable
   // Guard: 若 visibleColumnKeys 尚未初始化完成（空或無效），不得套用 hideInTable，必須維持全部顯示
-  // STEP 3 定型欄位數量：13 個（wagersID, externalPlatform, memberID, accountID, nickName, gameID, currencyType, betType, totalBet, totalWin, winLose, buyFeature, playDateTime）
+  // STEP 3 定型欄位數量：12 個（wagersID, externalPlatform, accountID, nickName, gameID, currencyType, betType, totalBet, totalWin, winLose, buyFeature, playDateTime）
   // 同時確保 flexible 欄位有 minWidth，避免初始 render 時被壓縮為 0
   const columns = computed<TableColumnItem[]>(() => {
     const visibleKeys = tableConfig.visibleColumnKeys.value;
     // 如果 visibleColumnKeys 為空或無效，不套用 hideInTable（全部顯示）
-    // 檢查 visibleColumnKeys 是否已正確初始化（至少包含所有預期的欄位，至少 13 個）
-    const expectedMinKeys = 13;
+    // 檢查 visibleColumnKeys 是否已正確初始化（至少包含所有預期的欄位，至少 12 個）
+    const expectedMinKeys = 12;
     const hasValidVisibleKeys = Array.isArray(visibleKeys) && visibleKeys.length >= expectedMinKeys;
 
     return baseColumns.value.map((col) => {

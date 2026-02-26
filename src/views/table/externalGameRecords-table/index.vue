@@ -345,12 +345,12 @@ watch(
     }
 
     // 初始化階段：確保 visibleColumnKeys 已正確初始化（包含所有 STEP 3 定型欄位）
-    // STEP 3 定型欄位：wagersID, externalPlatform, memberID, accountID, nickName, gameID, currencyType, betType, totalBet, totalWin, winLose, buyFeature, playDateTime
-    // 共 13 個欄位
+    // STEP 3 定型欄位：wagersID, externalPlatform, accountID, nickName, gameID, currencyType, betType, totalBet, totalWin, winLose, buyFeature, playDateTime
+    // 共 12 個欄位
     if (!isInitialized) {
       const currentKeys = tableConfig.visibleColumnKeys.value;
-      // 檢查 visibleColumnKeys 是否已正確初始化（應包含所有定型欄位，至少 13 個）
-      const expectedMinKeys = 13;
+      // 檢查 visibleColumnKeys 是否已正確初始化（應包含所有定型欄位，至少 12 個）
+      const expectedMinKeys = 12;
       if (Array.isArray(currentKeys) && currentKeys.length >= expectedMinKeys) {
         // 確保 dynamicTableInstance 已準備好，且 columns 已正確設置
         // 通過檢查 newColumns 是否包含所有預期的欄位來判斷初始化是否完成
