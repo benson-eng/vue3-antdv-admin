@@ -693,6 +693,13 @@ const searchModeConfig = computed(() => {
 });
 
 /**
+ * 表格 locale 配置（空資料顯示）
+ */
+const tableLocale = computed(() => ({
+  emptyText: '查無資料',
+}));
+
+/**
  * 監聽 selectedMasterAgent 變化，自動觸發表格重新載入
  * 對齊 TeamItemTags 的載入模型，確保初次進頁自動載入
  */
@@ -758,6 +765,7 @@ watch(
       :pagination="false"
       :scroll="tableScroll"
       :auto-height="true"
+      :locale="tableLocale"
       @search="handleFormSubmit"
     >
       <template #headerTitle>
