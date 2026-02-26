@@ -2,11 +2,13 @@
 // 從 Vue 2 + Element UI 專案整合，已轉換為 Vue 3 格式
 // 適配現有專案的 request 函數
 
-import { request } from '@/utils/request';
 import type { IVueResponse } from '@/api/types';
 import { resolveAdminSystemPath } from '@/utils/mockSwitch';
+import { request } from '@/utils/request';
 
-// 登入 API
+/**
+ * 登入 API
+ */
 export const loginLocal = (data: { account: string; password: string }) =>
   request<IVueResponse>({
     url: resolveAdminSystemPath('/AdminSystem/api/login'),
@@ -14,7 +16,9 @@ export const loginLocal = (data: { account: string; password: string }) =>
     data,
   });
 
-// 取得使用者資訊 API
+/**
+ * 取得使用者資訊 API
+ */
 export const getUserInfoLocal = (data: { token: string }) =>
   request<IVueResponse>({
     url: resolveAdminSystemPath('/AdminSystem/api/getUserInfo'),
@@ -22,7 +26,9 @@ export const getUserInfoLocal = (data: { token: string }) =>
     data,
   });
 
-// 登出 API
+/**
+ * 登出 API
+ */
 export const logoutLocal = (data: any = {}) =>
   request<IVueResponse>({
     url: resolveAdminSystemPath('/AdminSystem/api/logout'),
@@ -30,11 +36,11 @@ export const logoutLocal = (data: any = {}) =>
     data,
   });
 
-// 取得 BackendKey（雙因素驗證）
+/**
+ * 取得 BackendKey（Authenticator驗證）
+ */
 export const getBackendKey = async (data: {
-  input: {
-    id: number;
-  };
+  id: number;
 }) => {
   return request<IVueResponse>({
     url: resolveAdminSystemPath('/AdminSystem/api/getBackendKey'),
@@ -43,4 +49,3 @@ export const getBackendKey = async (data: {
     timeout: 0,
   });
 };
-
