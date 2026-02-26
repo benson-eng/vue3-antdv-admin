@@ -5,7 +5,7 @@ import type { DefaultAvatarItem } from '@/api/backend/profileSystem';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue';
-import { Button, Divider, message, Modal, Switch, Upload } from 'ant-design-vue';
+import { Button, Divider, message, Modal, Switch, Tag, Upload } from 'ant-design-vue';
 import { computed, inject, ref, watch } from 'vue';
 
 import { createDefaultAvatar as createDefaultAvatarApi, getDefaultAvatar, updateDefaultAvatar as updateDefaultAvatarApi } from '@/api/backend/profileSystem';
@@ -25,6 +25,30 @@ const t = i18n.t;
 
 const userStore = useUserStore();
 const hasPermission = computed(() => userStore.level < 4);
+
+// =========================
+// SearchMode 定義
+// =========================
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * - BACKEND：資料從後端 API 取得，過濾邏輯在 API 層面完成
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
 
 // =========================
 // Context Integration
@@ -550,7 +574,12 @@ const onDialogConfirm = async () => {
       :auto-height="true"
     >
       <template #headerTitle>
-        <span>{{ t('title') }}</span>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ t('title') }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
       </template>
       <template #toolbar>
         <a-space>
