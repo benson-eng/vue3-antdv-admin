@@ -24,6 +24,7 @@
       "ebableStatus": "啟用狀態",
       "createDateTime": "創建日期",
       "isEnabled": "隱藏禁用",
+      "showDisabled": "顯示禁用",
       "actions": "操作"
     },
     "form": {

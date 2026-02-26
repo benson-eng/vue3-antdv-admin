@@ -24,6 +24,7 @@
       "ebableStatus": "Enable Status",
       "createDateTime": "Create Date",
       "isEnabled": "Hide/Disable",
+      "showDisabled": "Show Disabled",
       "actions": "Actions"
     },
     "form": {
