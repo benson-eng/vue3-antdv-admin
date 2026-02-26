@@ -38,6 +38,7 @@ export const baseColumns: TableColumnItem[] = [
     dataIndex: 'id',
     width: 100,
     hideInSearch: true,
+    hideInTable: true, // 不顯示在表格中
   },
   {
     title: '帳號',
