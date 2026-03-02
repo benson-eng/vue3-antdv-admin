@@ -110,78 +110,99 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="setting">
-    <a-card :title="t('routes.setting.passwordSetting')" class="setting-card">
-      <a-form :model="formState" layout="vertical" @finish="handleSubmit">
-        <a-form-item
-          :label="t('page.setting.labels.oldPassword')"
-          name="oldPassword"
-          :rules="[{ required: true, message: t('page.setting.notify.emptyPassword') }]"
-        >
-          <a-input-password
-            v-model:value="formState.oldPassword"
-            :placeholder="t('page.setting.labels.oldPassword')"
-            autocomplete="off"
-            size="large"
-          />
-        </a-form-item>
+  <div class="password-setting-page">
+    <div class="section-container">
+      <div class="section-header">
+        {{ t('routes.setting.passwordSetting') }}
+      </div>
 
-        <a-form-item
-          :label="t('page.setting.labels.newPassword')"
-          name="newPassword"
-          :rules="[
-            { required: true, message: t('page.setting.notify.emptyPassword') },
-            { min: 6, message: t('page.setting.notify.shortPassword') },
-          ]"
+      <div class="section-body">
+        <a-form
+          :model="formState"
+          layout="vertical"
+          @finish="handleSubmit"
         >
-          <a-input-password
-            v-model:value="formState.newPassword"
-            :placeholder="t('page.setting.labels.passwordDescription')"
-            autocomplete="off"
-            size="large"
-          />
-        </a-form-item>
+          <a-form-item
+            :label="t('page.setting.labels.oldPassword')"
+            name="oldPassword"
+            :rules="[{ required: true, message: t('page.setting.notify.emptyPassword') }]"
+          >
+            <a-input-password
+              v-model:value="formState.oldPassword"
+              :placeholder="t('page.setting.labels.oldPassword')"
+              autocomplete="off"
+              size="large"
+            />
+          </a-form-item>
 
-        <a-form-item
-          :label="t('page.setting.labels.confirmPassword')"
-          name="confirmPassword"
-          :rules="[
-            { required: true, message: t('page.setting.notify.emptyPassword') },
-            { validator: validateConfirmPassword },
-          ]"
-        >
-          <a-input-password
-            v-model:value="formState.confirmPassword"
-            :placeholder="t('page.setting.labels.passwordDescription')"
-            autocomplete="off"
-            size="large"
-          />
-        </a-form-item>
+          <a-form-item
+            :label="t('page.setting.labels.newPassword')"
+            name="newPassword"
+            :rules="[
+              { required: true, message: t('page.setting.notify.emptyPassword') },
+              { min: 6, message: t('page.setting.notify.shortPassword') },
+            ]"
+          >
+            <a-input-password
+              v-model:value="formState.newPassword"
+              :placeholder="t('page.setting.labels.passwordDescription')"
+              autocomplete="off"
+              size="large"
+            />
+          </a-form-item>
 
-        <a-form-item class="submit-btn-wrapper">
-          <a-button type="primary" html-type="submit" :loading="loading" size="default">
-            {{ t('page.setting.actions.changePassword') }}
-          </a-button>
-        </a-form-item>
-      </a-form>
-    </a-card>
+          <a-form-item
+            :label="t('page.setting.labels.confirmPassword')"
+            name="confirmPassword"
+            :rules="[
+              { required: true, message: t('page.setting.notify.emptyPassword') },
+              { validator: validateConfirmPassword },
+            ]"
+          >
+            <a-input-password
+              v-model:value="formState.confirmPassword"
+              :placeholder="t('page.setting.labels.passwordDescription')"
+              autocomplete="off"
+              size="large"
+            />
+          </a-form-item>
+
+          <a-form-item>
+            <a-button
+              type="primary"
+              html-type="submit"
+              :loading="loading"
+            >
+              {{ t('page.setting.actions.changePassword') }}
+            </a-button>
+          </a-form-item>
+        </a-form>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.setting {
-  padding: 24px;
-
-  .setting-card {
-    max-width: 600px;
-    margin: 0 auto;
+.password-setting-page {
+  .section-container {
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
-  .submit-btn-wrapper {
-    :deep(.ant-form-item-control-input-content) {
-      display: flex;
-      justify-content: flex-end;
-    }
+  .section-header {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .section-body {
+    max-width: 480px;
+  }
+
+  :deep(.ant-form-item) {
+    margin-bottom: 16px;
   }
 }
 </style>
