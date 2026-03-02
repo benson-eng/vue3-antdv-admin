@@ -1,16 +1,18 @@
-<script setup lang="ts">
+<script setup lang="tsx">
+import type { TableColumnItem, TableListItem } from './columns';
 import type { IconItem } from '@/api/backend/treasureChestSystem';
-import { ImageType, addIcon, queryIcon, removeIcon } from '@/api/backend/treasureChestSystem';
-
-import { UploadOutlined } from '@ant-design/icons-vue';
-import { message, Modal } from 'ant-design-vue';
-import { computed, h, onMounted, ref } from 'vue';
-import { Upload, Button } from 'ant-design-vue';
-import type { UploadFile } from 'ant-design-vue';
-
-import AdminAccountSelector from '@/components/AdminAccountSelector/AdminAccountSelector.vue';
+import type { LoadDataParams } from '@/components/core/dynamic-table';
+import { message, Modal, Tag } from 'ant-design-vue';
+import { computed, inject, ref, watch } from 'vue';
+import { addIcon, ImageType, queryIcon, removeIcon } from '@/api/backend/treasureChestSystem';
+import { useTable } from '@/components/core/dynamic-table';
+import ImageUploadField from '@/components/system/ImageUploadField.vue';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { ImageSpec } from '@/system/image/imageSpec';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
+import { getColumns } from './columns';
 
 defineOptions({
   name: 'ImageSetting',
@@ -22,16 +24,250 @@ const t = i18n.t;
 const userStore = useUserStore();
 const hasPermission = computed(() => userStore.level < 4);
 
-const masterAgent = ref<string>('');
-const isSelectedMasterAgent = ref(false);
+// CDN Base URL
+const cdnBaseUrl = import.meta.env.VITE_APP_CDN_BASE_URL || '';
 
 // =========================
-// Table data
+// Context Integration
 // =========================
 
-const listLoading = ref(false);
-const list = ref<IconItem[]>([]);
-const tableKey = ref(0);
+/**
+ * 【Context 類型】：Context Reader（Page Type B）
+ * - 依賴 Breadcrumb 站長
+ * - 切換站長需重新載入資料
+ * - 監聽 selectedMasterAgent（Context）變化，自動 reset() + reload(true)
+ */
+// 從 Layout 根元件 provide 取得站長選單狀態（Breadcrumb Context）
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值（唯一資料來源）
+const selectedMasterAgent = computed(() => {
+  const v = masterAgentCtx?.selectedMasterAgent.value;
+  if (v) {
+    return String(v).trim();
+  }
+  return '';
+});
+
+// 使用 computed 取得 contextVersion（用於監聽變化，僅用於狀態更新）
+// 注意：目前未使用，但保留以備未來擴展需求
+
+// 計算是否已選擇 masterAgent（用於控制表格和新增按鈕顯示）
+const isSelectedMasterAgent = computed(() => {
+  return Boolean(selectedMasterAgent.value);
+});
+
+// =========================
+// SearchMode 定義
+// =========================
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
+
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * - BACKEND：資料從後端 API 取得，過濾邏輯在 API 層面完成
+ * - masterAgent：後端 API 參數（Context 控制，Breadcrumb Context）
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
+
+// =========================
+// DynamicTable Setup
+// =========================
+
+/**
+ * 【搜尋模型】無搜尋區模式（受控型）
+ * - search: false - 移除搜尋表單（masterAgent 由 Context 控制）
+ * - immediate: false - 不自動查詢（受控型：手動觸發）
+ *
+ * 【搜尋主控權】
+ * - masterAgent：Context 控制（Breadcrumb Context）
+ * - 觸發方式：watch(selectedMasterAgent) 自動觸發 reset() + reload(true)
+ *
+ * 【資料來源】
+ * - masterAgent：Context（selectedMasterAgent.value）
+ * - 查詢模式：受控型（Context 變化時自動觸發）
+ */
+const [DynamicTable, dynamicTableInstance] = useTable({
+  search: false, // 🔒 移除搜尋區（masterAgent 由 Context 控制）
+  immediate: false, // 🔒 受控型：不自動查詢，Context 變化時觸發
+  fetchConfig: {
+    listField: 'items' as const,
+    totalField: 'total' as any,
+  },
+});
+
+// =========================
+// Methods (需要先定義，供 columns 使用)
+// =========================
+
+const isChangeable = (_row: IconItem) => {
+  // 根據業務邏輯判斷是否可變更
+  return false;
+};
+
+const onHandleDelete = (row: IconItem) => {
+  const content = `${t('notify.deleteConfirm')} - ID: ${row.id} - ${row.name}`;
+  const title = t('notify.deleteTitle');
+
+  Modal.confirm({
+    title,
+    content,
+    okText: t('buttons.confirm'),
+    cancelText: t('buttons.cancel'),
+    async onOk() {
+      try {
+        await removeIcon({ masterAgent: selectedMasterAgent.value, id: [row.id] });
+        message.success(t('notify.deleteSuccess'));
+        // 使用 DynamicTable 的 reload 方法
+        dynamicTableInstance?.reload(true);
+      }
+      catch (error: any) {
+        message.error(error?.message || t('notify.deleteFailed'));
+      }
+    },
+  });
+};
+
+// 列配置
+const baseColumns = computed<TableColumnItem[]>(() => {
+  const cols = getColumns(t, cdnBaseUrl, onHandleDelete, isChangeable);
+  return Array.isArray(cols) ? cols.filter(Boolean) : [];
+});
+
+// 使用表格配置 Hook（計算 scroll.x）
+const tableConfig = useTableConfig(baseColumns as any);
+
+/**
+ * 計算 scroll 配置（AutoHeight 模式）
+ * 只傳入 scroll.x，不傳入 scroll.y，讓 useScroll 根據 autoHeight 自動計算 scroll.y
+ */
+const tableScroll = computed(() => {
+  const x = tableConfig.scrollX.value;
+
+  if (x == null || Number.isNaN(x) || !Number.isFinite(x) || (typeof x === 'number' && x <= 0)) {
+    return {};
+  }
+
+  return { x };
+});
+
+// 計算 container 的 overflow-x 樣式
+// container 預設 overflow-x 為 hidden，確保初始進入頁面時不會出現橫向 scrollbar
+// 僅當 scroll.x !== '100%' 且為數字時，才允許 overflow-x: auto
+const containerOverflowX = computed(() => {
+  const scrollX = tableConfig.scrollX.value;
+
+  // 當 scroll.x !== '100%' 且為數字時，允許橫向滾動
+  // 原因：當 scroll.x 為數字時，表示表格內部有固定寬度欄位，且總和超過容器寬度
+  // 此時表格內部會出現滾動條，外層 container 也需要允許滾動，以確保表格內容可以完整顯示
+  if (scrollX !== '100%' && typeof scrollX === 'number') {
+    return 'auto';
+  }
+
+  // scroll.x 為 '100%' 或 undefined 時，必須為 hidden
+  // 原因：
+  // - '100%': 表示有 flexible 欄位，表格會自動適應容器寬度，不需要外層滾動
+  //           這樣可以確保初始進入頁面時，不論資料量多少，都不會出現橫向 scrollbar
+  // - undefined: 表示沒有固定寬度欄位或固定寬度總和為 0，表格會自適應容器，不需要滾動
+  //              這樣可以確保關閉欄位到 1~2 欄時，table 寬度會自適應容器
+  return 'hidden';
+});
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+const columns = computed<TableColumnItem[]>(() => {
+  const src = Array.isArray(baseColumns.value) ? baseColumns.value : [];
+
+  return src
+    .filter((col): col is TableColumnItem => col != null)
+    .map((col) => {
+      const key = (col.dataIndex as string) || (col.key as string) || '';
+      const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+      const normalized: TableColumnItem = {
+        ...col,
+        hideInTable: !isVisible,
+      };
+
+      return normalized;
+    });
+});
+
+// =========================
+// Table Data Loading
+// =========================
+
+interface TableListResponse {
+  items: TableListItem[];
+  meta: { totalItems: number };
+}
+
+/**
+ * 載入表格資料（受控型搜尋模型）
+ *
+ * 【資料來源】
+ * - masterAgent：Context（selectedMasterAgent.value）
+ * - 查詢參數：從 Context 取得
+ *
+ * 【必要欄位】
+ * - masterAgent：必填（後端 API 參數，來自 Context）
+ *
+ * 【行為】
+ * - masterAgent 為空：返回空陣列
+ * - masterAgent 有值：呼叫 API 查詢
+ */
+const loadTableData = async (_params: LoadDataParams & Record<string, any>): Promise<TableListResponse> => {
+  // 必要欄位：masterAgent（Context 控制）
+  const masterAgentValue = selectedMasterAgent.value;
+  if (!masterAgentValue) {
+    return { items: [], meta: { totalItems: 0 } };
+  }
+
+  try {
+    const res = await queryIcon({ masterAgent: masterAgentValue });
+
+    // 根據實際 API 回傳格式：{ data: { result: [...] } }
+    let items: IconItem[] = [];
+    if (res && res.data && res.data.result && Array.isArray(res.data.result)) {
+      items = res.data.result;
+    }
+    else if (res && res.data && res.data.result) {
+      items = Array.isArray(res.data.result) ? res.data.result : [];
+    }
+    // 處理可能的 Vue2 風格回傳（已解包）
+    else if ((res as any)?.result && Array.isArray((res as any).result)) {
+      items = (res as any).result;
+    }
+
+    return {
+      items,
+      meta: {
+        totalItems: items.length,
+      },
+    };
+  }
+  catch (error: any) {
+    message.error(error?.message || t('notify.queryFailed'));
+    return { items: [], meta: { totalItems: 0 } };
+  }
+};
 
 // =========================
 // Dialog
@@ -47,107 +283,47 @@ const dialogForm = ref<{
   url: string;
   type: ImageType;
   gameID?: string;
+  imageFile: File | null;
 }>({
   masterAgent: '',
   name: '',
   url: '',
   type: ImageType.MAIL,
   gameID: '',
+  imageFile: null,
 });
-
-const limitMinWidth = ref(130);
-const limitMinHeight = ref(130);
-
-const uploadFile = ref<{
-  previewAvatarImageUrl: string;
-  profilePictureFile?: File;
-}>({
-  previewAvatarImageUrl: '',
-  profilePictureFile: undefined,
-});
-
-const imageTypeList = computed(() => [
-  { name: t('type.mail'), value: ImageType.MAIL },
-]);
-
-// 對齊 Vue2：this.assetsDomainName = cdnBaseURL;
-const cdnBaseUrl = import.meta.env.VITE_APP_CDN_BASE_URL || '';
-const toCdnUrl = (url?: string) => {
-  if (!url) {
-    return '';
-  }
-  // 對齊 Vue2：assetsDomainName + row.url (直接拼接)
-  // 如果已經是完整 URL，直接返回
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-  // 否則拼接 CDN base URL
-  return cdnBaseUrl ? `${cdnBaseUrl}${url}` : url;
-};
 
 // =========================
 // Methods
 // =========================
 
-const getDefaultAvatarList = async () => {
-  if (!masterAgent.value) {
-    return;
-  }
+/**
+ * 監聽站長變化（Page Type B：Context Reader）
+ * - 監聽 selectedMasterAgent（Context）變化
+ * - 切換站長時：reset() + reload(true)
+ * - 不得使用 DOM 監聽
+ * - 不得修改 Layout
+ */
+watch(
+  () => selectedMasterAgent.value,
+  () => {
+    // Context 站長變化時，重新載入資料
+    // 注意：無搜尋區模式，不需要 reset，直接 reload 即可
+    dynamicTableInstance?.reload(true);
+  },
+);
 
-  listLoading.value = true;
-  try {
-    // 對齊 Vue2：const { data } = await queryIcon(this.listQuery);
-    // Vue2 的 request interceptor 返回 response.data，所以 queryIcon 返回 { result: [...] }
-    // Vue3 的 request 對於 AdminSystem API 返回整個 response，所以 res.data 是 { result: [...] }
-    const res = await queryIcon({ masterAgent: masterAgent.value });
-    
-    // 根據實際 API 回傳格式：{ result: [...] }
-    // Vue2: response.data = { result: [...] }，所以 data.result 是陣列
-    // Vue3: response.data = { result: [...] }，所以 res.data.result 是陣列
-    if (res && res.data && res.data.result && Array.isArray(res.data.result)) {
-      list.value = res.data.result;
-    }
-    // 如果 res.data 直接是 { result: [...] }（某些情況下可能已經解包）
-    else if (res && res.data && res.data.result) {
-      list.value = Array.isArray(res.data.result) ? res.data.result : [];
-    }
-    // 如果 res 直接是 { result: [...] }（Vue2 風格，request 已解包）
-    else if (res && res.result && Array.isArray(res.result)) {
-      list.value = res.result;
-    }
-    else {
-      list.value = [];
-    }
-  }
-  catch (error: any) {
-    message.error(error?.message || t('notify.queryFailed'));
-    list.value = [];
-  }
-  finally {
-    // 對齊 Vue2：setTimeout(() => { this.listLoading = false; }, 0.5 * 1000);
-    setTimeout(() => {
-      listLoading.value = false;
-    }, 500);
-  }
-};
-
-// 對齊 Vue2：onMasterAgentChanged(changes:{masterAgent:string, agents: Array<{account:string}>})
-const onMasterAgentChanged = async () => {
-  // 對齊 Vue2：this.listQuery.masterAgent = changes.masterAgent;
-  if (!masterAgent.value || masterAgent.value === '') {
-    isSelectedMasterAgent.value = false;
-    list.value = [];
-    return;
-  }
-
-  // 對齊 Vue2：this.isSelectedMasterAgent = true;
-  isSelectedMasterAgent.value = true;
-
-  // 對齊 Vue2：if (this.getAuthLevel < 4) { this.handleFilter(); }
-  if (hasPermission.value) {
-    await getDefaultAvatarList();
-  }
-};
+// 對於 Level 4 用戶，同時監聽 userStore.masterAgent 變化
+// 這是既有系統機制（userStore 是系統層狀態管理）
+if (userStore.level === 4) {
+  watch(
+    () => userStore.masterAgent,
+    () => {
+      // 當 userStore.masterAgent 變化時，重新載入資料
+      dynamicTableInstance?.reload(true);
+    },
+  );
+}
 
 const defaultDialogForm = () => ({
   masterAgent: '',
@@ -155,99 +331,83 @@ const defaultDialogForm = () => ({
   url: '',
   type: ImageType.MAIL,
   gameID: '',
+  imageFile: null,
 });
 
 const onHandleCreate = () => {
   disabledConfirm.value = false;
-  uploadFile.value.profilePictureFile = undefined;
-  uploadFile.value.previewAvatarImageUrl = '';
   dialogForm.value = defaultDialogForm();
   dialogStatus.value = 'CREATE';
   dialogFormVisible.value = true;
 };
 
-const onHandleDelete = (row: IconItem) => {
-  const content = `${t('notify.deleteConfirm')} - ID: ${row.id} - ${row.name}`;
-  const title = t('notify.deleteTitle');
-
-  Modal.confirm({
-    title,
-    content,
-    okText: t('buttons.confirm'),
-    cancelText: t('buttons.cancel'),
-    async onOk() {
-      try {
-        await removeIcon({ masterAgent: masterAgent.value, id: [row.id] });
-        message.success(t('notify.deleteSuccess'));
-        await getDefaultAvatarList();
-      }
-      catch (error: any) {
-        message.error(error?.message || t('notify.deleteFailed'));
-      }
-    },
-  });
-};
-
-const handleAvatarImageImport = (params: { raw: File; previewUrl: string }) => {
-  uploadFile.value.previewAvatarImageUrl = params.previewUrl;
-  uploadFile.value.profilePictureFile = params.raw;
-};
-
-const handleBeforeUpload = (file: UploadFile) => {
-  // 獲取原始文件對象
-  let fileObj: File | undefined;
-  
-  if (file.originFileObj) {
-    fileObj = file.originFileObj;
-  }
-  else if ((file as any).originFile) {
-    fileObj = (file as any).originFile;
-  }
-  else if ((file as any) instanceof File) {
-    fileObj = file as any;
+const createDefaultAvatar = async () => {
+  if (!dialogForm.value.imageFile) {
+    return;
   }
 
-  if (!fileObj) {
-    message.error('無法讀取文件，請重試或選擇其他圖片');
-    return false;
-  }
+  try {
+    // 對齊 Vue2：gameID 為 undefined，而不是空字串
+    const postData = {
+      masterAgent: selectedMasterAgent.value,
+      name: dialogForm.value.name,
+      imageFile: dialogForm.value.imageFile,
+      type: dialogForm.value.type,
+      gameID: undefined as string | undefined,
+    };
 
-  // 驗證文件類型
-  const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-  if (!fileObj.type || !validImageTypes.includes(fileObj.type.toLowerCase())) {
-    const formatList = validImageTypes.map(t => t.split('/')[1].toUpperCase()).join(', ');
-    message.error(`不支援的圖片格式。請選擇以下格式：${formatList}`);
-    return false;
-  }
+    const result = await addIcon(postData);
 
-  // 驗證文件大小（限制 5MB）
-  const maxSize = 5 * 1024 * 1024;
-  if (fileObj.size > maxSize) {
-    message.error('圖片大小不能超過 5MB');
-    return false;
-  }
+    // 對齊 Vue2：檢查 result.error === undefined 來判斷成功
+    // Vue2 的響應格式：{ error?: { code, message }, data?: any, result?: any }
+    // Vue3 可能返回 { data: { ... } } 或直接 { error, data }
+    const response = result as any;
 
-  // 使用 FileReader 讀取文件並顯示預覽
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    if (e.target?.result) {
-      uploadFile.value.previewAvatarImageUrl = e.target.result as string;
-      uploadFile.value.profilePictureFile = fileObj;
-      message.success('圖片預覽已加載');
+    if (response && response.error === undefined) {
+      // 成功：沒有 error 屬性
+      message.success(t('notify.createSuccess'));
+      dialogFormVisible.value = false;
+      // 使用 DynamicTable 的 reload 方法
+      dynamicTableInstance?.reload(true);
     }
-  };
-  reader.onerror = () => {
-    message.error('圖片讀取失敗，請重試');
-    uploadFile.value.previewAvatarImageUrl = '';
-    uploadFile.value.profilePictureFile = undefined;
-  };
-  reader.readAsDataURL(fileObj);
-  
-  return false; // 阻止自動上傳
+    else if (response && response.error) {
+      // 有錯誤
+      const errorMsg = response.error.message || t('notify.createFailed');
+      message.error(errorMsg);
+    }
+    else if (response && response.data && !response.data.error) {
+      // Vue3 格式：{ data: { ... } }，且 data 中沒有 error
+      message.success(t('notify.createSuccess'));
+      dialogFormVisible.value = false;
+      // 使用 DynamicTable 的 reload 方法
+      dynamicTableInstance?.reload(true);
+    }
+    else {
+      // 其他情況視為失敗
+      const errorData = response?.data?.error || response?.error;
+      if (errorData && errorData.message) {
+        message.error(errorData.message);
+      }
+      else {
+        message.error(t('notify.createFailed'));
+      }
+    }
+  }
+  catch (error: any) {
+    console.error('Failed to create default avatar:', error);
+    message.error(error?.message || t('notify.createFailed'));
+  }
+};
+
+const updateDefaultAvatar = async () => {
+  // 注意：Vue2 版本使用 updateDefaultAvatarAction，但這裡可能需要不同的 API
+  // 暫時先顯示提示
+  message.warning(t('notify.updateNotImplemented'));
+  dialogFormVisible.value = false;
 };
 
 const onDialogConfirm = async () => {
-  if (!uploadFile.value.profilePictureFile) {
+  if (!dialogForm.value.imageFile) {
     message.error(t('rules.image'));
     return;
   }
@@ -274,85 +434,12 @@ const onDialogConfirm = async () => {
   }
 };
 
-const createDefaultAvatar = async () => {
-  if (!uploadFile.value.profilePictureFile) {
-    return;
-  }
-
-  try {
-    // 對齊 Vue2：gameID 為 undefined，而不是空字串
-    const postData = {
-      masterAgent: masterAgent.value,
-      name: dialogForm.value.name,
-      imageFile: uploadFile.value.profilePictureFile,
-      type: dialogForm.value.type,
-      gameID: undefined as string | undefined,
-    };
-    
-    const result = await addIcon(postData);
-    
-    // 對齊 Vue2：檢查 result.error === undefined 來判斷成功
-    // Vue2 的響應格式：{ error?: { code, message }, data?: any, result?: any }
-    // Vue3 可能返回 { data: { ... } } 或直接 { error, data }
-    const response = result as any;
-    
-    if (response && response.error === undefined) {
-      // 成功：沒有 error 屬性
-      message.success(t('notify.createSuccess'));
-      dialogFormVisible.value = false;
-      await getDefaultAvatarList();
-    }
-    else if (response && response.error) {
-      // 有錯誤
-      const errorMsg = response.error.message || t('notify.createFailed');
-      message.error(errorMsg);
-    }
-    else if (response && response.data && !response.data.error) {
-      // Vue3 格式：{ data: { ... } }，且 data 中沒有 error
-      message.success(t('notify.createSuccess'));
-      dialogFormVisible.value = false;
-      await getDefaultAvatarList();
-    }
-    else {
-      // 其他情況視為失敗
-      const errorData = response?.data?.error || response?.error;
-      if (errorData && errorData.message) {
-        message.error(errorData.message);
-      }
-      else {
-        message.error(t('notify.createFailed'));
-      }
-    }
-  }
-  catch (error: any) {
-    console.error('Failed to create default avatar:', error);
-    message.error(error?.message || t('notify.createFailed'));
-  }
-};
-
-const updateDefaultAvatar = async () => {
-  // 注意：Vue2 版本使用 updateDefaultAvatarAction，但這裡可能需要不同的 API
-  // 暫時先顯示提示
-  message.warning(t('notify.updateNotImplemented'));
-  dialogFormVisible.value = false;
-};
-
-const isChangeable = (row: IconItem) => {
-  // 根據業務邏輯判斷是否可變更
-  return false;
-};
-
 // =========================
 // Lifecycle
 // =========================
 
-onMounted(() => {
-  // 對齊其他頁面：level>=4 直接鎖定總代理
-  if (userStore.level >= 4) {
-    masterAgent.value = userStore.masterAgent;
-    onMasterAgentChanged();
-  }
-});
+// 🔒 禁止 mounted 自動查詢
+// 注意：此頁面不再在 mounted 時自動查詢，改為手動觸發
 </script>
 
 <template>
@@ -364,23 +451,38 @@ onMounted(() => {
       :sub-title="t('noPermission.subTitle')"
     />
 
-    <a-card v-else :title="t('title')" :bordered="false">
-      <!-- Filter -->
-      <!-- 對齊 Vue2：filter-container 結構 -->
-      <div class="filter-container">
-        <div class="wrap">
-          <div class="input_group">
-            <div class="txt">{{ t('labels.masterAgent') }}</div>
-            <div class="my_input">
-              <AdminAccountSelector
-                v-model="masterAgent"
-                value-type="account"
-                :auto-select-first="true"
-                @update:model-value="onMasterAgentChanged"
-              />
+    <a-card v-else :bordered="false">
+      <!-- Table -->
+      <!-- 【受控型搜尋模型 + Context Reader】reset/reload 行為：
+           - reset：Context 變化時自動調用 reset()
+           - reload：Context 變化時自動調用 reload(true)
+           - 新增/刪除成功後：調用 reload(true) 刷新資料
+      -->
+      <div
+        class="table-container"
+        :style="{ overflowX: containerOverflowX }"
+      >
+        <DynamicTable
+          row-key="id"
+          :data-request="loadTableData"
+          :columns="columns"
+          :scroll="tableScroll"
+          :auto-height="true"
+          :form-props="{
+            showSubmitButton: false,
+            showResetButton: false,
+            showAdvancedButton: false,
+          }"
+        >
+          <template #headerTitle>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span>{{ t('title') }}</span>
+              <Tag :color="searchModeConfig.color" style="margin: 0">
+                SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+              </Tag>
             </div>
-          </div>
-          <div class="input_group">
+          </template>
+          <template #toolbar>
             <a-button
               v-if="isSelectedMasterAgent"
               type="primary"
@@ -389,74 +491,9 @@ onMounted(() => {
             >
               {{ t('buttons.add') }}
             </a-button>
-          </div>
-        </div>
+          </template>
+        </DynamicTable>
       </div>
-
-      <!-- Table -->
-      <!-- 對齊 Vue2：el-table 結構 -->
-      <a-table
-        :key="tableKey"
-        :loading="listLoading"
-        :data-source="list"
-        :columns="[
-          {
-            title: 'ID',
-            dataIndex: 'id',
-            width: 80,
-            align: 'center',
-          },
-          {
-            title: t('labels.type'),
-            dataIndex: 'type',
-            width: 80,
-            align: 'center',
-            customRender: ({ record }: { record: IconItem }) => t(`type.${record.type}`),
-          },
-          {
-            title: t('labels.name'),
-            dataIndex: 'name',
-            width: 200,
-            align: 'center',
-          },
-          {
-            title: t('labels.image'),
-            dataIndex: 'url',
-            width: 200,
-            align: 'center',
-            customRender: ({ record }: { record: IconItem }) => {
-              if (record.url) {
-                return h('img', {
-                  src: toCdnUrl(record.url),
-                  width: 50,
-                  height: 50,
-                  loading: 'lazy',
-                  style: { objectFit: 'cover' },
-                });
-              }
-              return null;
-            },
-          },
-          {
-            title: t('labels.actions'),
-            dataIndex: 'actions',
-            align: 'center',
-            width: 250,
-            customRender: ({ record }: { record: IconItem }) => {
-              return h(Button, {
-                type: 'primary',
-                danger: true,
-                size: 'small',
-                disabled: isChangeable(record),
-                onClick: () => onHandleDelete(record),
-              }, () => t('buttons.delete'));
-            },
-          },
-        ]"
-        :pagination="false"
-        bordered
-        style="width: 100%;"
-      />
 
       <!-- Dialog -->
       <a-modal
@@ -487,53 +524,10 @@ onMounted(() => {
             :label="t('labels.image')"
             :rules="[{ required: true, message: t('rules.image') }]"
           >
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="white-space: nowrap;">{{ t('labels.limitMinWidth') }}</span>
-                <a-input-number
-                  v-model:value="limitMinWidth"
-                  style="width: 150px"
-                />
-                <span style="white-space: nowrap;">{{ t('labels.limitMinHeight') }}</span>
-                <a-input-number
-                  v-model:value="limitMinHeight"
-                  style="width: 150px"
-                />
-              </div>
-              <div class="uploader-container">
-                <Upload
-                  :before-upload="handleBeforeUpload"
-                  :show-upload-list="false"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/bmp"
-                >
-                  <a-button>
-                    <template #icon>
-                      <UploadOutlined />
-                    </template>
-                    選擇圖片
-                  </a-button>
-                </Upload>
-                <div
-                  v-if="uploadFile.previewAvatarImageUrl"
-                  style="position: relative; display: inline-block; margin-top: 10px;"
-                >
-                  <img
-                    :src="uploadFile.previewAvatarImageUrl"
-                    style="width: 150px; height: 150px; object-fit: contain; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px; background: #fafafa;"
-                    alt="preview"
-                  >
-                  <a-button
-                    type="text"
-                    danger
-                    size="small"
-                    style="position: absolute; top: 0; right: 0;"
-                    @click.stop="uploadFile.previewAvatarImageUrl = ''; uploadFile.profilePictureFile = undefined;"
-                  >
-                    移除
-                  </a-button>
-                </div>
-              </div>
-            </div>
+            <ImageUploadField
+              v-model="dialogForm.imageFile"
+              :spec="ImageSpec.ICON"
+            />
           </a-form-item>
         </a-form>
 
@@ -591,16 +585,5 @@ onMounted(() => {
       }
     }
   }
-
-  .uploader-container {
-    margin: 30px 0;
-    position: relative;
-
-    .preview-image,
-    .upload-placeholder {
-      border-radius: 4px;
-    }
-  }
 }
 </style>
-

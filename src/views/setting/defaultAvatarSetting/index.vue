@@ -274,6 +274,7 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
  * 監聽站長變化（Page Type B：Context Reader）
  * - 監聽 selectedMasterAgent（Context）和 userStore.masterAgent
  * - 切換站長時：reset() + reload(true)
+ * - immediate: true - 立即執行一次，確保初始載入
  * - 不得使用 DOM 監聽
  * - 不得修改 Layout
  */
@@ -286,6 +287,7 @@ watch(
       dynamicTableInstance?.reload(true);
     }
   },
+  { immediate: true }, // 立即執行一次，確保初始載入
 );
 
 // 對於 Level 4 用戶，同時監聽 userStore.masterAgent 變化
@@ -295,9 +297,12 @@ if (userStore.level === 4) {
     () => userStore.masterAgent,
     () => {
       // 當 userStore.masterAgent 變化時，重置表格並重新載入資料
-      dynamicTableInstance?.reset();
-      dynamicTableInstance?.reload(true);
+      if (userStore.masterAgent) {
+        dynamicTableInstance?.reset();
+        dynamicTableInstance?.reload(true);
+      }
     },
+    { immediate: true }, // 立即執行一次，確保初始載入
   );
 }
 
