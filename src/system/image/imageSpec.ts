@@ -53,4 +53,15 @@ export const ImageSpec = {
     maxFileSizeMB: 5,
     quality: 0.7,
   },
+
+  DEFAULT_AVATAR: {
+    aspectRatio: 1,
+    outputWidth: 256,
+    outputHeight: 256,
+    previewSize: 128,
+    minWidth: 200,
+    minHeight: 200,
+    maxFileSizeMB: 2,
+    quality: 0.6,
+  },
 } as const;

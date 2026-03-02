@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import type { UploadFile } from 'ant-design-vue';
 import type { TableColumnItem } from './columns';
 import type { DefaultAvatarItem } from '@/api/backend/profileSystem';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 
-import { DeleteOutlined, EditOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons-vue';
-import { Button, Divider, message, Modal, Switch, Tag, Upload } from 'ant-design-vue';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons-vue';
+import { Button, Divider, message, Modal, Switch, Tag } from 'ant-design-vue';
 import { computed, inject, ref, watch } from 'vue';
 
 import { createDefaultAvatar as createDefaultAvatarApi, getDefaultAvatar, updateDefaultAvatar as updateDefaultAvatarApi } from '@/api/backend/profileSystem';
 import { useTable } from '@/components/core/dynamic-table';
+import ImageUploadField from '@/components/system/ImageUploadField.vue';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
+import { ImageSpec } from '@/system/image/imageSpec';
 import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
 import { useTableConfig } from '@/views/adminAccount/masterAgent/useTableConfig';
 import { getColumns } from './columns';
@@ -77,9 +78,6 @@ const selectedMasterAgent = computed(() => {
   }
   return '';
 });
-
-// 使用 computed 取得 contextVersion（用於監聽變化，僅用於狀態更新）
-const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 // 計算是否已選擇 masterAgent（用於控制表格和新增按鈕顯示）
 const isSelectedMasterAgent = computed(() => {
@@ -173,13 +171,9 @@ const tempDialogData = ref<{
   isEnabled: true,
 });
 
-const uploadFile = ref<{
-  previewAvatarImageUrl: string;
-  profilePictureFile?: File;
-}>({
-  previewAvatarImageUrl: '',
-  profilePictureFile: undefined,
-});
+const profilePictureFile = ref<File | null>(null);
+const previewAvatarImageUrl = ref<string>('');
+const isChangeAvatar = ref(false);
 
 // =========================
 // Helper Functions
@@ -281,9 +275,8 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
 watch(
   () => selectedMasterAgent.value,
   () => {
-    // Context 站長變化時，重置表格並重新載入資料
+    // Context 站長變化時，重新載入資料
     if (selectedMasterAgent.value) {
-      dynamicTableInstance?.reset();
       dynamicTableInstance?.reload(true);
     }
   },
@@ -296,9 +289,8 @@ if (userStore.level === 4) {
   watch(
     () => userStore.masterAgent,
     () => {
-      // 當 userStore.masterAgent 變化時，重置表格並重新載入資料
+      // 當 userStore.masterAgent 變化時，重新載入資料
       if (userStore.masterAgent) {
-        dynamicTableInstance?.reset();
         dynamicTableInstance?.reload(true);
       }
     },
@@ -318,10 +310,9 @@ watch(
 );
 
 const defaultTempDialogData = () => {
-  uploadFile.value = {
-    previewAvatarImageUrl: '',
-    profilePictureFile: undefined,
-  };
+  profilePictureFile.value = null;
+  previewAvatarImageUrl.value = '';
+  isChangeAvatar.value = false;
 
   return {
     masterAgent: '',
@@ -340,7 +331,9 @@ const onHandleEdit = (row: DefaultAvatarItem) => {
   dialogStatus.value = 'UPDATE';
   tempDialogData.value.avatarID = row.id;
   tempDialogData.value.isEnabled = row.isEnabled;
-  uploadFile.value.previewAvatarImageUrl = toCdnUrl(row.profileUrl);
+  previewAvatarImageUrl.value = toCdnUrl(row.profileUrl);
+  profilePictureFile.value = null;
+  isChangeAvatar.value = false;
   dialogFormVisible.value = true;
 };
 
@@ -378,59 +371,8 @@ const isChangeable = (_row: DefaultAvatarItem) => {
   return false;
 };
 
-const handleBeforeUpload = (file: UploadFile) => {
-  // 獲取原始文件對象
-  let fileObj: File | undefined;
-
-  if (file.originFileObj) {
-    fileObj = file.originFileObj;
-  }
-  else if ((file as any).originFile) {
-    fileObj = (file as any).originFile;
-  }
-  else if ((file as any) instanceof File) {
-    fileObj = file as any;
-  }
-
-  if (!fileObj) {
-    message.error(t('notify.uploadFailed'));
-    return false;
-  }
-
-  // 驗證文件類型
-  const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-  if (!fileObj.type || !validImageTypes.includes(fileObj.type.toLowerCase())) {
-    message.error(t('notify.imageFormatError'));
-    return false;
-  }
-
-  // 驗證文件大小（限制 2MB）
-  const maxSize = 2 * 1024 * 1024;
-  if (fileObj.size > maxSize) {
-    message.error(t('notify.imageSizeError'));
-    return false;
-  }
-
-  // 使用 FileReader 讀取文件並顯示預覽
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    if (e.target?.result) {
-      uploadFile.value.previewAvatarImageUrl = e.target.result as string;
-      uploadFile.value.profilePictureFile = fileObj;
-    }
-  };
-  reader.onerror = () => {
-    message.error(t('notify.uploadFailed'));
-    uploadFile.value.previewAvatarImageUrl = '';
-    uploadFile.value.profilePictureFile = undefined;
-  };
-  reader.readAsDataURL(fileObj);
-
-  return false; // 阻止自動上傳
-};
-
 const createDefaultAvatar = async () => {
-  if (!uploadFile.value.profilePictureFile) {
+  if (!profilePictureFile.value) {
     return;
   }
 
@@ -443,7 +385,7 @@ const createDefaultAvatar = async () => {
   try {
     const result = await createDefaultAvatarApi({
       masterAgent,
-      profilePictureFile: uploadFile.value.profilePictureFile,
+      profilePictureFile: profilePictureFile.value,
       isEnabled: tempDialogData.value.isEnabled,
     });
 
@@ -509,8 +451,8 @@ const updateDefaultAvatar = async () => {
       isEnabled: tempDialogData.value.isEnabled,
     };
 
-    if (uploadFile.value.profilePictureFile) {
-      params.profilePictureFile = uploadFile.value.profilePictureFile;
+    if (profilePictureFile.value) {
+      params.profilePictureFile = profilePictureFile.value;
     }
 
     const res = await updateDefaultAvatarApi(params);
@@ -534,7 +476,7 @@ const updateDefaultAvatar = async () => {
 };
 
 const onDialogConfirm = async () => {
-  if (dialogStatus.value === 'CREATE' && !uploadFile.value.profilePictureFile) {
+  if (dialogStatus.value === 'CREATE' && !profilePictureFile.value) {
     message.error(t('rules.image'));
     return;
   }
@@ -653,41 +595,22 @@ const onDialogConfirm = async () => {
       >
         <a-form-item
           :label="t('form.image')"
-          :rules="[{ required: dialogStatus === 'CREATE', message: t('rules.image') }]"
+          :required="dialogStatus === 'CREATE'"
         >
-          <div class="uploader-container">
-            <Upload
-              :before-upload="handleBeforeUpload"
-              :show-upload-list="false"
-              accept="image/jpeg,image/jpg,image/png"
-            >
-              <a-button>
-                <template #icon>
-                  <UploadOutlined />
-                </template>
-                {{ t('buttons.selectImage') }}
-              </a-button>
-            </Upload>
-            <div
-              v-if="uploadFile.previewAvatarImageUrl"
-              style="position: relative; display: inline-block; margin-top: 10px;"
-            >
-              <img
-                :src="uploadFile.previewAvatarImageUrl"
-                style="width: 128px; height: 128px; object-fit: contain; border: 1px solid #d9d9d9; border-radius: 4px; padding: 4px; background: #fafafa;"
-                alt="preview"
-              >
-              <a-button
-                type="text"
-                danger
-                size="small"
-                style="position: absolute; top: 0; right: 0;"
-                @click.stop="uploadFile.previewAvatarImageUrl = ''; uploadFile.profilePictureFile = undefined;"
-              >
-                {{ t('buttons.remove') }}
-              </a-button>
+          <div v-if="dialogStatus === 'UPDATE' && previewAvatarImageUrl && !isChangeAvatar" class="edit-image-preview">
+            <div class="preview-image-wrapper">
+              <img :src="previewAvatarImageUrl" alt="avatar" class="preview-image">
             </div>
+            <a-button type="link" size="small" @click="isChangeAvatar = true">
+              更換圖片
+            </a-button>
           </div>
+          <ImageUploadField
+            v-if="dialogStatus === 'CREATE' || isChangeAvatar"
+            v-model="profilePictureFile"
+            :spec="ImageSpec.DEFAULT_AVATAR"
+            @update:model-value="(val) => { profilePictureFile = val; if (val) isChangeAvatar = true; }"
+          />
         </a-form-item>
 
         <a-form-item
@@ -771,6 +694,42 @@ const onDialogConfirm = async () => {
   .w-240 {
     width: 240px;
     min-width: 240px;
+  }
+}
+
+// 使用 :deep() 直接命中 Teleport 的 Modal 內容，移除父層包裹
+:deep(.edit-image-preview) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .preview-image-wrapper {
+    width: 128px;
+    height: 128px;
+    min-width: 128px;
+    min-height: 128px;
+    max-width: 128px;
+    max-height: 128px;
+    box-sizing: border-box;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+    padding: 4px;
+    background: #fafafa;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .preview-image {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+    flex-shrink: 0;
   }
 }
 </style>
