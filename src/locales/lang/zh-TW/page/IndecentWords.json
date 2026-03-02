@@ -4,8 +4,13 @@
     "setString": "不雅字",
     "add": "新增",
     "importBtn": "匯入 Excel",
+    "exportBtn": "Excel匯出",
+    "masterAgent": "站長",
     "replaceAll": "是否全部替換",
     "replaceAllinfo": "勾選後將替換所有現有不雅字"
+  },
+  "placeholders": {
+    "selectMasterAgent": "請選擇站長"
   },
   "title": {
     "add": "新增不雅字",
