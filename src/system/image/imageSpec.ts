@@ -64,4 +64,15 @@ export const ImageSpec = {
     maxFileSizeMB: 2,
     quality: 0.6,
   },
+
+  STICKER: {
+    aspectRatio: 1,
+    outputWidth: 512,
+    outputHeight: 512,
+    previewSize: 120,
+    minWidth: 130,
+    minHeight: 130,
+    maxFileSizeMB: 5,
+    quality: 0.7,
+  },
 } as const;
