@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import type { Rule } from 'ant-design-vue/es/form';
 import type { Dayjs } from 'dayjs';
+import type { TableColumnItem } from './columns';
 import type { FuzzyQueryUserItem } from '@/api/backend/adminSystem/accountSystem';
 import type {
   PrivateTeamInfo,
   PrivateTeamSearchType,
   TextHistoryMessage,
 } from '@/api/backend/adminSystem/gameChatroomSystem';
-import type { TableColumn } from '@/components/core/dynamic-table';
 
-import { message, Modal } from 'ant-design-vue';
+import { message, Modal, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
 import { debounce } from 'lodash-es';
-import { computed, h, nextTick, onMounted, reactive, ref } from 'vue';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
+import { computed, h, inject, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { fuzzyQueryUser, queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import {
   broadcast,
@@ -29,6 +28,9 @@ import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
 import { formatToDateTime } from '@/utils/dateUtil';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { getBaseColumns } from './columns';
+import { getSearchSchemas } from './formSchemas';
 
 defineOptions({
   name: 'ChatroomPrivateRooms',
@@ -36,6 +38,9 @@ defineOptions({
 
 const { t } = useI18n('page.chatroom');
 const userStore = useUserStore();
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 enum Dialog3Type {
   masterAgent = 'masterAgent',
@@ -51,8 +56,6 @@ enum DurationSecType {
 
 // ============ 狀態管理 ============
 const isTableLoading = ref(false);
-const masterAgent = ref('');
-const masterAgentList = ref<Array<{ account: string }>>([]);
 const dataList = ref<PrivateTeamInfo[]>([]);
 const treasureItemListData = ref<any[]>([]);
 const nowMemberID = ref('');
@@ -64,10 +67,6 @@ const nameList = ref<Record<string, string>>({});
 const emptyMessage = ref(false);
 const sSearchType = ref<PrivateTeamSearchType>(SearchTypeEnum.IS_EXIST);
 const qSearchType = ref<PrivateTeamSearchType>(SearchTypeEnum.IS_EXIST);
-const searchTypeList = [
-  { name: t('PrivateTeamSearchType.1'), value: SearchTypeEnum.IS_EXIST },
-  { name: t('PrivateTeamSearchType.2'), value: SearchTypeEnum.IS_NOT_EXIST },
-];
 
 // ============ 會員搜索 ============
 const memberLoading = ref(false);
@@ -126,12 +125,37 @@ const isDialogForm5 = ref(false);
 const dataForm5Ref = ref();
 const _durationSecTypeList = Object.keys(DurationSecType) as Array<keyof typeof DurationSecType>;
 
-const getAuthLevel = computed(() => userStore.level);
+const _getAuthLevel = computed(() => userStore.level);
 const getAuthAccount = computed(() => userStore.account);
+
+// ============ MasterAgent Context ============
+// 從 Layout 根元件 provide 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值（從 Context）
+const contextMasterAgent = computed(() => {
+  const v = masterAgentCtx?.selectedMasterAgent.value;
+  if (v) {
+    return String(v).trim();
+  }
+  return '';
+});
+
+// 使用 computed 取得 contextVersion
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 const getI18nText = (path: string) => {
   return t(path);
 };
+
+// 提前聲明 tableInstance 以避免使用前定義的錯誤
+let tableInstance: ReturnType<typeof useTable>[1];
 
 /**
  * ============ 工具函數 ============
@@ -203,11 +227,25 @@ const getList = async () => {
   isTableLoading.value = true;
   qSearchType.value = sSearchType.value;
   nameList.value = {};
-  if (qMemberID.value) {
+
+  // 從搜索表單獲取參數
+  const searchFormRef = tableInstance?.getSearchFormRef?.();
+  let formMemberID = sMemberID.value;
+  let formSearchType = sSearchType.value;
+
+  if (searchFormRef) {
+    const formValues = searchFormRef.getFieldsValue();
+    formMemberID = String(formValues?.memberID || sMemberID.value || '').trim();
+    formSearchType = (formValues?.searchType as PrivateTeamSearchType) || SearchTypeEnum.IS_EXIST;
+    sSearchType.value = formSearchType;
+  }
+
+  if (formMemberID) {
+    qMemberID.value = formMemberID;
     try {
       const postData = {
-        memberID: qMemberID.value,
-        searchType: sSearchType.value,
+        memberID: formMemberID,
+        searchType: formSearchType,
       };
       const res = await privateTeamQuery(postData);
       /**
@@ -229,52 +267,95 @@ const getList = async () => {
          */
         const idArray: string[] = privateTeamData
           .map((item: any) => {
-            return item.owner ? item.owner.split('@')[0] : '';
+            return item.owner ? item.owner.split('@')[0].trim() : '';
           })
           .filter((value: any, index: any, array: any) => {
             return value && array.indexOf(value) === index;
           });
+
+        // 調試：確認 idArray 的內容
+        console.log('[ownerName] idArray extracted:', idArray);
 
         /**
          * 如果有 owner，先查詢 owner 的帳號資訊
          */
         if (idArray.length > 0) {
           try {
+            console.log('[ownerName] Querying account info with:', { masterAgent: contextMasterAgent.value, accounts: idArray });
             const resAccount = await queryAccountBaseInfo({
-              masterAgent: masterAgent.value,
+              masterAgent: contextMasterAgent.value,
               accounts: idArray,
             });
-            if (resAccount && resAccount.data) {
-              resAccount.data.forEach((item: any) => {
-                if (nameList.value[item.account] === undefined) {
-                  nameList.value[item.account] = `${item.id} - ${item.nickName}`;
+            console.log('[ownerName] Query result:', resAccount);
+            // 處理不同的回應格式：可能是 { data: [...] } 或直接是 [...]
+            let accountData: any[] = [];
+            if (Array.isArray(resAccount)) {
+              accountData = resAccount;
+            }
+            else if (resAccount && resAccount.data && Array.isArray(resAccount.data)) {
+              accountData = resAccount.data;
+            }
+
+            if (accountData.length > 0) {
+              accountData.forEach((item: any) => {
+                const displayName = `${item.id} - ${item.nickName}`;
+                // 使用 item.account 作為主要 key（API 返回的帳號，與 ownerID 一致）
+                // 確保 account 被 trim，以匹配 ownerID 的提取方式
+                if (item.account) {
+                  const accountKey = String(item.account).trim();
+                  nameList.value[accountKey] = displayName;
+                  // 調試：確認 key 和值
+                  console.log('[ownerName] Set nameList:', accountKey, '=>', displayName);
+                }
+                // 同時也使用 item.id 作為 key（accountID，以防萬一）
+                if (item.id) {
+                  const idKey = String(item.id).trim();
+                  nameList.value[idKey] = displayName;
+                }
+                // 如果 item.accountID 存在，也使用它作為 key
+                if (item.accountID) {
+                  const accountIDKey = String(item.accountID).trim();
+                  nameList.value[accountIDKey] = displayName;
                 }
               });
+              // 調試：確認 nameList 的內容
+              console.log('[ownerName] nameList after query:', nameList.value);
+            }
+            else {
+              console.warn('[ownerName] Query result is empty or invalid:', resAccount);
             }
           }
           catch (error) {
-            console.error('Failed to query account base info:', error);
+            console.error('[ownerName] Failed to query account base info:', error);
           }
+        }
+        else {
+          console.warn('[ownerName] idArray is empty, skipping account query');
         }
 
         /**
          * 映射資料並設定 ownerName
+         * 注意：必須在查詢帳號資訊完成後（await）才執行，確保 nameList 已填充
          */
         const dataListTemp = privateTeamData.map((item: any) => {
-          const ownerID = item.owner ? item.owner.split('@')[0] : '';
+          const ownerID = item.owner ? item.owner.split('@')[0].trim() : '';
+          // 優先從 nameList 查找轉換後的顯示名稱
+          const displayName = nameList.value[ownerID] || '';
+          // 調試：確認查找過程
+          if (ownerID && !displayName) {
+            console.log('[ownerName] Not found in nameList:', ownerID, 'Available keys:', Object.keys(nameList.value));
+          }
           return {
             ...item,
-            memberID: sMemberID.value,
-            nickName: qNickName.value,
+            memberID: formMemberID,
+            nickName: qNickName.value || formMemberID,
             ownerID,
-            ownerName: nameList.value[ownerID] || '',
-            searchType: sSearchType.value,
+            ownerName: displayName || (item.owner || ''),
+            searchType: formSearchType,
           };
         });
 
         dataList.value = dataListTemp;
-        // eslint-disable-next-line ts/no-use-before-define
-        extraDataInit();
         emptyMessage.value = false;
       }
       else {
@@ -297,37 +378,15 @@ const getList = async () => {
   }
 };
 
-const onMasterAgentChanged = async (value: string) => {
-  if (!value) {
-    masterAgent.value = '';
-    dataList.value = [];
-    // 清空會員選擇
-    selectedMemberID.value = undefined;
-    sMemberID.value = '';
-    qNickName.value = '';
-    memberOptions.value = [];
-    return;
-  }
-  emptyMessage.value = false;
-  isTableLoading.value = true;
-  masterAgent.value = value;
-  await getTreasureItemList(masterAgent.value);
-  isTableLoading.value = false;
-  qSearchType.value = SearchTypeEnum.IS_EXIST;
-  // 清空會員選擇（因為 masterAgent 改變了）
-  selectedMemberID.value = undefined;
-  sMemberID.value = '';
-  qNickName.value = '';
-  memberOptions.value = [];
-};
-
 /**
  * ============ 會員搜索相關函數 ============
  */
 const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLastQueryText.value = queryText;
 
-  if (!masterAgent.value) {
+  // 使用 Context 的 masterAgent
+  const currentMasterAgent = contextMasterAgent.value;
+  if (!currentMasterAgent) {
     return;
   }
   if (!queryText || queryText.length < 2) {
@@ -339,7 +398,7 @@ const fetchMemberOptions = async (queryText: string, append = false) => {
   memberLoading.value = true;
   try {
     const res = await fuzzyQueryUser({
-      masterAgent: masterAgent.value,
+      masterAgent: currentMasterAgent,
       queryText,
       limit: memberPageSize,
       lastAccountID: append ? memberLastAccountID.value || undefined : undefined,
@@ -377,6 +436,11 @@ const onMemberSelectChanged = (value: string | undefined) => {
     sMemberID.value = '';
     qNickName.value = '';
     selectedMemberID.value = undefined;
+    // 更新表單值
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.setFieldsValue({ memberID: undefined });
+    }
     return;
   }
 
@@ -385,6 +449,11 @@ const onMemberSelectChanged = (value: string | undefined) => {
     sMemberID.value = `${selected.raw.account}@${selected.raw.agentID}`;
     qNickName.value = `${selected.raw.accountID} - ${selected.raw.nickName}`;
     selectedMemberID.value = value;
+    // 更新表單值
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.setFieldsValue({ memberID: value });
+    }
   }
 };
 
@@ -398,81 +467,17 @@ const onMemberPopupScroll = (e: Event) => {
   }
 };
 
-const handleFilter = async () => {
-  if (!sMemberID.value) {
-    message.error(getI18nText('notify.required'));
-    return;
-  }
-  qMemberID.value = sMemberID.value;
-  await getList();
-};
-
-// ============ 表格配置 ============
-const columns = ref<TableColumn<PrivateTeamInfo>[]>([
-  {
-    title: getI18nText('privateTeamID'),
-    dataIndex: 'privateTeamID',
-    width: 200,
-  },
-  {
-    title: getI18nText('privateName'),
-    dataIndex: 'name',
-    width: 200,
-  },
-  {
-    title: getI18nText('memberID'),
-    dataIndex: 'nickName',
-    width: 200,
-  },
-  {
-    title: getI18nText('owner'),
-    dataIndex: 'ownerName',
-    width: 200,
-  },
-  {
-    title: getI18nText('SearchType'),
-    dataIndex: 'searchType',
-    width: 150,
-    customRender: ({ record }) => {
-      if (record.searchType === SearchTypeEnum.IS_EXIST) {
-        return getI18nText('PrivateTeamSearchType.1');
-      }
-      else if (record.searchType === SearchTypeEnum.IS_NOT_EXIST) {
-        return getI18nText('PrivateTeamSearchType.2');
-      }
-      return '';
-    },
-  },
-]);
-
-const extraData = ref<any[]>([]);
-
-const extraDataInit = () => {
-  const control: any[] = [];
-  dataList.value.forEach((row) => {
-    const actions: any[] = [
-      {
-        label: getI18nText('btnHistoryMessage'),
-        // eslint-disable-next-line ts/no-use-before-define
-        onClick: () => openDialogForm2(row),
-      },
-      {
-        label: getI18nText('btnPrivateTeamKick'),
-        // eslint-disable-next-line ts/no-use-before-define
-        onClick: () => privateTeamKickAction(row),
-        disabled: row.searchType !== SearchTypeEnum.IS_EXIST || row.memberID === row.owner,
-      },
-      {
-        label: getI18nText('btnPrivateTeamDel'),
-        // eslint-disable-next-line ts/no-use-before-define
-        onClick: () => privateTeamDelAction(row),
-        disabled: qSearchType.value === SearchTypeEnum.IS_NOT_EXIST,
-      },
-    ];
-    control.push(actions);
+// 搜尋欄位必須移至 searchSchemas / formSchemas
+const searchSchemas = computed(() => {
+  return getSearchSchemas(getI18nText, {
+    masterAgent: () => contextMasterAgent.value,
+    memberOptions,
+    memberLoading,
+    onMemberSearch,
+    onMemberSelectChanged,
+    onMemberPopupScroll,
   });
-  extraData.value = control;
-};
+});
 
 /**
  * ============ Dialog1 編輯 ============
@@ -605,7 +610,7 @@ const submitForm = async () => {
       // 這裡保持與 Vue2 一致，但不調用 updateRoom API
       closeDialogForm();
       isTableLoading.value = true;
-      await getTreasureItemList(masterAgent.value);
+      await getTreasureItemList(contextMasterAgent.value);
       isTableLoading.value = false;
     }
   }
@@ -713,7 +718,7 @@ const setMessageData = async (postData: any) => {
     }
     if (memberIDs.length > 0) {
       const res2 = await queryAccountBaseInfo({
-        masterAgent: masterAgent.value,
+        masterAgent: contextMasterAgent.value,
         accounts: memberIDs,
       });
       if (res2 && res2.data) {
@@ -754,7 +759,7 @@ const _openDialogForm3 = (type: Dialog3Type, obj?: any) => {
     }
   }
   dialogTitle3.value
-    = `${type === Dialog3Type.masterAgent ? masterAgent.value : teamName
+    = `${type === Dialog3Type.masterAgent ? contextMasterAgent.value : teamName
     } ${
       getI18nText('broadcast')}`;
 };
@@ -771,13 +776,13 @@ const submitForm3 = async () => {
     switch (dialog3Type.value) {
       case Dialog3Type.masterAgent:
         res = await broadcast({
-          masterAgent: masterAgent.value,
+          masterAgent: contextMasterAgent.value,
           message: dataForm3.message,
         });
         break;
       case Dialog3Type.room:
         res = await roomBroadcast({
-          masterAgent: masterAgent.value,
+          masterAgent: contextMasterAgent.value,
           roomID: dataForm3.roomID,
           message: dataForm3.message,
         });
@@ -917,131 +922,201 @@ const privateTeamDelAction = (obj: any) => {
   });
 };
 
-// ============ 表格 ============
-const [DynamicTable] = useTable({
-  search: false,
-  showActionColumn: true,
-  actionColumn: {
-    title: getI18nText('control'),
-    width: 300,
-    fixed: 'right',
-    actions: ({ record, index }) => {
-      const actions = extraData.value[index] || [];
-      return actions.map((action: any) => ({
-        ...action,
-        onClick: () => action.onClick(record),
-      }));
+// ============ 表格配置 ============
+// Table columns 包含資料欄位和操作欄
+// 注意：將 nameList 作為依賴，確保當 nameList 更新時，columns 會重新計算
+const columns = computed<TableColumnItem[]>(() => {
+  // 訪問 nameList.value 以建立響應式依賴
+  void nameList.value;
+
+  const baseCols = getBaseColumns(getI18nText, SearchTypeEnum);
+  // 為所有欄位添加不換行設定，並為 owner 欄位添加 customRender，確保正確顯示轉換後的資料
+  const processedCols = baseCols.map((col) => {
+    // 為所有欄位添加不換行設定
+    const colWithNoWrap = {
+      ...col,
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
+      },
+    };
+
+    // 為 ownerName 欄位添加 customRender
+    if (col.dataIndex === 'ownerName') {
+      return {
+        ...colWithNoWrap,
+        customRender: ({ record }: { record: any }) => {
+          // 優先使用 record.ownerID（已在資料映射時提取）
+          if (record.ownerID) {
+            const trimmedOwnerID = String(record.ownerID).trim();
+            if (nameList.value[trimmedOwnerID]) {
+              return nameList.value[trimmedOwnerID];
+            }
+          }
+          // 如果 ownerName 已經轉換（包含 " - "），直接顯示
+          if (record.ownerName && record.ownerName.includes(' - ')) {
+            return record.ownerName;
+          }
+          // 如果 record.owner 存在且包含 "@"，嘗試提取 ownerID 並查找
+          if (record.owner && typeof record.owner === 'string' && record.owner.includes('@')) {
+            const ownerID = record.owner.split('@')[0].trim();
+            if (nameList.value[ownerID]) {
+              return nameList.value[ownerID];
+            }
+          }
+          // 如果 record.ownerName 存在，使用它
+          if (record.ownerName) {
+            return record.ownerName;
+          }
+          // 最後回退到 record.owner
+          return record.owner || '';
+        },
+      };
+    }
+    return colWithNoWrap;
+  });
+
+  return [
+    ...processedCols,
+    {
+      title: getI18nText('control'),
+      dataIndex: 'ACTION',
+      width: 300,
+      align: 'center',
+      fixed: 'right',
+      hideInSearch: true,
+      actions: ({ record }) => {
+        const actions: any[] = [
+          {
+            label: getI18nText('btnHistoryMessage'),
+            type: 'link',
+            onClick: () => openDialogForm2(record),
+          },
+          {
+            label: getI18nText('btnPrivateTeamKick'),
+            type: 'link',
+            disabled: record.searchType !== SearchTypeEnum.IS_EXIST || record.memberID === record.owner,
+            onClick: () => privateTeamKickAction(record),
+          },
+          {
+            label: getI18nText('btnPrivateTeamDel'),
+            type: 'link',
+            disabled: qSearchType.value === SearchTypeEnum.IS_NOT_EXIST,
+            onClick: () => privateTeamDelAction(record),
+          },
+        ];
+        return actions;
+      },
     },
+  ];
+});
+
+// ============ 表格 ============
+const [DynamicTable, _tableInstance] = useTable({
+  search: true,
+  immediate: false,
+  formProps: {
+    schemas: searchSchemas.value,
+    showSubmitButton: true,
+    showResetButton: true,
+    showAdvancedButton: true,
+    submitOnReset: false,
   },
+});
+// 賦值給提前聲明的 tableInstance
+tableInstance = _tableInstance;
+
+/**
+ * ============ SearchMode 狀態顯示 ============
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * 根據當前實現：
+ * - 直接調用 privateTeamQuery API，傳入搜尋參數（memberID 和 searchType）
+ * - 使用 API 返回的資料，沒有在前端進行過濾
+ * 因此為 BACKEND 模式
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
 });
 
 /**
- * ============ 初始化 ============
+ * 處理表單提交（查詢按鈕）
+ * 觸發 getList 查詢
  */
-const fetchMasterAgentList = async () => {
-  try {
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = (list || []).map((item: any) => ({ account: item.account }));
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
-  }
+const handleFormSubmit = () => {
+  getList();
 };
 
+/**
+ * 監聽 contextVersion 變更，當站長切換時自動重置
+ * Context-only 模式：Context 變化時，重置搜索表單和清空資料
+ */
+watch(
+  () => contextVersion.value,
+  () => {
+    // 清空會員選擇
+    selectedMemberID.value = undefined;
+    sMemberID.value = '';
+    qNickName.value = '';
+    memberOptions.value = [];
+    // 重置 DynamicTable 查詢條件
+    const searchFormRef = tableInstance?.getSearchFormRef?.();
+    if (searchFormRef) {
+      searchFormRef.resetFields();
+      searchFormRef.setFieldsValue({
+        searchType: SearchTypeEnum.IS_EXIST,
+      });
+    }
+    // 清空表格資料（禁止自動 reload，等待用戶點擊搜索）
+    dataList.value = [];
+    // 載入寶物清單
+    if (contextMasterAgent.value) {
+      getTreasureItemList(contextMasterAgent.value);
+    }
+  },
+);
+
 onMounted(async () => {
-  if (getAuthLevel.value < 4) {
-    await fetchMasterAgentList();
+  // 初始化時載入寶物清單（如果 Context 有值）
+  if (contextMasterAgent.value) {
+    await getTreasureItemList(contextMasterAgent.value);
   }
 });
 </script>
 
 <template>
   <div class="app-container chatroom-private-rooms">
-    <div class="filter-container">
-      <div class="wrap">
-        <div
-          v-if="getAuthLevel < 4"
-          class="input_group"
-        >
-          <div class="txt">
-            <label>站長</label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="masterAgent"
-              placeholder="請選擇站長"
-              style="width: 200px"
-              @change="onMasterAgentChanged"
-            >
-              <a-select-option
-                v-for="item in masterAgentList"
-                :key="item.account"
-                :value="item.account"
-              >
-                {{ item.account }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </div>
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">
-              {{ getI18nText('SearchType') }}
-            </label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="sSearchType"
-              style="width: 200px"
-            >
-              <a-select-option
-                v-for="platform in searchTypeList"
-                :key="platform.value"
-                :value="platform.value"
-              >
-                {{ platform.name }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </div>
-        <div class="input_group">
-          <div class="txt">
-            <label style="color: #ff4949">會員</label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="selectedMemberID"
-              show-search
-              :filter-option="false"
-              :options="memberOptions"
-              :loading="memberLoading"
-              :disabled="!masterAgent"
-              style="width: 200px"
-              allow-clear
-              placeholder="00001314 - 王小明"
-              @search="onMemberSearch"
-              @change="onMemberSelectChanged"
-              @popup-scroll="onMemberPopupScroll"
-            />
-          </div>
-        </div>
-        <div class="input_group">
-          <a-button
-            type="primary"
-            @click="handleFilter"
-          >
-            {{ t('search') }}
-          </a-button>
-        </div>
-      </div>
-    </div>
-
+    <!-- DynamicTable 搜索表單和表格 -->
     <DynamicTable
       :loading="isTableLoading"
       :columns="columns"
       :data-source="dataList"
       :scroll="{ x: 'max-content' }"
-    />
+      @search="handleFormSubmit"
+      @reset="() => { dataList = []; }"
+    >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>公會頻管理</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+    </DynamicTable>
 
     <!-- Dialog1 編輯 -->
     <a-modal
@@ -1108,15 +1183,14 @@ onMounted(async () => {
             <div class="input_group">
               <span>{{ getI18nText('startTime') }}</span>
             </div>
-            <div class="input_group">
+            <div class="input_group" style="display: flex; align-items: center; gap: 10px">
               <a-range-picker
                 v-model:value="dataForm2.startTime"
                 show-time
                 format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
+                style="flex: 1"
               />
               <a-button
-                style="margin-left: 10px"
                 @click="searchMessage"
               >
                 {{ t('search') }}
@@ -1216,6 +1290,13 @@ onMounted(async () => {
 
 <style lang="less" scoped>
 .chatroom-private-rooms {
+  // 確保搜尋條件區最後一行與操作按鈕區之間有清楚的視覺間距
+  :deep(.ant-form) {
+    .ant-row:last-of-type {
+      margin-bottom: 16px;
+    }
+  }
+
   .wrap {
     display: flex;
     flex-wrap: wrap;
