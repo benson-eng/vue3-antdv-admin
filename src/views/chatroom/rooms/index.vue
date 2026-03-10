@@ -1,13 +1,13 @@
-<script setup lang="ts">
+<script setup lang="tsx">
 import type { Rule } from 'ant-design-vue/es/form';
 import type { Dayjs } from 'dayjs';
+import type { TableColumnItem } from './columns';
 import type { RoomInfo, RoomRelationship, TextHistoryMessage } from '@/api/backend/adminSystem/gameChatroomSystem';
 import type { TableColumn } from '@/components/core/dynamic-table';
 
-import { message } from 'ant-design-vue';
+import { message, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
-import { computed, h, nextTick, onMounted, reactive, ref } from 'vue';
-import { getMasterAgentAccountList } from '@/api/backend/adminAccount/masterAgent';
+import { computed, h, inject, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import { queryAccountBaseInfo } from '@/api/backend/adminSystem/accountSystem';
 import {
   broadcast,
@@ -26,6 +26,9 @@ import { useTable } from '@/components/core/dynamic-table';
 import { useI18n } from '@/hooks/useI18n';
 import { useUserStore } from '@/store/modules/user';
 import { formatToDateTime } from '@/utils/dateUtil';
+import { MASTER_AGENT_SELECT_KEY } from '@/views/adminAccount/agent/constants';
+import { getBaseColumns } from './columns';
+import { useTableConfig } from './useTableConfig';
 
 defineOptions({
   name: 'ChatroomRooms',
@@ -33,6 +36,9 @@ defineOptions({
 
 const { t } = useI18n('page.chatroom');
 const userStore = useUserStore();
+
+// SearchMode 定義
+type SearchMode = 'FRONTEND' | 'HYBRID' | 'BACKEND';
 
 enum Dialog3Type {
   masterAgent = 'masterAgent',
@@ -48,8 +54,6 @@ enum DurationSecType {
 
 // ============ 狀態管理 ============
 const isTableLoading = ref(false);
-const masterAgent = ref('');
-const masterAgentList = ref<Array<{ account: string }>>([]);
 const dataList = ref<RoomInfo[]>([]);
 const treasureItemListData = ref<any[]>([]);
 const nowRoomID = ref('');
@@ -104,6 +108,21 @@ const durationSecTypeList = Object.keys(DurationSecType);
 const dataForm5Ref = ref();
 
 const getAuthLevel = computed(() => Number(userStore.level ?? -1));
+
+// ============ Breadcrumb Context 整合 ============
+// 從 Layout Breadcrumb 取得站長選單狀態
+const masterAgentCtx = inject<{
+  masterAgentOptions: { value: { label: string; value: string }[] };
+  selectedMasterAgent: { value: string | undefined };
+  canSelectMasterAgent: { value: boolean };
+  contextVersion: { value: number };
+  onMasterAgentChanged: (value: string) => void;
+} | undefined>(MASTER_AGENT_SELECT_KEY);
+
+// 使用 computed 取得當前選取的站長值（來自 Breadcrumb）
+const selectedMasterAgent = computed(() => masterAgentCtx?.selectedMasterAgent.value || '');
+// 使用 computed 取得 contextVersion（用於監聽站長切換）
+const contextVersion = computed(() => masterAgentCtx?.contextVersion.value ?? 0);
 
 /**
  * ============ 工具函數 ============
@@ -210,7 +229,7 @@ const openDialogForm3 = (type: Dialog3Type, obj?: RoomInfo) => {
     }
   }
   dialogTitle3.value
-    = `${type === Dialog3Type.masterAgent ? masterAgent.value : teamName
+    = `${type === Dialog3Type.masterAgent ? selectedMasterAgent.value : teamName
     } ${
       getI18nText('broadcast')}`;
 };
@@ -255,7 +274,7 @@ const setMessageData = async (postData: any) => {
     }
     if (memberIDs.length > 0) {
       const res2 = await queryAccountBaseInfo({
-        masterAgent: masterAgent.value,
+        masterAgent: selectedMasterAgent.value,
         accounts: memberIDs,
       });
       if (res2 && res2.data) {
@@ -314,7 +333,7 @@ const fetchRoomRelationships = async () => {
   relationshipsListObj.value = {};
   try {
     const res = await queryRoomRelationships({
-      masterAgent: masterAgent.value,
+      masterAgent: selectedMasterAgent.value,
       roomID: nowRoomID.value,
     });
     const memberIDs: string[] = [];
@@ -331,7 +350,7 @@ const fetchRoomRelationships = async () => {
     }
     if (memberIDs.length > 0) {
       const res2 = await queryAccountBaseInfo({
-        masterAgent: masterAgent.value,
+        masterAgent: selectedMasterAgent.value,
         accounts: memberIDs,
       });
       if (res2 && res2.data) {
@@ -362,80 +381,27 @@ const openDialogForm4 = async (type: Dialog3Type, obj?: RoomInfo) => {
     }
   }
   dialogTitle4.value
-    = `${type === Dialog3Type.masterAgent ? masterAgent.value : teamName
+    = `${type === Dialog3Type.masterAgent ? selectedMasterAgent.value : teamName
     } ${
       getI18nText('btnMute')}`;
 };
 
-const extraData = ref<any[]>([]);
-
-const extraDataInit = () => {
-  let control: any[][] = [];
-  const authLevel = getAuthLevel.value;
-
-  // 默認顯示完整選單（包含廣播）
-  control = [
-    [
-      {
-        label: getI18nText('btnBroadcast'),
-        onClick: (row: RoomInfo) => openDialogForm3(Dialog3Type.room, row),
-      },
-      {
-        label: getI18nText('btnHistoryMessage'),
-        onClick: (row: RoomInfo) => openDialogForm2(row),
-      },
-      {
-        label: getI18nText('edit'),
-        onClick: (row: RoomInfo) => onUpdateBtnClick(row),
-      },
-      {
-        label: getI18nText('btnMute'),
-        onClick: (row: RoomInfo) => openDialogForm4(Dialog3Type.room, row),
-      },
-    ],
-  ];
-
-  // 如果等級 > 1（等級 2, 3, 4...），則顯示不包含廣播的選單
-  if (authLevel > 1) {
-    control = [
-      [
-        {
-          label: getI18nText('btnHistoryMessage'),
-          onClick: (row: RoomInfo) => openDialogForm2(row),
-        },
-        {
-          label: getI18nText('edit'),
-          onClick: (row: RoomInfo) => onUpdateBtnClick(row),
-        },
-        {
-          label: getI18nText('btnMute'),
-          onClick: (row: RoomInfo) => openDialogForm4(Dialog3Type.room, row),
-        },
-      ],
-    ];
-  }
-
-  extraData.value = [];
-  if (dataList.value && Array.isArray(dataList.value)) {
-    dataList.value.forEach(() => {
-      const extra: { [index: string]: any } = {};
-      extra.control = control[0] || [];
-      extraData.value.push(extra);
-    });
-  }
-};
+// 已移除 extraData 和 extraDataInit
+// 操作欄現在直接在 columns computed 中定義（參照 privateRooms 頁面）
 
 /**
  * ============ API 調用 ============
  */
 const getRooms = async () => {
-  if (!masterAgent.value) {
+  // 使用 Breadcrumb Context 的站長值
+  const masterAgentValue = selectedMasterAgent.value;
+  if (!masterAgentValue) {
     return;
   }
   dataList.value = [];
   isTableLoading.value = true;
   try {
-    const res = await queryRooms({ masterAgent: masterAgent.value });
+    const res = await queryRooms({ masterAgent: masterAgentValue });
     console.log('queryRooms response:', res);
     if (res) {
       // 處理不同的返回格式：可能是 { data: [...] } 或直接是 [...]
@@ -449,7 +415,7 @@ const getRooms = async () => {
         dataList.value = [];
       }
       console.log('dataList.value after assignment:', dataList.value);
-      extraDataInit();
+      // 已移除 extraDataInit()，操作欄現在直接在 columns computed 中定義
     }
   }
   catch (error) {
@@ -485,54 +451,137 @@ const getTreasureItemList = async (masterAgentValue: string) => {
   }
 };
 
-const onMasterAgentChanged = async (value: string) => {
-  if (!value) {
-    masterAgent.value = '';
-    dataList.value = [];
-    return;
-  }
-  isTableLoading.value = true;
-  masterAgent.value = value;
-  await getTreasureItemList(masterAgent.value);
-  await getRooms();
-  isTableLoading.value = false;
-};
+/**
+ * 監聽 Breadcrumb Context 的站長切換
+ * 當 Context 的 masterAgent 變更時，自動重新載入資料
+ * 參照 privateRooms 頁面：站長切換時自動載入資料（因為此頁面沒有搜尋按鈕）
+ */
+watch(
+  () => contextVersion.value,
+  () => {
+    // 當站長切換時，重新載入資料
+    if (selectedMasterAgent.value) {
+      isTableLoading.value = true;
+      getTreasureItemList(selectedMasterAgent.value)
+        .then(() => getRooms())
+        .finally(() => {
+          isTableLoading.value = false;
+        });
+    }
+    else {
+      // 如果站長被清空，清空資料列表
+      dataList.value = [];
+    }
+  },
+);
 
-const fetchMasterAgentList = async () => {
-  try {
-    const list = await getMasterAgentAccountList();
-    masterAgentList.value = (list || []).map((item: any) => ({ account: item.account }));
-  }
-  catch (error) {
-    console.error('Failed to fetch master agent list:', error);
-  }
-};
+// ============ SearchMode 狀態顯示 ============
+/**
+ * 計算 SearchMode（僅用於狀態顯示，不影響功能邏輯）
+ * - BACKEND：資料從後端 API 取得，過濾邏輯在 API 層面完成
+ */
+const searchMode = computed<SearchMode>(() => {
+  return 'BACKEND';
+});
+
+// SearchMode 顯示文字和顏色
+const searchModeConfig = computed(() => {
+  const mode = searchMode.value;
+  const configs = {
+    FRONTEND: { text: '前端過濾', color: 'orange' },
+    HYBRID: { text: '混合模式', color: 'blue' },
+    BACKEND: { text: '後端查詢', color: 'green' },
+  };
+  return configs[mode];
+});
 
 // ============ 表格配置 ============
-const columns = ref<TableColumn<RoomInfo>[]>([
-  {
-    title: getI18nText('teamName'),
-    dataIndex: 'teamID',
-    width: 200,
-    customRender: ({ record }) => findTeamName(record.teamID || ''),
-  },
-  {
-    title: getI18nText('roomID'),
-    dataIndex: 'roomID',
-    width: 200,
-  },
-  {
-    title: getI18nText('type'),
-    dataIndex: 'type',
-    width: 150,
-    customRender: ({ record }) => getI18nText(`RoomType.${record.type}`),
-  },
-  {
-    title: getI18nText('announcement'),
-    dataIndex: 'announcement',
-    width: 300,
-  },
-]);
+const baseColumns = computed<TableColumnItem[]>(() => {
+  return getBaseColumns({
+    getI18nText,
+    findTeamName,
+  });
+});
+
+// 使用表格配置 Hook（與 agent 頁對齊）
+const tableConfig = useTableConfig(baseColumns);
+
+// 根據 visibleColumnKeys 設置欄位的 hideInTable
+// 參照 privateRooms 頁面：將操作欄直接添加到 columns 中，並為所有欄位添加不換行設定
+const columns = computed<TableColumnItem[]>(() => {
+  const processedCols = baseColumns.value.map((col) => {
+    const key = (col.dataIndex as string) || (col.key as string) || '';
+    const isVisible = tableConfig.visibleColumnKeys.value.includes(key);
+
+    // 為所有欄位添加不換行設定
+    const colWithNoWrap = {
+      ...col,
+      hideInTable: !isVisible,
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
+      },
+    };
+
+    return colWithNoWrap;
+  });
+
+  // 獲取操作按鈕列表（根據權限等級）
+  // 參照 privateRooms 頁面：actions 函數接收 { record } 參數
+  const authLevel = getAuthLevel.value;
+
+  return [
+    ...processedCols,
+    {
+      title: getI18nText('control'),
+      dataIndex: 'ACTION',
+      width: 300,
+      align: 'center',
+      fixed: 'right',
+      hideInSearch: true,
+      customCell: () => {
+        return {
+          style: {
+            whiteSpace: 'nowrap', // 禁止換行
+          },
+        };
+      },
+      actions: ({ record }) => {
+        const actions: any[] = [
+          {
+            label: getI18nText('btnHistoryMessage'),
+            type: 'link',
+            onClick: () => openDialogForm2(record),
+          },
+          {
+            label: getI18nText('edit'),
+            type: 'link',
+            onClick: () => onUpdateBtnClick(record),
+          },
+          {
+            label: getI18nText('btnMute'),
+            type: 'link',
+            onClick: () => openDialogForm4(Dialog3Type.room, record),
+          },
+        ];
+
+        // 如果等級 <= 1，添加廣播按鈕
+        if (authLevel <= 1) {
+          actions.unshift({
+            label: getI18nText('btnBroadcast'),
+            type: 'link',
+            onClick: () => openDialogForm3(Dialog3Type.room, record),
+          });
+        }
+
+        return actions;
+      },
+    },
+  ];
+});
 
 /**
  * ============ Dialog1 編輯 ============
@@ -663,7 +712,7 @@ const submitForm = async () => {
     await dataFormRef.value?.validate();
     if (mode.value === 'edit') {
       const postData = {
-        masterAgent: masterAgent.value,
+        masterAgent: selectedMasterAgent.value,
         roomID: dataForm.roomID,
         name: '',
         announcement: dataForm.announcement || '',
@@ -671,7 +720,7 @@ const submitForm = async () => {
       await updateRoom(postData);
       closeDialogForm();
       isTableLoading.value = true;
-      await getTreasureItemList(masterAgent.value);
+      await getTreasureItemList(selectedMasterAgent.value);
       await getRooms();
       isTableLoading.value = false;
     }
@@ -703,7 +752,7 @@ const searchMessage = async () => {
   try {
     await dataForm2Ref.value?.validate();
     const postData = {
-      masterAgent: masterAgent.value,
+      masterAgent: selectedMasterAgent.value,
       roomID: nowRoomID.value,
       startTime: dataForm2.startTime.toDate(),
     };
@@ -743,13 +792,13 @@ const submitForm3 = async () => {
     switch (dialog3Type.value) {
       case Dialog3Type.masterAgent:
         res = await broadcast({
-          masterAgent: masterAgent.value,
+          masterAgent: selectedMasterAgent.value,
           message: dataForm3.message,
         });
         break;
       case Dialog3Type.room:
         res = await roomBroadcast({
-          masterAgent: masterAgent.value,
+          masterAgent: selectedMasterAgent.value,
           roomID: dataForm3.roomID,
           message: dataForm3.message,
         });
@@ -857,77 +906,53 @@ const clickMuteUser = async (memberID: string) => {
 };
 
 // ============ 表格 ============
+// 參照 privateRooms 頁面：不使用 actionColumn，操作欄已在 columns 中定義
 const [DynamicTable] = useTable({
   search: false,
-  showActionColumn: true,
-  actionColumn: {
-    title: getI18nText('control'),
-    width: 300,
-    fixed: 'right',
-    actions: ({ record, index }) => {
-      const actions = extraData.value[index]?.control || [];
-      return actions.map((action: any) => ({
-        ...action,
-        onClick: () => action.onClick(record),
-      }));
-    },
-  },
 });
 
 // ============ 初始化 ============
+// 注意：站長選擇器已遷移至 Breadcrumb，本頁僅作為 Consumer
+// 參照 privateRooms 頁面：初始化時只載入寶物清單，不自動載入資料表
+// 資料表將在站長切換時（watch contextVersion）自動載入
 onMounted(async () => {
-  // 如果等級 < 4，載入 masterAgent 列表
-  if (getAuthLevel.value < 4) {
-    await fetchMasterAgentList();
+  // 初始化時載入寶物清單（如果 Context 有值）
+  if (selectedMasterAgent.value) {
+    await getTreasureItemList(selectedMasterAgent.value);
+    // 自動載入資料表（因為此頁面沒有搜尋按鈕，需要自動載入）
+    // 與 privateRooms 不同：privateRooms 有搜尋按鈕，此頁面沒有，所以需要自動載入
+    isTableLoading.value = true;
+    await getRooms();
+    isTableLoading.value = false;
   }
 });
 </script>
 
 <template>
   <div class="app-container chatroom-rooms">
-    <div class="filter-container">
-      <div class="wrap">
-        <div
-          v-if="getAuthLevel < 4"
-          class="input_group"
-        >
-          <div class="txt">
-            <label>站長</label>
-          </div>
-          <div class="my_input">
-            <a-select
-              v-model:value="masterAgent"
-              placeholder="請選擇站長"
-              style="width: 200px"
-              @change="onMasterAgentChanged"
-            >
-              <a-select-option
-                v-for="item in masterAgentList"
-                :key="item.account"
-                :value="item.account"
-              >
-                {{ item.account }}
-              </a-select-option>
-            </a-select>
-          </div>
-        </div>
-        <div class="input_group">
-          <a-button
-            type="primary"
-            @click="openDialogForm3(Dialog3Type.masterAgent)"
-          >
-            {{ getI18nText('broadcast') }}
-          </a-button>
-        </div>
-      </div>
-    </div>
-
     <DynamicTable
       :loading="isTableLoading"
       :columns="columns"
       :data-source="dataList"
-      :scroll="{ x: 'max-content' }"
-    />
+      :scroll="{ x: '100%' }"
+    >
+      <template #headerTitle>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <span>{{ getI18nText('rooms2') || '公頻管理' }}</span>
+          <Tag :color="searchModeConfig.color" style="margin: 0">
+            SearchMode: {{ searchMode }} ({{ searchModeConfig.text }})
+          </Tag>
+        </div>
+      </template>
+      <template #toolbar>
+        <a-button
+          type="primary"
+          @click="openDialogForm3(Dialog3Type.masterAgent)"
+        >
+          {{ getI18nText('broadcast') }}
+        </a-button>
+      </template>
+    </DynamicTable>
 
     <!-- Dialog1 編輯 -->
     <a-modal
@@ -1211,6 +1236,11 @@ onMounted(async () => {
 
 <style lang="less" scoped>
 .chatroom-rooms {
+  // 確保表格寬度為 100%
+  :deep(.ant-table-wrapper) {
+    width: 100%;
+  }
+
   .wrap {
     display: flex;
     flex-wrap: wrap;
