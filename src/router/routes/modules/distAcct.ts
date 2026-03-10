@@ -24,10 +24,12 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'familyList',
         name: 'DistAcctFamilyList',
-        component: () => import('@/views/distAcct/familySetting/index.vue'),
+        component: () => import('@/views/distAcct/familyList/index.vue'),
         meta: {
           title: '家族列表',
           icon: 'ant-design:setting-outlined',
+          // 目標頁（memberList）：宣告為 Context Consumer UI，需顯示站長選單
+          showMasterAgent: true,
         },
       },
     ],
@@ -35,4 +37,3 @@ const routes: RouteRecordRaw[] = [
 ];
 
 export default routes;
-
