@@ -102,7 +102,7 @@ export const getColumns = (
      */
     customRender: ({ record }) => {
       return h(Button, {
-        type: 'primary',
+        type: 'link',
         danger: true,
         size: 'small',
         disabled: isChangeable(record),
