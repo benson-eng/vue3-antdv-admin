@@ -4,7 +4,7 @@ import type { ISettings, StationMasterItem } from '@/api/backend/agentHubManager
 import type { TableColumn } from '@/components/core/dynamic-table';
 
 import { message, Tag } from 'ant-design-vue';
-import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, h, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import {
   editAgentSettings,
   queryAgent,
@@ -246,7 +246,7 @@ const onEditBtnHandler = (data: FamilyRowData) => {
   openDialog(modeType, data);
 };
 
-const isDefaultSwitch = async (data: FamilyRowData) => {
+const _isDefaultSwitch = async (data: FamilyRowData) => {
   try {
     dataTableLoading.value = true;
     const postData = {
@@ -331,27 +331,25 @@ const columns = computed<TableColumn<FamilyRowData>[]>(() => {
     align: 'center',
     fixed: 'right',
     hideInSearch: true,
-    actions: ({ record }) => {
+    customRender: ({ record }) => {
       const actions: any[] = [];
 
-      // 設為預設按鈕
+      // 預設家族標籤
       if (record.isDefault) {
-        actions.push({
-          label: record.isDefault ? t('isDefault.disable') : t('isDefault.enable'),
-          type: 'link',
-          disabled: record.isDefault || false,
-          onClick: () => isDefaultSwitch(record as FamilyRowData),
-        });
+        actions.push(
+          h(Tag, { color: 'green' }, { default: () => '預設家族' }),
+        );
       }
 
       // 編輯/查看按鈕
-      actions.push({
-        label: userStore.level <= 3 ? t('edit') : t('view'),
-        type: 'link',
-        onClick: () => onEditBtnHandler(record as FamilyRowData),
-      });
+      actions.push(
+        h('a', {
+          style: { marginLeft: record.isDefault ? '8px' : '0' },
+          onClick: () => onEditBtnHandler(record as FamilyRowData),
+        }, userStore.level <= 3 ? t('edit') : t('view')),
+      );
 
-      return actions;
+      return h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' } }, actions);
     },
   });
 
@@ -721,7 +719,7 @@ const searchModeConfig = computed(() => {
               {{ t('confirm') }}
             </a-button>
             <a-button v-if="!disabledMode" @click="setDefault">
-              {{ t('label.setDefault') }}
+              預設值
             </a-button>
             <a-button @click="closeDialog">
               {{ t('cancel') }}
