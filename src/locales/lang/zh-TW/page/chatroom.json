@@ -29,6 +29,7 @@
   "success": "成功",
   "fail": "失敗",
   "cancel": "取消",
+  "confirm": "確認",
   "update": "更新",
   "close": "關閉",
   "search": "搜尋",
@@ -66,4 +67,3 @@
   "btnPrivateTeamDel": "解散群組",
   "messageAlert2": "訊息提醒"
 }
-

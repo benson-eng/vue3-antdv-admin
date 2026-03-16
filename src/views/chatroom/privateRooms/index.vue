@@ -97,6 +97,7 @@ const messageData = ref<TextHistoryMessage[]>([]);
 const memberList = ref<Record<string, string>>({});
 const lastPostData = ref<any>({});
 const dataForm2Ref = ref();
+const isMessageLoading = ref(false);
 
 // dialog3 廣播
 const isDialogForm3 = ref(false);
@@ -374,7 +375,9 @@ const getList = async () => {
     }
   }
   else {
+    // 沒有輸入會員ID時，顯示提示並關閉 loading
     isTableLoading.value = false;
+    message.warning('請輸入會員ID');
   }
 };
 
@@ -687,6 +690,7 @@ const searchMessage = async () => {
 };
 
 const setMessageData = async (postData: any) => {
+  isMessageLoading.value = true;
   try {
     const res = await privateTeamHistoryMessages(postData);
     const memberIDs: string[] = [];
@@ -732,9 +736,16 @@ const setMessageData = async (postData: any) => {
     if (res && res.data) {
       messageData.value = res.data;
     }
+    else {
+      messageData.value = [];
+    }
   }
   catch (error) {
     console.error('Failed to set message data:', error);
+    messageData.value = [];
+  }
+  finally {
+    isMessageLoading.value = false;
   }
 };
 
@@ -1191,6 +1202,7 @@ onMounted(async () => {
                 style="flex: 1"
               />
               <a-button
+                :loading="isMessageLoading"
                 @click="searchMessage"
               >
                 {{ t('search') }}
@@ -1203,6 +1215,7 @@ onMounted(async () => {
         </a-form-item>
       </a-form>
       <a-table
+        :loading="isMessageLoading"
         :data-source="messageData"
         :columns="[
           {
