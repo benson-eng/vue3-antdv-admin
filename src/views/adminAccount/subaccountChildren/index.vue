@@ -4,7 +4,7 @@ import type { SubaccountChildFormValues } from './formSchemas';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal, Tag } from 'ant-design-vue';
 import dayjs from 'dayjs';
-import { computed, inject, watch } from 'vue';
+import { computed, inject, nextTick, watch } from 'vue';
 import SubaccountApi from '@/api/backend/adminAccount/subaccount';
 import { useTable } from '@/components/core/dynamic-table';
 import { useFormModal } from '@/hooks/useModal';
@@ -101,14 +101,16 @@ const normalizeList = (listRaw: any[]) => {
  */
 watch(
   () => contextVersion.value,
-  () => {
+  async () => {
     // 重置 DynamicTable 查詢條件
     const searchFormRef = tableInstance?.getSearchFormRef?.();
     if (searchFormRef) {
       searchFormRef.resetFields();
     }
     // 清空表格資料並自動重新載入
-    tableInstance?.reload(true);
+    await tableInstance?.reload(true);
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   },
 );
 
@@ -117,9 +119,11 @@ watch(
 if (userStore.level === 4) {
   watch(
     () => userStore.masterAgent,
-    () => {
+    async () => {
       // 當 userStore.masterAgent 變化時，重新載入表格資料
-      tableInstance?.reload(true);
+      await tableInstance?.reload(true);
+      await nextTick();
+      window.dispatchEvent(new Event('resize'));
     },
   );
 }
@@ -199,12 +203,16 @@ const toggleEnabled = async (record: TableListItem, checked: boolean) => {
   try {
     await SubaccountApi.updateAdminSubaccount(buildUpdatePayload(record, { isEnabled: checked }));
     message.success('更新成功');
-    tableInstance?.reload();
+    await tableInstance?.reload();
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   }
   catch (e) {
     console.error(e);
     message.error('更新失敗');
-    tableInstance?.reload();
+    await tableInstance?.reload();
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   }
 };
 
@@ -235,12 +243,16 @@ const toggleRedemption = async (record: TableListItem, checked: boolean) => {
   try {
     await SubaccountApi.updateAdminSubaccount(buildUpdatePayload(record, { allowRedemptionCode: checked }));
     message.success('更新成功');
-    tableInstance?.reload();
+    await tableInstance?.reload();
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   }
   catch (e) {
     console.error(e);
     message.error('更新失敗');
-    tableInstance?.reload();
+    await tableInstance?.reload();
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   }
 };
 
@@ -367,7 +379,9 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
           message.success('新增成功');
         }
 
-        tableInstance?.reload();
+        await tableInstance?.reload();
+        await nextTick();
+        window.dispatchEvent(new Event('resize'));
       },
     },
     formProps: {
@@ -396,8 +410,10 @@ const openFormModal = async (record?: Partial<TableListItem>) => {
  * 處理表單提交（查詢按鈕）
  * 強制重新載入表格資料（不使用快取），行為等同於 tableInstance.reload(true)
  */
-const handleFormSubmit = () => {
-  tableInstance?.reload(true);
+const handleFormSubmit = async () => {
+  await tableInstance?.reload(true);
+  await nextTick();
+  window.dispatchEvent(new Event('resize'));
 };
 
 // 定義所有欄位（包含操作欄）

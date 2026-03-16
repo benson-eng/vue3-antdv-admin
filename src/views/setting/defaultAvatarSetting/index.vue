@@ -5,7 +5,7 @@ import type { LoadDataParams } from '@/components/core/dynamic-table';
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons-vue';
 import { Button, Divider, message, Modal, Switch, Tag } from 'ant-design-vue';
-import { computed, inject, ref, watch } from 'vue';
+import { computed, inject, nextTick, ref, watch } from 'vue';
 
 import { createDefaultAvatar as createDefaultAvatarApi, getDefaultAvatar, updateDefaultAvatar as updateDefaultAvatarApi } from '@/api/backend/profileSystem';
 import { useTable } from '@/components/core/dynamic-table';
@@ -274,10 +274,12 @@ const loadTableData = async (params: LoadDataParams & Record<string, any>) => {
  */
 watch(
   () => selectedMasterAgent.value,
-  () => {
+  async () => {
     // Context 站長變化時，重新載入資料
     if (selectedMasterAgent.value) {
-      dynamicTableInstance?.reload(true);
+      await dynamicTableInstance?.reload(true);
+      await nextTick();
+      window.dispatchEvent(new Event('resize'));
     }
   },
   { immediate: true }, // 立即執行一次，確保初始載入
@@ -288,10 +290,12 @@ watch(
 if (userStore.level === 4) {
   watch(
     () => userStore.masterAgent,
-    () => {
+    async () => {
       // 當 userStore.masterAgent 變化時，重新載入資料
       if (userStore.masterAgent) {
-        dynamicTableInstance?.reload(true);
+        await dynamicTableInstance?.reload(true);
+        await nextTick();
+        window.dispatchEvent(new Event('resize'));
       }
     },
     { immediate: true }, // 立即執行一次，確保初始載入
@@ -304,8 +308,10 @@ if (userStore.level === 4) {
  */
 watch(
   () => showDisabled.value,
-  () => {
-    dynamicTableInstance?.reload();
+  async () => {
+    await dynamicTableInstance?.reload();
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   },
 );
 

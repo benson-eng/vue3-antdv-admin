@@ -30,6 +30,7 @@
     "totalAmount": "總額",
     "totalBonus": "總贈額",
     "total": "總計",
+    "totalBillAmount": "本帳單合計金額",
     "totalPoints": "本帳單合計點數"
   },
   "subType": {
@@ -39,7 +40,17 @@
     "Purchase": "儲值",
     "GameWinLose": "遊戲輸贏",
     "Bonus": "紅利",
-    "ServiceFee": "手續費"
+    "ServiceFee": "手續費",
+    "Other": "其他",
+    "CreateGuildServiceFee": "創建公會手續費",
+    "SerialNumberTopUp": "序號儲值",
+    "Ewallet": "電子錢包",
+    "SanZhuSMSFee": "三竹簡訊手續",
+    "DailySignInReward": "每日登入紅利",
+    "NoviceMission": "新手任務紅利",
+    "OpenMail": "信箱發點紅利",
+    "BuyGift": "購買禮物",
+    "GameRefund": "遊戲退款"
   },
   "dialog": {
     "title": "站台報表查詢",
@@ -52,4 +63,3 @@
     "noPermission": "您沒有權限訪問此頁面"
   }
 }
-
