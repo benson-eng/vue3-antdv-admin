@@ -79,6 +79,7 @@ const messageData = ref<TextHistoryMessage[]>([]);
 const memberList = ref<Record<string, string>>({});
 const lastPostData = ref<any>({});
 const dataForm2Ref = ref();
+const isMessageLoading = ref(false);
 
 // dialog3 廣播
 const isDialogForm3 = ref(false);
@@ -198,6 +199,7 @@ const onUpdateBtnClick = (row: RoomInfo) => {
 const openDialogForm2 = (data: RoomInfo) => {
   dataForm2.startTime = dayjs(new Date());
   messageData.value = [];
+  isMessageLoading.value = false;
   dialogTitle2.value
     = `${getI18nText('messageSearch')
     } ${
@@ -235,6 +237,7 @@ const openDialogForm3 = (type: Dialog3Type, obj?: RoomInfo) => {
 };
 
 const setMessageData = async (postData: any) => {
+  isMessageLoading.value = true;
   try {
     const res = await queryRoomHistoryMessages(postData);
     const memberIDs: string[] = [];
@@ -291,6 +294,9 @@ const setMessageData = async (postData: any) => {
   }
   catch (error) {
     console.error('Failed to set message data:', error);
+  }
+  finally {
+    isMessageLoading.value = false;
   }
 };
 
@@ -741,6 +747,7 @@ const submitForm = async () => {
 
 const closeDialogForm2 = () => {
   lastPostData.value = {};
+  isMessageLoading.value = false;
   nextTick(() => {
     dataForm2Ref.value?.clearValidate();
     dataForm2Ref.value?.resetFields();
@@ -911,6 +918,22 @@ const [DynamicTable] = useTable({
   search: false,
 });
 
+/**
+ * 處理重新整理事件
+ */
+const handleReload = async () => {
+  if (selectedMasterAgent.value) {
+    isTableLoading.value = true;
+    try {
+      await getTreasureItemList(selectedMasterAgent.value);
+      await getRooms();
+    }
+    finally {
+      isTableLoading.value = false;
+    }
+  }
+};
+
 // ============ 初始化 ============
 // 注意：站長選擇器已遷移至 Breadcrumb，本頁僅作為 Consumer
 // 參照 privateRooms 頁面：初始化時只載入寶物清單，不自動載入資料表
@@ -935,6 +958,7 @@ onMounted(async () => {
       :columns="columns"
       :data-source="dataList"
       :scroll="{ x: '100%' }"
+      @reload="handleReload"
     >
       <template #headerTitle>
         <div style="display: flex; align-items: center; gap: 8px">
@@ -1028,6 +1052,7 @@ onMounted(async () => {
               />
               <a-button
                 style="margin-left: 10px"
+                :loading="isMessageLoading"
                 @click="searchMessage"
               >
                 {{ t('search') }}
@@ -1040,6 +1065,7 @@ onMounted(async () => {
         </a-form-item>
       </a-form>
       <a-table
+        :loading="isMessageLoading"
         :data-source="messageData"
         :columns="[
           {
