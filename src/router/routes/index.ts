@@ -9,6 +9,7 @@ export const rootRoute: RouteRecordRaw = {
   component: () => import('@/layout/index.vue'),
   meta: {
     title: '根路由',
+    showMasterAgent: true,
   },
   children: [],
 };

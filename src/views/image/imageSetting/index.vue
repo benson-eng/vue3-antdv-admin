@@ -3,7 +3,7 @@ import type { TableColumnItem, TableListItem } from './columns';
 import type { IconItem } from '@/api/backend/treasureChestSystem';
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 import { message, Modal, Tag } from 'ant-design-vue';
-import { computed, inject, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, ref, watch } from 'vue';
 import { addIcon, ImageType, queryIcon, removeIcon } from '@/api/backend/treasureChestSystem';
 import { useTable } from '@/components/core/dynamic-table';
 import ImageUploadField from '@/components/system/ImageUploadField.vue';
@@ -136,8 +136,9 @@ const onHandleDelete = (row: IconItem) => {
       try {
         await removeIcon({ masterAgent: selectedMasterAgent.value, id: [row.id] });
         message.success(t('notify.deleteSuccess'));
-        // 使用 DynamicTable 的 reload 方法
-        dynamicTableInstance?.reload(true);
+        await dynamicTableInstance?.reload(true);
+        await nextTick();
+        window.dispatchEvent(new Event('resize'));
       }
       catch (error: any) {
         message.error(error?.message || t('notify.deleteFailed'));
@@ -306,10 +307,12 @@ const dialogForm = ref<{
  */
 watch(
   () => selectedMasterAgent.value,
-  () => {
+  async () => {
     // Context 站長變化時，重新載入資料
     // 注意：無搜尋區模式，不需要 reset，直接 reload 即可
-    dynamicTableInstance?.reload(true);
+    await dynamicTableInstance?.reload(true);
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
   },
 );
 
@@ -318,9 +321,11 @@ watch(
 if (userStore.level === 4) {
   watch(
     () => userStore.masterAgent,
-    () => {
+    async () => {
       // 當 userStore.masterAgent 變化時，重新載入資料
-      dynamicTableInstance?.reload(true);
+      await dynamicTableInstance?.reload(true);
+      await nextTick();
+      window.dispatchEvent(new Event('resize'));
     },
   );
 }
@@ -367,8 +372,9 @@ const createDefaultAvatar = async () => {
       // 成功：沒有 error 屬性
       message.success(t('notify.createSuccess'));
       dialogFormVisible.value = false;
-      // 使用 DynamicTable 的 reload 方法
-      dynamicTableInstance?.reload(true);
+      await dynamicTableInstance?.reload(true);
+      await nextTick();
+      window.dispatchEvent(new Event('resize'));
     }
     else if (response && response.error) {
       // 有錯誤
@@ -379,8 +385,9 @@ const createDefaultAvatar = async () => {
       // Vue3 格式：{ data: { ... } }，且 data 中沒有 error
       message.success(t('notify.createSuccess'));
       dialogFormVisible.value = false;
-      // 使用 DynamicTable 的 reload 方法
-      dynamicTableInstance?.reload(true);
+      await dynamicTableInstance?.reload(true);
+      await nextTick();
+      window.dispatchEvent(new Event('resize'));
     }
     else {
       // 其他情況視為失敗
@@ -438,8 +445,27 @@ const onDialogConfirm = async () => {
 // Lifecycle
 // =========================
 
-// 🔒 禁止 mounted 自動查詢
-// 注意：此頁面不再在 mounted 時自動查詢，改為手動觸發
+/**
+ * 頁面首次載入時，如果 selectedMasterAgent 已有值，則自動載入資料
+ * - 檢查 selectedMasterAgent 是否有值
+ * - 如果有值，調用 reload(true) 載入資料
+ * - 如果沒有值，不載入（符合現有邏輯）
+ * - 載入完成後觸發 resize 事件以重新計算表格高度
+ */
+onMounted(async () => {
+  // 檢查 selectedMasterAgent 是否有值
+  if (selectedMasterAgent.value) {
+    await dynamicTableInstance?.reload(true);
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
+  }
+  // 對於 Level 4 用戶，也檢查 userStore.masterAgent
+  else if (userStore.level === 4 && userStore.masterAgent) {
+    await dynamicTableInstance?.reload(true);
+    await nextTick();
+    window.dispatchEvent(new Event('resize'));
+  }
+});
 </script>
 
 <template>
