@@ -5,7 +5,7 @@ import type { StickerColumns } from '@/api/backend/adminSystem/gameChatroomSyste
 import type { LoadDataParams } from '@/components/core/dynamic-table';
 
 import { message, Modal, Tag } from 'ant-design-vue';
-import { computed, inject, nextTick, reactive, ref, watch } from 'vue';
+import { computed, inject, nextTick, onMounted, reactive, ref, watch } from 'vue';
 import {
   addSticker,
   removeSticker,
@@ -367,6 +367,37 @@ watch(
     tableInstance?.reload(true);
   },
 );
+
+/**
+ * 監聽 contextMasterAgent 變化，當站長值從空變為有值時自動載入
+ * 這確保了即使 contextVersion 沒有變化，只要 masterAgent 有值就會載入資料
+ */
+watch(
+  () => contextMasterAgent.value,
+  (newVal) => {
+    // 當 masterAgent 有值時，自動載入表格資料
+    if (newVal) {
+      nextTick(() => {
+        tableInstance?.reload();
+      });
+    }
+  },
+);
+
+/**
+ * ============ 初始化 ============
+ */
+onMounted(() => {
+  // 注意：此頁面完全依賴 Breadcrumb Context 的 masterAgent
+  // 不再需要 fetchMasterAgentList，因為已關閉搜尋區
+
+  // Context 整合：如果 Context 有值，自動 reload 表格資料
+  if (contextMasterAgent.value) {
+    nextTick(() => {
+      tableInstance?.reload();
+    });
+  }
+});
 
 /**
  * ============ 表單驗證規則 ============
