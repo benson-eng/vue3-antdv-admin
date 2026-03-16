@@ -348,11 +348,11 @@ const loadTableData = async (_params: LoadDataParams & Record<string, any>): Pro
     }
 
     // 純函數：僅進行資料轉換，不修改狀態
+    // 注意：不再設置 seq，使用列設置中的"序號列"開關功能
     const dataList: DataListItem[] = [];
     if (indecentWordsData.length > 0) {
-      indecentWordsData.forEach((item: string, index: number) => {
+      indecentWordsData.forEach((item: string) => {
         dataList.push({
-          seq: index + 1,
           value: item,
         });
       });

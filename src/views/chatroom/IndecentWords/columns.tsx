@@ -1,7 +1,10 @@
 import type { TableColumn } from '@/components/core/dynamic-table';
 
 export interface DataListItem {
-  seq: number;
+  /**
+   * 可選屬性，已移除序號欄位，使用列設置中的"序號列"開關功能
+   */
+  seq?: number;
   value: string;
 }
 
@@ -22,14 +25,9 @@ export const getBaseColumns = (
   const columns: TableColumnItem[] = [];
 
   // 注意：站長欄位已移除，改為使用 Breadcrumb Context 自動 reload
+  // 注意：序號欄位已移除，使用列設置中的"序號列"開關功能
 
   columns.push(
-    {
-      title: pt('labels.seq'),
-      dataIndex: 'seq',
-      width: 80,
-      hideInSearch: true,
-    },
     {
       title: pt('labels.setString'),
       dataIndex: 'value',
